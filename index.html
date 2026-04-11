@@ -12,26 +12,32 @@
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
         body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; letter-spacing: -0.025em; }
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.04); }
-        .input-style { width: 100%; padding: 0.8rem; border-radius: 1rem; border: 1px solid #e2e8f0; outline: none; font-size: 16px; }
+        .input-style { width: 100%; padding: 0.8rem; border-radius: 1rem; border: 1px solid #e2e8f0; outline: none; font-size: 16px; transition: all 0.2s; }
+        .input-style:focus { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15,23,42,0.05); }
         .btn-active { background-color: #0f172a !important; color: white !important; }
         .tab-btn { padding: 0.5rem 1rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
         .tab-btn.active { background-color: #0f172a; color: white; }
         .tab-btn:not(.active) { color: #64748b; background-color: #f1f5f9; }
-        .edit-mode { border: 2px solid #3b82f6 !important; background-color: #eff6ff !important; }
+        .edit-mode { border: 2px solid #3b82f6 !important; background-color: #f0f7ff !important; }
+        /* 로딩 스피너 애니메이션 */
+        .spinner { width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-8">
-            <h1 class="text-2xl font-extrabold text-slate-900">💰 NH&GR 가계부</h1>
-            <button onclick="fetchData()" class="text-xs font-bold text-blue-500 bg-blue-50 px-3 py-2 rounded-xl hover:bg-blue-100 transition-colors">전체 새로고침 🔄</button>
+            <h1 class="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+                💰 NH&GR 가계부 <span id="sync-status" class="hidden"><span class="spinner"></span></span>
+            </h1>
+            <button onclick="fetchData()" class="text-xs font-bold text-blue-500 bg-blue-50 px-4 py-2 rounded-xl">동기화 🔄</button>
         </header>
 
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-10 text-center">
-            <div class="card p-5 border-t-4 border-blue-500"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">Cash</p><p id="sum-avail" class="text-lg font-black font-mono">₩0</p></div>
-            <div class="card p-5 border-t-4 border-emerald-500"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">Savings</p><p id="sum-save" class="text-lg font-black font-mono">₩0</p></div>
-            <div class="card p-5 border-t-4 border-purple-600"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">Stocks</p><p id="sum-stock" class="text-lg font-black font-mono">₩0</p></div>
-            <div class="card p-5 border-t-4 border-orange-500"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">Future</p><p id="sum-future" class="text-lg font-black font-mono">₩0</p></div>
+            <div class="card p-5 border-t-4 border-blue-500"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">Cash</p><p id="sum-avail" class="text-lg font-black font-mono tracking-tighter">₩0</p></div>
+            <div class="card p-5 border-t-4 border-emerald-500"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">Savings</p><p id="sum-save" class="text-lg font-black font-mono tracking-tighter">₩0</p></div>
+            <div class="card p-5 border-t-4 border-purple-600"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">Stocks</p><p id="sum-stock" class="text-lg font-black font-mono tracking-tighter">₩0</p></div>
+            <div class="card p-5 border-t-4 border-orange-500"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">Future</p><p id="sum-future" class="text-lg font-black font-mono tracking-tighter">₩0</p></div>
             <div class="card p-5 bg-slate-900 text-white shadow-xl col-span-2 md:col-span-1 border-t-4 border-slate-900">
                 <p class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest text-center">Total Net Worth</p>
                 <p id="sum-total" class="text-xl font-black text-emerald-400 tracking-tighter font-mono">₩0</p>
@@ -41,20 +47,19 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div class="lg:col-span-7 space-y-6">
                 <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    <button onclick="setTab('all')" id="tab-all" class="tab-btn active">전체 내역</button>
-                    <button onclick="setTab('asset')" id="tab-asset" class="tab-btn">자산 관리</button>
-                    <button onclick="setTab('income')" id="tab-income" class="tab-btn">순수입</button>
-                    <button onclick="setTab('expense')" id="tab-expense" class="tab-btn">지출 내역</button>
+                    <button onclick="setTab('all')" id="tab-all" class="tab-btn active">전체</button>
+                    <button onclick="setTab('asset')" id="tab-asset" class="tab-btn">자산</button>
+                    <button onclick="setTab('income')" id="tab-income" class="tab-btn">수입</button>
+                    <button onclick="setTab('expense')" id="tab-expense" class="tab-btn">지출</button>
                 </div>
-                <div id="list" class="space-y-3 max-h-[700px] overflow-y-auto pr-2">
-                    </div>
+                <div id="list" class="space-y-3 max-h-[700px] overflow-y-auto pr-2"></div>
             </div>
 
             <div class="lg:col-span-5">
-                <section id="input-card" class="card p-6 sticky top-8 border-2 border-slate-50 transition-all">
+                <section id="input-card" class="card p-6 sticky top-8 border-2 border-slate-50">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 id="form-title" class="font-bold text-slate-700">새 내역 기록</h2>
-                        <button id="cancel-edit" onclick="resetForm()" class="hidden text-xs text-red-500 font-bold">수정 취소</button>
+                        <h2 id="form-title" class="font-bold text-slate-700">기록하기</h2>
+                        <button id="cancel-edit" onclick="resetForm()" class="hidden text-xs text-red-500 font-bold">취소</button>
                     </div>
                     <form id="finance-form" class="space-y-4">
                         <input type="hidden" id="edit-id" value="">
@@ -65,21 +70,21 @@
                         </div>
                         <div class="flex bg-slate-100 p-1 rounded-2xl">
                             <button type="button" onclick="setType('수입')" id="btn-inc" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all">수입/자산</button>
-                            <button type="button" onclick="setType('지출')" id="btn-exp" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all">지출</button>
+                            <button type="button" onclick="setType('지출')" id="btn-exp" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all text-slate-500">지출</button>
                             <input type="hidden" id="type-select" value="수입">
                         </div>
-                        <div id="method-container" class="hidden"><select id="method-select" class="input-style font-bold"><option value="신용카드">💳 신용카드</option><option value="체크카드">💳 체크카드</option><option value="현금">💵 현금</option><option value="계좌이체">📲 계좌이체</option></select></div>
+                        <div id="method-container" class="hidden"><select id="method-select" class="input-style font-bold text-sm"><option value="신용카드">💳 신용카드</option><option value="체크카드">💳 체크카드</option><option value="현금">💵 현금</option><option value="계좌이체">📲 계좌이체</option></select></div>
                         <select id="category-select" class="input-style font-bold text-slate-700" onchange="toggleStock()"></select>
-                        <div id="stock-inputs" class="hidden space-y-3 p-5 bg-blue-50/50 rounded-2xl border border-blue-100">
-                            <input type="text" id="ticker" placeholder="AAPL 또는 005930.KS" class="input-style uppercase font-bold text-blue-600">
+                        <div id="stock-inputs" class="hidden space-y-3 p-5 bg-blue-50 rounded-2xl border border-blue-100">
+                            <input type="text" id="ticker" placeholder="AAPL 또는 005930.KS" class="input-style uppercase font-bold text-blue-600 text-sm">
                             <div class="grid grid-cols-2 gap-2">
-                                <input type="number" id="buy-price" placeholder="단가($/₩)" class="input-style font-bold">
-                                <input type="number" id="qty" step="0.01" placeholder="수량" class="input-style font-bold">
+                                <input type="number" id="buy-price" placeholder="평단" class="input-style font-bold text-sm">
+                                <input type="number" id="qty" step="0.01" placeholder="수량" class="input-style font-bold text-sm">
                             </div>
                         </div>
                         <div id="amt-container"><input type="number" id="amount" placeholder="금액 ₩" class="input-style font-bold text-lg"></div>
-                        <input type="text" id="desc" placeholder="상세 내용" class="input-style">
-                        <button type="submit" id="submit-btn" class="w-full bg-slate-900 text-white p-4 rounded-xl font-bold shadow-xl active:scale-95 transition-all text-lg">기록 저장하기</button>
+                        <input type="text" id="desc" placeholder="상세 내용" class="input-style text-sm">
+                        <button type="submit" id="submit-btn" class="w-full bg-slate-900 text-white p-4 rounded-xl font-bold shadow-xl active:scale-95 transition-all">즉시 저장</button>
                     </form>
                 </section>
             </div>
@@ -94,18 +99,33 @@
         let allRecords = [], currentTab = 'all', exchangeRate = 1380, stockCache = {};
 
         const categories = {
-            "수입": ["월급", "주식", "주식(미환산이익)", "저축/예금", "적금", "청약", "퇴직연금", "퇴직금", "기기타"],
+            "수입": ["월급", "주식", "주식(미환산이익)", "저축/예금", "적금", "청약", "퇴직연금", "퇴직금", "기타"],
             "지출": ["식비/마트", "카페/외식", "주거비", "통신/OTT", "교통/차량", "보험료", "의료비", "취미/문화", "경조사", "기타"]
         };
 
+        // 로딩 속도 개선을 위한 초기화 함수
+        async function init() {
+            setUser('남편');
+            setType('수입');
+            await fetchData();
+            // 백그라운드에서 환율 정보 업데이트
+            fetch('https://api.exchangerate-api.com/v4/latest/USD').then(r => r.json()).then(data => {
+                exchangeRate = data.rates.KRW;
+                calculateAndRender();
+            }).catch(() => {});
+        }
+
         async function fetchData() {
+            document.getElementById('sync-status').classList.remove('hidden');
             const { data } = await sb.from('account_v3').select('*').order('created_at', { ascending: false });
             if (data) {
                 allRecords = data;
+                // 주가 로딩 최적화: 티커가 있는 데이터만 골라 업데이트 (병렬 처리)
                 const tickers = [...new Set(allRecords.filter(r => r.ticker).map(r => r.ticker))];
                 await Promise.all(tickers.map(updateStockCache));
                 calculateAndRender();
             }
+            document.getElementById('sync-status').classList.add('hidden');
         }
 
         async function updateStockCache(ticker) {
@@ -126,9 +146,10 @@
                 else if (r.ticker && !r.ticker.includes('.KS')) val = Math.round(r.amount * exchangeRate * (r.qty || 1));
 
                 if (r.type === "수입") {
-                    if (["월급", "기타"].includes(r.category.split(' (')[0])) sums.avail += r.amount;
-                    else if (["저축/예금", "적금", "청약"].includes(r.category.split(' (')[0])) sums.save += r.amount;
-                    else if (["퇴직연금", "퇴직금"].includes(r.category.split(' (')[0])) sums.future += r.amount;
+                    const pureCat = r.category.split(' (')[0];
+                    if (["월급", "기타"].includes(pureCat)) sums.avail += r.amount;
+                    else if (["저축/예금", "적금", "청약"].includes(pureCat)) sums.save += r.amount;
+                    else if (["퇴직연금", "퇴직금"].includes(pureCat)) sums.future += r.amount;
                     else sums.stock += val;
                 } else sums.avail -= r.amount;
             });
@@ -161,66 +182,23 @@
             list.innerHTML = filtered.map(r => {
                 let val = r.amount * (r.qty || 1);
                 if (r.ticker && stockCache[r.ticker]) val = Math.round(stockCache[r.ticker] * r.qty);
-                return `<div class="card p-4 flex justify-between items-center group">
+                return `<div class="card p-4 flex justify-between items-center transition-transform hover:scale-[1.01] active:scale-95 cursor-pointer" onclick="editRecord('${r.id}')">
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs ${r.user_name === '남편' ? 'bg-slate-900 text-white' : 'bg-rose-500 text-white'}">${r.user_name[0]}</div>
-                        <div onclick="editRecord('${r.id}')" class="cursor-pointer hover:opacity-70">
-                            <p class="font-bold text-slate-800 text-sm mb-0.5">${r.description || r.category} <span class="text-[10px] text-blue-500 opacity-0 group-hover:opacity-100 italic">수정</span></p>
+                        <div>
+                            <p class="font-bold text-slate-800 text-sm mb-0.5">${r.description || r.category}</p>
                             <p class="text-[10px] text-slate-400 font-bold">${r.ticker ? r.ticker + ' ' + r.qty + '주' : r.category}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-4 text-right">
                         <span class="font-black text-sm ${r.type === '수입' ? 'text-emerald-600' : 'text-slate-600'}">${r.type === '수입' ? '+' : '-'} ${val.toLocaleString()}</span>
-                        <button onclick="deleteItem('${r.id}')" class="text-slate-200 hover:text-red-500 font-bold px-1 text-xl">×</button>
+                        <button onclick="event.stopPropagation(); deleteItem('${r.id}')" class="text-slate-200 hover:text-red-500 font-bold px-1 text-xl">×</button>
                     </div>
                 </div>`;
             }).join('');
         }
 
-        // 수정 모드 진입
-        function editRecord(id) {
-            const record = allRecords.find(r => r.id === id || r.id.toString() === id.toString());
-            if (!record) return;
-
-            document.getElementById('input-card').classList.add('edit-mode');
-            document.getElementById('form-title').innerText = "내역 수정 중...";
-            document.getElementById('cancel-edit').classList.remove('hidden');
-            document.getElementById('submit-btn').innerText = "수정 완료하기";
-            document.getElementById('edit-id').value = record.id;
-
-            setUser(record.user_name);
-            const pureType = record.type;
-            const fullCat = record.category;
-            setType(pureType);
-
-            // 지출 수단 분리 및 카테고리 설정
-            if (pureType === "지출" && fullCat.includes(" (")) {
-                const [cat, method] = fullCat.split(" (");
-                document.getElementById('category-select').value = cat;
-                document.getElementById('method-select').value = method.replace(")", "");
-            } else {
-                document.getElementById('category-select').value = fullCat;
-            }
-
-            document.getElementById('amount').value = record.amount;
-            document.getElementById('ticker').value = record.ticker || "";
-            document.getElementById('qty').value = record.qty || "";
-            document.getElementById('desc').value = record.description || "";
-            
-            toggleStock();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function resetForm() {
-            document.getElementById('finance-form').reset();
-            document.getElementById('input-card').classList.remove('edit-mode');
-            document.getElementById('form-title').innerText = "새 내역 기록";
-            document.getElementById('cancel-edit').classList.add('hidden');
-            document.getElementById('submit-btn').innerText = "저장하기";
-            document.getElementById('edit-id').value = "";
-            setType('수입');
-        }
-
+        // 입력 폼 처리 (낙관적 업데이트 적용)
         document.getElementById('finance-form').onsubmit = async (e) => {
             e.preventDefault();
             const editId = document.getElementById('edit-id').value;
@@ -228,6 +206,7 @@
             const type = document.getElementById('type-select').value;
             
             const record = {
+                id: editId || Date.now().toString(), // 임시 ID 생성
                 user_name: document.getElementById('user-name').value,
                 type: type,
                 category: cat + (type === '지출' ? ` (${document.getElementById('method-select').value})` : ''),
@@ -238,27 +217,69 @@
                 date: new Date().toLocaleDateString('ko-KR')
             };
 
-            const btn = document.getElementById('submit-btn');
-            btn.disabled = true;
-
+            // 낙관적 업데이트: 서버 응답 전 미리 화면에 반영
             if (editId) {
-                const { error } = await sb.from('account_v3').update(record).eq('id', editId);
-                if (error) alert("수정 실패");
+                allRecords = allRecords.map(r => (r.id === editId || r.id.toString() === editId.toString()) ? record : r);
             } else {
-                const { error } = await sb.from('account_v3').insert([record]);
-                if (error) alert("저장 실패");
+                allRecords.unshift(record);
             }
-
+            calculateAndRender();
             resetForm();
-            fetchData();
+
+            // 실제 서버 저장 (백그라운드)
+            if (editId) {
+                await sb.from('account_v3').update(record).eq('id', editId);
+            } else {
+                await sb.from('account_v3').insert([record]);
+            }
+            fetchData(); // 최종 데이터 동기화
         };
+
+        function editRecord(id) {
+            const record = allRecords.find(r => r.id === id || r.id.toString() === id.toString());
+            if (!record) return;
+            document.getElementById('input-card').classList.add('edit-mode');
+            document.getElementById('form-title').innerText = "내역 수정 중";
+            document.getElementById('cancel-edit').classList.remove('hidden');
+            document.getElementById('submit-btn').innerText = "수정 완료";
+            document.getElementById('edit-id').value = record.id;
+            setUser(record.user_name);
+            setType(record.type);
+            if (record.type === "지출" && record.category.includes(" (")) {
+                const [c, m] = record.category.split(" (");
+                document.getElementById('category-select').value = c;
+                document.getElementById('method-select').value = m.replace(")", "");
+            } else {
+                document.getElementById('category-select').value = record.category;
+            }
+            document.getElementById('amount').value = record.amount;
+            document.getElementById('ticker').value = record.ticker || "";
+            document.getElementById('qty').value = record.qty || "";
+            document.getElementById('desc').value = record.description || "";
+            toggleStock();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            document.getElementById('finance-form').reset();
+            document.getElementById('input-card').classList.remove('edit-mode');
+            document.getElementById('form-title').innerText = "기록하기";
+            document.getElementById('cancel-edit').classList.add('hidden');
+            document.getElementById('submit-btn').innerText = "즉시 저장";
+            document.getElementById('edit-id').value = "";
+            setType('수입');
+        }
 
         function setUser(n) { document.getElementById('user-name').value = n; document.getElementById('btn-h').className = n==='남편'?'flex-1 py-3 rounded-xl border-2 font-bold text-sm btn-active border-slate-900':'flex-1 py-3 rounded-xl border-2 font-bold text-sm bg-white text-slate-400 border-slate-100'; document.getElementById('btn-w').className = n==='아내'?'flex-1 py-3 rounded-xl border-2 font-bold text-sm btn-active border-slate-900':'flex-1 py-3 rounded-xl border-2 font-bold text-sm bg-white text-slate-400 border-slate-100'; }
         function setType(t) { document.getElementById('type-select').value = t; document.getElementById('btn-inc').className = t==='수입'?'flex-1 py-2 rounded-lg font-bold text-sm btn-active':'flex-1 py-2 rounded-lg font-bold text-sm text-slate-500'; document.getElementById('btn-exp').className = t==='지출'?'flex-1 py-2 rounded-lg font-bold text-sm btn-active':'flex-1 py-2 rounded-lg font-bold text-sm text-slate-500'; document.getElementById('method-container').classList.toggle('hidden', t==='수입'); document.getElementById('category-select').innerHTML = categories[t].map(c => `<option value="${c}">${c}</option>`).join(''); toggleStock(); }
         function toggleStock() { const s = document.getElementById('category-select').value.includes("주식"); document.getElementById('stock-inputs').style.display = s?'block':'none'; document.getElementById('amt-container').style.display = s?'none':'block'; }
-        async function deleteItem(id) { if (confirm("정말 삭제할까요?")) { await sb.from('account_v3').delete().eq('id', id); fetchData(); } }
+        async function deleteItem(id) { 
+            allRecords = allRecords.filter(r => r.id !== id && r.id.toString() !== id.toString());
+            calculateAndRender();
+            await sb.from('account_v3').delete().eq('id', id); 
+        }
         
-        setUser('남편'); setType('수입'); fetchData();
+        init();
     </script>
 </body>
 </html>
