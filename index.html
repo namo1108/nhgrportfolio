@@ -3,41 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2인 스마트 자산관리 v3.0</title>
+    <title>2인 스마트 자산관리 v3.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
         body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; }
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        select, input { border: 1px solid #e2e8f0 !important; }
+        .input-style { border: 1px solid #e2e8f0 !important; width: 100%; padding: 0.75rem; border-radius: 0.75rem; outline: none; background-color: #f8fafc; }
+        .input-style:focus { border-color: #3b82f6 !important; background-color: white; }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-6xl mx-auto">
         <header class="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="card p-5 border-t-4 border-blue-500">
+            <div class="card p-5 border-t-4 border-blue-500 text-center">
                 <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">가용 현금</p>
-                <p id="available-assets" class="text-lg font-extrabold text-slate-800">₩0</p>
+                <p id="avail-total" class="text-lg font-extrabold text-slate-800">₩0</p>
             </div>
-            <div class="card p-5 border-t-4 border-emerald-500">
+            <div class="card p-5 border-t-4 border-emerald-500 text-center">
                 <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">예적금/청약</p>
-                <p id="savings-assets" class="text-lg font-extrabold text-slate-800">₩0</p>
+                <p id="save-total" class="text-lg font-extrabold text-slate-800">₩0</p>
             </div>
-            <div class="card p-5 border-t-4 border-purple-500">
+            <div class="card p-5 border-t-4 border-purple-500 text-center">
                 <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">주식 평가액</p>
-                <p id="stock-assets" class="text-lg font-extrabold text-slate-800">₩0</p>
+                <p id="stock-total" class="text-lg font-extrabold text-slate-800">₩0</p>
             </div>
-            <div class="card p-5 border-t-4 border-orange-500">
+            <div class="card p-5 border-t-4 border-orange-500 text-center">
                 <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">퇴직/미래자산</p>
-                <p id="future-assets" class="text-lg font-extrabold text-slate-800">₩0</p>
+                <p id="future-total" class="text-lg font-extrabold text-slate-800">₩0</p>
             </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <section class="lg:col-span-1 card p-6 h-fit">
+            <section class="lg:col-span-1 card p-6 h-fit sticky top-8">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-lg font-bold">자산/지출 기록</h2>
-                    <select id="user-select" class="bg-slate-100 rounded-full px-4 py-1 text-sm font-bold border-none outline-none">
+                    <h2 class="text-lg font-bold">자산 기록</h2>
+                    <select id="user-select" class="bg-slate-100 rounded-full px-4 py-1 text-sm font-bold border-none outline-none cursor-pointer">
                         <option value="남편">🧔 남편</option>
                         <option value="아내">👩 아내</option>
                     </select>
@@ -46,206 +48,170 @@
                 <form id="finance-form" class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-1">대분류</label>
-                        <select id="type-select" class="w-full p-3 rounded-xl bg-white outline-none" onchange="updateCategories()">
-                            <option value="수입">💰 수입/금융자산 증가</option>
+                        <select id="type-select" class="input-style" onchange="updateCategories()">
+                            <option value="수입">💰 수입/자산 증가</option>
                             <option value="지출">💸 지출/자산 감소</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">소분류 카테고리</label>
-                        <select id="category-select" class="w-full p-3 rounded-xl bg-white outline-none" onchange="toggleSpecialFields()">
-                            </select>
+                        <label class="block text-xs font-bold text-slate-400 mb-1">항목 선택</label>
+                        <select id="category-select" class="input-style" onchange="toggleFields()"></select>
                     </div>
 
-                    <div id="stock-fields" class="hidden space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                        <input type="text" id="stock-ticker" placeholder="티커 (예: AAPL, 005930.KS)" class="w-full p-2 rounded-lg text-sm">
-                        <input type="number" id="stock-qty" placeholder="보유 수량" class="w-full p-2 rounded-lg text-sm">
+                    <div id="stock-inputs" class="hidden space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <input type="text" id="ticker" placeholder="티커(AAPL, 005930.KS)" class="w-full p-2 rounded-lg text-sm border-none shadow-sm">
+                        <input type="number" id="qty" step="0.01" placeholder="보유 수량" class="w-full p-2 rounded-lg text-sm border-none shadow-sm">
                     </div>
 
-                    <div id="normal-amount-field">
+                    <div id="amount-container">
                         <label class="block text-xs font-bold text-slate-400 mb-1">금액</label>
-                        <input type="number" id="amount-input" placeholder="₩ 0" class="w-full p-3 rounded-xl bg-white outline-none">
+                        <input type="number" id="amount" placeholder="₩ 0" class="input-style">
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-1">메모</label>
-                        <input type="text" id="desc-input" placeholder="항목 상세 설명" class="w-full p-3 rounded-xl bg-white outline-none">
+                        <input type="text" id="desc" placeholder="상세 내용 입력" class="input-style">
                     </div>
 
-                    <button type="submit" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg">
-                        저장하기
+                    <button type="submit" id="submit-btn" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg active:scale-95">
+                        실시간 저장하기
                     </button>
                 </form>
             </section>
 
-            <section class="lg:col-span-2 space-y-6">
-                <div class="card p-6 min-h-[500px]">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-lg font-bold">세부 변동 내역</h2>
-                        <div class="flex gap-2">
-                             <button onclick="loadDefaultFixed()" class="text-[11px] bg-slate-100 px-3 py-1 rounded-full font-bold">기본 고정비 생성</button>
-                             <button onclick="refreshStockPrices()" class="text-[11px] bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full font-bold">주가 갱신</button>
-                        </div>
+            <section class="lg:col-span-2 card p-6 min-h-[600px]">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-bold">공동 변동 내역</h2>
+                    <div class="flex gap-2">
+                        <button onclick="loadDefaultFixed()" class="text-[11px] bg-slate-100 px-3 py-1 rounded-full font-bold hover:bg-slate-200">고정비 로드</button>
+                        <button onclick="fetchData()" class="text-[11px] bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-bold hover:bg-blue-200">새로고침</button>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <tbody id="history-list" class="divide-y divide-slate-50 text-sm">
-                                </tbody>
-                        </table>
-                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <tbody id="list" class="divide-y divide-slate-50">
+                            <tr><td colspan="4" class="py-10 text-center text-slate-400 font-medium">데이터를 불러오는 중...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </section>
         </div>
     </div>
 
     <script>
-        let records = JSON.parse(localStorage.getItem('couple_assets_v3')) || [];
-        let stockPrices = {};
+        // Supabase 설정 연동
+        const SB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
+        const SB_KEY = 'sb_publishable_kl5FAdM9mGEZttyFqzbNfw_TlLSgRLY';
+        const sb = supabase.createClient(SB_URL, SB_KEY);
 
-        // 상세 카테고리 정의
         const categories = {
-            "수입": [
-                "월급(본봉)", "월급(상여/수당)", "주식(실현수익)", "주식(미환산이익)", 
-                "저축/예금", "적금", "주택청약", "퇴직연금(DB/DC)", "퇴직금", "기타수입"
-            ],
-            "지출": [
-                "식비/마트", "카페/외식", "주거(임대료/관리비)", "공과금(전기/수도)",
-                "통신/OTT", "교통/차량", "신용카드 대금", "체크카드 지출",
-                "보험료", "의료/건강", "문화/취미", "경조사/선물", "현금지출", "기타지출"
-            ]
+            "수입": ["월급", "주식", "주식(미환산이익)", "저축/예금", "적금", "청약", "퇴직연금", "퇴직금", "기타수입"],
+            "지출": ["식비/마트", "카페/외식", "주거비", "통신/OTT", "교통/차량", "보험료", "의료비", "취미/문화", "경조사", "현금지출", "기타지출"]
         };
 
         function updateCategories() {
             const type = document.getElementById('type-select').value;
             const catSelect = document.getElementById('category-select');
             catSelect.innerHTML = categories[type].map(c => `<option value="${c}">${c}</option>`).join('');
-            toggleSpecialFields();
+            toggleFields();
         }
 
-        function toggleSpecialFields() {
-            const cat = document.getElementById('category-select').value;
-            const stockDiv = document.getElementById('stock-fields');
-            const amountField = document.getElementById('normal-amount-field');
-            
-            if (cat.includes("주식")) {
-                stockDiv.classList.remove('hidden');
-                amountField.classList.add('hidden');
-            } else {
-                stockDiv.classList.add('hidden');
-                amountField.classList.remove('hidden');
+        function toggleFields() {
+            const isStock = document.getElementById('category-select').value.includes("주식");
+            document.getElementById('stock-inputs').style.display = isStock ? 'block' : 'none';
+        }
+
+        // 실시간 데이터 불러오기
+        async function fetchData() {
+            const { data, error } = await sb.from('account_v3').select('*').order('created_at', { ascending: false });
+            if (error) {
+                console.error("데이터 로드 실패:", error);
+                alert("데이터 로드 중 오류가 발생했습니다. RLS 설정을 확인하세요.");
+                return;
             }
+            render(data || []);
         }
 
-        async function getPrice(ticker) {
-            try {
-                const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`);
-                const data = await response.json();
-                return data.chart.result[0].meta.regularMarketPrice;
-            } catch (e) { return null; }
-        }
-
-        document.getElementById('finance-form').addEventListener('submit', async (e) => {
+        // 데이터 저장
+        document.getElementById('finance-form').onsubmit = async (e) => {
             e.preventDefault();
-            const cat = document.getElementById('category-select').value;
-            let amount = parseInt(document.getElementById('amount-input').value) || 0;
-            let ticker = document.getElementById('stock-ticker').value.toUpperCase();
-            let qty = parseFloat(document.getElementById('stock-qty').value) || 0;
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerText = "저장 중...";
 
-            records.unshift({
-                id: Date.now(),
-                user: document.getElementById('user-select').value,
+            const record = {
+                user_name: document.getElementById('user-select').value,
                 type: document.getElementById('type-select').value,
-                category: cat,
-                amount: amount,
-                ticker: ticker,
-                qty: qty,
-                desc: document.getElementById('desc-input').value,
+                category: document.getElementById('category-select').value,
+                amount: parseInt(document.getElementById('amount').value) || 0,
+                ticker: document.getElementById('ticker').value.toUpperCase(),
+                qty: parseFloat(document.getElementById('qty').value) || 0,
+                description: document.getElementById('desc').value,
                 date: new Date().toLocaleDateString()
-            });
+            };
 
-            saveAndRender();
+            const { error } = await sb.from('account_v3').insert([record]);
+            if (error) alert("저장 실패: " + error.message);
+            
             e.target.reset();
             updateCategories();
-        });
+            await fetchData();
+            btn.disabled = false;
+            btn.innerText = "실시간 저장하기";
+        };
 
-        function loadDefaultFixed() {
-            const fixed = [
-                { id: Date.now()+1, user: "남편", type: "지출", category: "주거(임대료/관리비)", amount: 250000, desc: "아파트 관리비", date: new Date().toLocaleDateString() },
-                { id: Date.now()+2, user: "아내", type: "지출", category: "통신/OTT", amount: 15000, desc: "유튜브 프리미엄", date: new Date().toLocaleDateString() },
-                { id: Date.now()+3, user: "남편", type: "지출", category: "보험료", amount: 120000, desc: "실손보험", date: new Date().toLocaleDateString() }
-            ];
-            records = [...fixed, ...records];
-            saveAndRender();
+        // 데이터 삭제
+        async function deleteItem(id) {
+            if (!confirm("항목을 삭제하시겠습니까?")) return;
+            const { error } = await sb.from('account_v3').delete().eq('id', id);
+            if (!error) fetchData();
         }
 
-        async function refreshStockPrices() {
-            const tickers = [...new Set(records.filter(r => r.ticker).map(r => r.ticker))];
-            for (let t of tickers) {
-                const p = await getPrice(t);
-                if (p) stockPrices[t] = p;
-            }
-            render();
-        }
-
-        function deleteRecord(id) {
-            records = records.filter(r => r.id !== id);
-            saveAndRender();
-        }
-
-        function saveAndRender() {
-            localStorage.setItem('couple_assets_v3', JSON.stringify(records));
-            render();
-        }
-
-        function render() {
-            const list = document.getElementById('history-list');
+        // 대시보드 및 리스트 출력
+        function render(records) {
+            const list = document.getElementById('list');
             let sums = { avail: 0, save: 0, stock: 0, future: 0 };
 
-            list.innerHTML = records.map(r => {
-                let displayAmount = r.amount;
-                let detail = r.category;
-
-                if (r.type === "수입") {
-                    if (r.category.includes("월급") || r.category === "기타수입") sums.avail += r.amount;
-                    else if (["저축/예금", "적금", "주택청약"].includes(r.category)) sums.save += r.amount;
-                    else if (["퇴직연금(DB/DC)", "퇴직금"].includes(r.category)) sums.future += r.amount;
-                    else if (r.category.includes("주식")) {
-                        const price = stockPrices[r.ticker] || 0;
-                        displayAmount = price > 0 ? price * r.qty : r.amount;
-                        sums.stock += displayAmount;
-                        detail = `${r.ticker} (${r.qty}주)`;
+            if (records.length === 0) {
+                list.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-slate-400">내역이 없습니다. 첫 기록을 남겨보세요!</td></tr>`;
+            } else {
+                list.innerHTML = records.map(r => {
+                    if (r.type === "수입") {
+                        if (["월급", "기타수입"].includes(r.category)) sums.avail += r.amount;
+                        else if (["저축/예금", "적금", "청약"].includes(r.category)) sums.save += r.amount;
+                        else if (["퇴직연금", "퇴직금"].includes(r.category)) sums.future += r.amount;
+                        else if (r.category.includes("주식")) sums.stock += r.amount;
+                    } else {
+                        sums.avail -= r.amount;
                     }
-                } else {
-                    sums.avail -= r.amount;
-                }
 
-                return `
-                <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                    <td class="py-4 font-bold ${r.user === '남편' ? 'text-blue-500' : 'text-rose-500'}">${r.user}</td>
-                    <td class="py-4">
-                        <div class="font-bold text-slate-800">${r.desc || r.category}</div>
-                        <div class="text-[10px] text-slate-400 font-medium uppercase">${detail} · ${r.date}</div>
-                    </td>
-                    <td class="py-4 text-right font-bold ${r.type === '수입' ? 'text-emerald-600' : 'text-slate-500'}">
-                        ${r.type === '수입' ? '+' : '-'} ${displayAmount.toLocaleString()}
-                    </td>
-                    <td class="py-4 text-right">
-                        <button onclick="deleteRecord(${r.id})" class="text-slate-300 hover:text-red-500 text-lg">×</button>
-                    </td>
-                </tr>
-                `;
-            }).join('');
+                    return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="py-4 font-bold ${r.user_name === '남편' ? 'text-blue-500' : 'text-rose-500'}">${r.user_name}</td>
+                        <td class="py-4">
+                            <div class="font-bold text-slate-800">${r.description || r.category}</div>
+                            <div class="text-[10px] text-slate-400 font-medium uppercase">${r.category} | ${r.date}</div>
+                        </td>
+                        <td class="py-4 text-right font-bold ${r.type === '수입' ? 'text-emerald-600' : 'text-slate-600'}">
+                            ${r.type === '수입' ? '+' : '-'} ${r.amount.toLocaleString()}
+                        </td>
+                        <td class="py-4 text-right">
+                            <button onclick="deleteItem('${r.id}')" class="text-slate-300 hover:text-red-500 transition-colors text-lg px-2">×</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
 
-            document.getElementById('available-assets').innerText = `₩ ${sums.avail.toLocaleString()}`;
-            document.getElementById('savings-assets').innerText = `₩ ${sums.save.toLocaleString()}`;
-            document.getElementById('stock-assets').innerText = `₩ ${sums.stock.toLocaleString()}`;
-            document.getElementById('future-assets').innerText = `₩ ${sums.future.toLocaleString()}`;
+            document.getElementById('avail-total').innerText = `₩ ${sums.avail.toLocaleString()}`;
+            document.getElementById('save-total').innerText = `₩ ${sums.save.toLocaleString()}`;
+            document.getElementById('stock-total').innerText = `₩ ${sums.stock.toLocaleString()}`;
+            document.getElementById('future-total').innerText = `₩ ${sums.future.toLocaleString()}`;
         }
 
+        // 초기 실행
         updateCategories();
-        render();
-        setTimeout(refreshStockPrices, 1000);
+        fetchData();
     </script>
 </body>
 </html>
