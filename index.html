@@ -2,215 +2,213 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2인 스마트 자산관리 v3.5</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>우리집 가계부 v4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; }
-        .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        .input-style { border: 1px solid #e2e8f0 !important; width: 100%; padding: 0.75rem; border-radius: 0.75rem; outline: none; background-color: #f8fafc; }
-        .input-style:focus { border-color: #3b82f6 !important; background-color: white; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
+        .card { background: white; border-radius: 1.25rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .input-style { width: 100%; padding: 0.85rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; outline: none; font-size: 16px; transition: all 0.2s; }
+        .input-style:focus { border-color: #3b82f6; ring: 2px; ring-color: #bfdbfe; }
+        /* 모바일 터치 최적화 */
+        .btn-active { background-color: #1e293b !important; color: white !important; }
+        input[type="number"] { font-family: sans-serif; }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="max-w-6xl mx-auto">
-        <header class="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="card p-5 border-t-4 border-blue-500 text-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">가용 현금</p>
-                <p id="avail-total" class="text-lg font-extrabold text-slate-800">₩0</p>
-            </div>
-            <div class="card p-5 border-t-4 border-emerald-500 text-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">예적금/청약</p>
-                <p id="save-total" class="text-lg font-extrabold text-slate-800">₩0</p>
-            </div>
-            <div class="card p-5 border-t-4 border-purple-500 text-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">주식 평가액</p>
-                <p id="stock-total" class="text-lg font-extrabold text-slate-800">₩0</p>
-            </div>
-            <div class="card p-5 border-t-4 border-orange-500 text-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">퇴직/미래자산</p>
-                <p id="future-total" class="text-lg font-extrabold text-slate-800">₩0</p>
+<body class="pb-20"> <div class="max-w-md mx-auto p-4">
+        <header class="mb-6 space-y-3">
+            <h1 class="text-xl font-bold px-1 flex justify-between items-center">
+                🏠 자산 현황
+                <button onclick="fetchData()" class="text-blue-500 text-sm font-medium">새로고침</button>
+            </h1>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="card p-4 border-l-4 border-blue-500">
+                    <p class="text-[11px] text-slate-400 font-bold mb-1">가용 현금</p>
+                    <p id="avail-total" class="text-lg font-bold text-slate-800">₩0</p>
+                </div>
+                <div class="card p-4 border-l-4 border-emerald-500">
+                    <p class="text-[11px] text-slate-400 font-bold mb-1">예적금/청약</p>
+                    <p id="save-total" class="text-lg font-bold text-slate-800">₩0</p>
+                </div>
+                <div class="card p-4 border-l-4 border-purple-500">
+                    <p class="text-[11px] text-slate-400 font-bold mb-1">주식 평가액</p>
+                    <p id="stock-total" class="text-lg font-bold text-slate-800">₩0</p>
+                </div>
+                <div class="card p-4 border-l-4 border-orange-500">
+                    <p class="text-[11px] text-slate-400 font-bold mb-1">퇴직/미래</p>
+                    <p id="future-total" class="text-lg font-bold text-slate-800">₩0</p>
+                </div>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <section class="lg:col-span-1 card p-6 h-fit sticky top-8">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-lg font-bold">자산 기록</h2>
-                    <select id="user-select" class="bg-slate-100 rounded-full px-4 py-1 text-sm font-bold border-none outline-none cursor-pointer">
-                        <option value="남편">🧔 남편</option>
-                        <option value="아내">👩 아내</option>
+        <section class="card p-5 mb-6">
+            <form id="finance-form" class="space-y-4">
+                <div class="flex gap-2">
+                    <button type="button" onclick="setUser('남편')" id="btn-h" class="flex-1 py-3 rounded-xl border font-bold text-sm bg-slate-50 text-slate-400 transition-all">🧔 남편</button>
+                    <button type="button" onclick="setUser('아내')" id="btn-w" class="flex-1 py-3 rounded-xl border font-bold text-sm bg-slate-50 text-slate-400 transition-all">👩 아내</button>
+                    <input type="hidden" id="user-name" value="남편">
+                </div>
+
+                <div class="flex bg-slate-100 p-1 rounded-xl">
+                    <button type="button" onclick="setType('수입')" id="btn-inc" class="flex-1 py-2 rounded-lg font-bold text-sm transition-all">수입</button>
+                    <button type="button" onclick="setType('지출')" id="btn-exp" class="flex-1 py-2 rounded-lg font-bold text-sm transition-all">지출</button>
+                    <input type="hidden" id="type-select" value="수입">
+                </div>
+
+                <div id="method-container" class="hidden">
+                    <label class="block text-xs font-bold text-slate-400 mb-1 ml-1">결제 수단</label>
+                    <select id="method-select" class="input-style">
+                        <option value="신용카드">💳 신용카드</option>
+                        <option value="체크카드">💳 체크카드</option>
+                        <option value="현금">💵 현금</option>
+                        <option value="계좌이체">📲 계좌이체</option>
+                        <option value="온누리상품권">🏷️ 온누리상품권</option>
+                        <option value="문화상품권">🎫 문화상품권</option>
                     </select>
                 </div>
 
-                <form id="finance-form" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">대분류</label>
-                        <select id="type-select" class="input-style" onchange="updateCategories()">
-                            <option value="수입">💰 수입/자산 증가</option>
-                            <option value="지출">💸 지출/자산 감소</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">항목 선택</label>
-                        <select id="category-select" class="input-style" onchange="toggleFields()"></select>
-                    </div>
-
-                    <div id="stock-inputs" class="hidden space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                        <input type="text" id="ticker" placeholder="티커(AAPL, 005930.KS)" class="w-full p-2 rounded-lg text-sm border-none shadow-sm">
-                        <input type="number" id="qty" step="0.01" placeholder="보유 수량" class="w-full p-2 rounded-lg text-sm border-none shadow-sm">
-                    </div>
-
-                    <div id="amount-container">
-                        <label class="block text-xs font-bold text-slate-400 mb-1">금액</label>
-                        <input type="number" id="amount" placeholder="₩ 0" class="input-style">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-1">메모</label>
-                        <input type="text" id="desc" placeholder="상세 내용 입력" class="input-style">
-                    </div>
-
-                    <button type="submit" id="submit-btn" class="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg active:scale-95">
-                        실시간 저장하기
-                    </button>
-                </form>
-            </section>
-
-            <section class="lg:col-span-2 card p-6 min-h-[600px]">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-lg font-bold">공동 변동 내역</h2>
-                    <div class="flex gap-2">
-                        <button onclick="loadDefaultFixed()" class="text-[11px] bg-slate-100 px-3 py-1 rounded-full font-bold hover:bg-slate-200">고정비 로드</button>
-                        <button onclick="fetchData()" class="text-[11px] bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-bold hover:bg-blue-200">새로고침</button>
-                    </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1 ml-1">상세 카테고리</label>
+                    <select id="category-select" class="input-style" onchange="toggleStock()"></select>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <tbody id="list" class="divide-y divide-slate-50">
-                            <tr><td colspan="4" class="py-10 text-center text-slate-400 font-medium">데이터를 불러오는 중...</td></tr>
-                        </tbody>
-                    </table>
+
+                <div id="stock-inputs" class="hidden space-y-3 p-4 bg-blue-50 rounded-xl">
+                    <input type="text" id="ticker" placeholder="티커(AAPL, 005930.KS)" class="input-style text-sm">
+                    <input type="number" id="qty" step="0.01" placeholder="보유 수량" class="input-style text-sm">
                 </div>
-            </section>
-        </div>
+
+                <div id="amt-container">
+                    <input type="number" id="amount" placeholder="금액 입력 ₩" class="input-style text-lg font-bold">
+                </div>
+
+                <input type="text" id="desc" placeholder="메모(내용)" class="input-style">
+
+                <button type="submit" id="submit-btn" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all">기록하기</button>
+            </form>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold px-1">최근 변동 내역</h2>
+            <div id="list" class="space-y-3">
+                </div>
+        </section>
     </div>
 
     <script>
-        // Supabase 설정 연동
         const SB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
         const SB_KEY = 'sb_publishable_kl5FAdM9mGEZttyFqzbNfw_TlLSgRLY';
         const sb = supabase.createClient(SB_URL, SB_KEY);
 
         const categories = {
             "수입": ["월급", "주식", "주식(미환산이익)", "저축/예금", "적금", "청약", "퇴직연금", "퇴직금", "기타수입"],
-            "지출": ["식비/마트", "카페/외식", "주거비", "통신/OTT", "교통/차량", "보험료", "의료비", "취미/문화", "경조사", "현금지출", "기타지출"]
+            "지출": ["식비/마트", "카페/외식", "주거비", "통신/OTT", "교통/차량", "보험료", "의료비", "취미/문화", "경조사", "기타지출"]
         };
 
-        function updateCategories() {
-            const type = document.getElementById('type-select').value;
+        function setUser(name) {
+            document.getElementById('user-name').value = name;
+            document.getElementById('btn-h').className = name === '남편' ? 'flex-1 py-3 rounded-xl border font-bold text-sm btn-active' : 'flex-1 py-3 rounded-xl border font-bold text-sm bg-slate-50 text-slate-400';
+            document.getElementById('btn-w').className = name === '아내' ? 'flex-1 py-3 rounded-xl border font-bold text-sm btn-active' : 'flex-1 py-3 rounded-xl border font-bold text-sm bg-slate-50 text-slate-400';
+        }
+
+        function setType(type) {
+            document.getElementById('type-select').value = type;
+            document.getElementById('btn-inc').className = type === '수입' ? 'flex-1 py-2 rounded-lg font-bold text-sm btn-active' : 'flex-1 py-2 rounded-lg font-bold text-sm text-slate-500';
+            document.getElementById('btn-exp').className = type === '지출' ? 'flex-1 py-2 rounded-lg font-bold text-sm btn-active' : 'flex-1 py-2 rounded-lg font-bold text-sm text-slate-500';
+            
+            document.getElementById('method-container').classList.toggle('hidden', type === '수입');
+            
             const catSelect = document.getElementById('category-select');
             catSelect.innerHTML = categories[type].map(c => `<option value="${c}">${c}</option>`).join('');
-            toggleFields();
+            toggleStock();
         }
 
-        function toggleFields() {
+        function toggleStock() {
             const isStock = document.getElementById('category-select').value.includes("주식");
             document.getElementById('stock-inputs').style.display = isStock ? 'block' : 'none';
+            document.getElementById('amt-container').style.display = isStock ? 'none' : 'block';
         }
 
-        // 실시간 데이터 불러오기
         async function fetchData() {
-            const { data, error } = await sb.from('account_v3').select('*').order('created_at', { ascending: false });
-            if (error) {
-                console.error("데이터 로드 실패:", error);
-                alert("데이터 로드 중 오류가 발생했습니다. RLS 설정을 확인하세요.");
-                return;
-            }
-            render(data || []);
+            const { data } = await sb.from('account_v3').select('*').order('created_at', { ascending: false }).limit(20);
+            if (data) render(data);
         }
 
-        // 데이터 저장
         document.getElementById('finance-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
-            btn.disabled = true;
-            btn.innerText = "저장 중...";
+            btn.disabled = true; btn.innerText = "저장 중...";
 
+            const type = document.getElementById('type-select').value;
             const record = {
-                user_name: document.getElementById('user-select').value,
-                type: document.getElementById('type-select').value,
-                category: document.getElementById('category-select').value,
+                user_name: document.getElementById('user-name').value,
+                type: type,
+                category: document.getElementById('category-select').value + (type === '지출' ? ` (${document.getElementById('method-select').value})` : ''),
                 amount: parseInt(document.getElementById('amount').value) || 0,
                 ticker: document.getElementById('ticker').value.toUpperCase(),
                 qty: parseFloat(document.getElementById('qty').value) || 0,
                 description: document.getElementById('desc').value,
-                date: new Date().toLocaleDateString()
+                date: new Date().toLocaleDateString('ko-KR', {month:'2-digit', day:'2-digit'})
             };
 
             const { error } = await sb.from('account_v3').insert([record]);
-            if (error) alert("저장 실패: " + error.message);
+            if (error) alert("오류: " + error.message);
             
-            e.target.reset();
-            updateCategories();
-            await fetchData();
-            btn.disabled = false;
-            btn.innerText = "실시간 저장하기";
+            e.target.reset(); setUser('남편'); setType('수입'); fetchData();
+            btn.disabled = false; btn.innerText = "기록하기";
         };
 
-        // 데이터 삭제
         async function deleteItem(id) {
-            if (!confirm("항목을 삭제하시겠습니까?")) return;
-            const { error } = await sb.from('account_v3').delete().eq('id', id);
-            if (!error) fetchData();
+            if (confirm("삭제할까요?")) {
+                await sb.from('account_v3').delete().eq('id', id);
+                fetchData();
+            }
         }
 
-        // 대시보드 및 리스트 출력
         function render(records) {
             const list = document.getElementById('list');
             let sums = { avail: 0, save: 0, stock: 0, future: 0 };
 
-            if (records.length === 0) {
-                list.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-slate-400">내역이 없습니다. 첫 기록을 남겨보세요!</td></tr>`;
-            } else {
-                list.innerHTML = records.map(r => {
-                    if (r.type === "수입") {
-                        if (["월급", "기타수입"].includes(r.category)) sums.avail += r.amount;
-                        else if (["저축/예금", "적금", "청약"].includes(r.category)) sums.save += r.amount;
-                        else if (["퇴직연금", "퇴직금"].includes(r.category)) sums.future += r.amount;
-                        else if (r.category.includes("주식")) sums.stock += r.amount;
-                    } else {
-                        sums.avail -= r.amount;
-                    }
+            list.innerHTML = records.map(r => {
+                if (r.type === "수입") {
+                    if (["월급", "기타수입"].includes(r.category)) sums.avail += r.amount;
+                    else if (["저축/예금", "적금", "청약"].includes(r.category)) sums.save += r.amount;
+                    else if (["퇴직연금", "퇴직금"].includes(r.category)) sums.future += r.amount;
+                    else if (r.category.includes("주식")) sums.stock += r.amount;
+                } else {
+                    sums.avail -= r.amount;
+                }
 
-                    return `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="py-4 font-bold ${r.user_name === '남편' ? 'text-blue-500' : 'text-rose-500'}">${r.user_name}</td>
-                        <td class="py-4">
-                            <div class="font-bold text-slate-800">${r.description || r.category}</div>
-                            <div class="text-[10px] text-slate-400 font-medium uppercase">${r.category} | ${r.date}</div>
-                        </td>
-                        <td class="py-4 text-right font-bold ${r.type === '수입' ? 'text-emerald-600' : 'text-slate-600'}">
+                return `
+                <div class="card p-4 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs ${r.user_name === '남편' ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-600'}">
+                            ${r.user_name[0]}
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-sm">${r.description || r.category}</p>
+                            <p class="text-[10px] text-slate-400 font-medium">${r.category} | ${r.date}</p>
+                        </div>
+                    </div>
+                    <div class="text-right flex items-center gap-3">
+                        <p class="font-bold text-sm ${r.type === '수입' ? 'text-emerald-600' : 'text-slate-700'}">
                             ${r.type === '수입' ? '+' : '-'} ${r.amount.toLocaleString()}
-                        </td>
-                        <td class="py-4 text-right">
-                            <button onclick="deleteItem('${r.id}')" class="text-slate-300 hover:text-red-500 transition-colors text-lg px-2">×</button>
-                        </td>
-                    </tr>`;
-                }).join('');
-            }
+                        </p>
+                        <button onclick="deleteItem('${r.id}')" class="text-slate-300 px-1 text-lg">×</button>
+                    </div>
+                </div>`;
+            }).join('');
 
-            document.getElementById('avail-total').innerText = `₩ ${sums.avail.toLocaleString()}`;
-            document.getElementById('save-total').innerText = `₩ ${sums.save.toLocaleString()}`;
-            document.getElementById('stock-total').innerText = `₩ ${sums.stock.toLocaleString()}`;
-            document.getElementById('future-total').innerText = `₩ ${sums.future.toLocaleString()}`;
+            document.getElementById('avail-total').innerText = `₩${sums.avail.toLocaleString()}`;
+            document.getElementById('save-total').innerText = `₩${sums.save.toLocaleString()}`;
+            document.getElementById('stock-total').innerText = `₩${sums.stock.toLocaleString()}`;
+            document.getElementById('future-total').innerText = `₩${sums.future.toLocaleString()}`;
         }
 
-        // 초기 실행
-        updateCategories();
+        // 초기값 설정
+        setUser('남편');
+        setType('수입');
         fetchData();
     </script>
 </body>
