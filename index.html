@@ -3,72 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>부부 자산관리 v6.0 (주가 실시간 연동)</title>
+    <title>부부 자산관리 v6.1 (안정화 버전)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; overflow-x: hidden; }
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .input-style { width: 100%; padding: 0.75rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; outline: none; font-size: 16px; }
         .btn-active { background-color: #1e293b !important; color: white !important; }
-        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        .spinner { border: 2px solid #f3f3f3; border-top: 2px solid #3b82f6; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
-        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <h1 class="text-2xl font-bold text-slate-800 tracking-tight">📊 실시간 자산 관리</h1>
-            <div class="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
-                <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-lg">◀</button>
-                <span id="current-month-display" class="font-bold text-lg min-w-[100px] text-center">2026.04</span>
-                <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-lg">▶</button>
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h1 class="text-xl font-bold text-slate-800">📊 실시간 자산 통합 관리</h1>
+            <div class="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+                <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-50 rounded-lg">◀</button>
+                <span id="month-display" class="font-bold text-md px-2">2026.04</span>
+                <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-50 rounded-lg">▶</button>
             </div>
         </header>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div class="card p-5 border-l-4 border-blue-500">
-                <p class="text-xs text-slate-400 font-bold mb-1">가용 현금</p>
-                <p id="sum-avail" class="text-xl font-extrabold">₩0</p>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div class="card p-4 border-l-4 border-blue-500">
+                <p class="text-[10px] text-slate-400 font-bold mb-1">가용 현금</p>
+                <p id="sum-avail" class="text-lg font-extrabold text-slate-700">₩0</p>
             </div>
-            <div class="card p-5 border-l-4 border-emerald-500">
-                <p class="text-xs text-slate-400 font-bold mb-1">예적금/청약</p>
-                <p id="sum-save" class="text-xl font-extrabold">₩0</p>
+            <div class="card p-4 border-l-4 border-emerald-500">
+                <p class="text-[10px] text-slate-400 font-bold mb-1">예적금/청약</p>
+                <p id="sum-save" class="text-lg font-extrabold text-slate-700">₩0</p>
             </div>
-            <div class="card p-5 border-l-4 border-purple-500">
-                <div class="flex justify-between items-start">
-                    <p class="text-xs text-slate-400 font-bold mb-1">주식 평가액</p>
-                    <div id="stock-loading" class="hidden"><div class="loading-spinner"></div></div>
-                </div>
-                <p id="sum-stock" class="text-xl font-extrabold">₩0</p>
+            <div class="card p-4 border-l-4 border-purple-500 relative">
+                <p class="text-[10px] text-slate-400 font-bold mb-1 flex justify-between">
+                    주식 평가액 <span id="stock-status" class="hidden"><span class="spinner"></span></span>
+                </p>
+                <p id="sum-stock" class="text-lg font-extrabold text-slate-700">₩0</p>
             </div>
-            <div class="card p-5 border-l-4 border-orange-500">
-                <p class="text-xs text-slate-400 font-bold mb-1">퇴직/미래</p>
-                <p id="sum-future" class="text-xl font-extrabold">₩0</p>
+            <div class="card p-4 border-l-4 border-orange-500">
+                <p class="text-[10px] text-slate-400 font-bold mb-1">미래/퇴직금</p>
+                <p id="sum-future" class="text-lg font-extrabold text-slate-700">₩0</p>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div class="lg:col-span-7 space-y-6">
-                <div class="card p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold">월간 지출 분석</h3>
-                        <button onclick="fetchData()" class="text-xs text-blue-500 font-bold">데이터 동기화 🔄</button>
-                    </div>
-                    <div class="h-[300px]"><canvas id="expenseChart"></canvas></div>
+                <div class="card p-6 min-h-[350px]">
+                    <h3 class="text-sm font-bold mb-4 flex justify-between">지출 분포 <button onclick="fetchData()" class="text-blue-500">새로고침 🔄</button></h3>
+                    <div class="h-[250px]"><canvas id="expenseChart"></canvas></div>
                 </div>
                 <div class="card p-6">
-                    <h3 class="text-lg font-bold mb-4">자산 변동 로그</h3>
-                    <div id="list" class="space-y-3 max-h-[500px] overflow-y-auto"></div>
+                    <h3 class="text-sm font-bold mb-4">입력 내역</h3>
+                    <div id="list" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
                 </div>
             </div>
 
             <div class="lg:col-span-5">
-                <section class="card p-6 sticky top-8 border border-slate-100">
+                <section class="card p-6 sticky top-4 border border-slate-100">
                     <form id="finance-form" class="space-y-4">
-                        <div class="flex gap-2 mb-2">
+                        <div class="flex gap-2">
                             <button type="button" onclick="setUser('남편')" id="btn-h" class="flex-1 py-3 rounded-xl border font-bold text-sm bg-white">🧔 남편</button>
                             <button type="button" onclick="setUser('아내')" id="btn-w" class="flex-1 py-3 rounded-xl border font-bold text-sm bg-white">👩 아내</button>
                             <input type="hidden" id="user-name" value="남편">
@@ -88,14 +84,14 @@
                             </select>
                         </div>
                         <div id="stock-inputs" class="hidden space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                            <input type="text" id="ticker" placeholder="티커 (예: AAPL, 005930.KS)" class="input-style">
-                            <input type="number" id="qty" step="0.01" placeholder="수량" class="input-style">
+                            <input type="text" id="ticker" placeholder="삼성전자: 005930.KS / 애플: AAPL" class="input-style text-sm">
+                            <input type="number" id="qty" step="0.01" placeholder="수량(예: 10.5)" class="input-style text-sm">
                         </div>
                         <div id="amt-container">
-                            <input type="number" id="amount" placeholder="금액 ₩" class="input-style text-lg font-bold">
+                            <input type="number" id="amount" placeholder="금액 ₩" class="input-style font-bold">
                         </div>
-                        <input type="text" id="desc" placeholder="상세 메모" class="input-style">
-                        <button type="submit" id="submit-btn" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">기록 저장하기</button>
+                        <input type="text" id="desc" placeholder="상세 내용" class="input-style">
+                        <button type="submit" id="submit-btn" class="w-full bg-slate-900 text-white p-4 rounded-xl font-bold shadow-lg transition-all active:scale-95">데이터 저장</button>
                     </form>
                 </section>
             </div>
@@ -109,41 +105,46 @@
 
         let currentDate = new Date();
         let chartInstance = null;
-        let globalStockPrices = {}; // 캐시용 주가
+        let stockCache = {};
 
         const categories = {
             "수입": ["월급", "주식", "주식(미환산이익)", "저축/예금", "적금", "청약", "퇴직연금", "퇴직금", "기타수입"],
             "지출": ["식비/마트", "카페/외식", "주거비", "통신/OTT", "교통/차량", "보험료", "의료비", "취미/문화", "경조사", "기타지출"]
         };
 
-        // 주가 가져오기 핵심 함수 (Proxy 사용)
-        async function fetchStockPrice(ticker) {
+        // 주가 API 호출 (타임아웃 3초 설정하여 무한 로딩 방지)
+        async function getStockPrice(ticker) {
             if (!ticker) return 0;
-            if (globalStockPrices[ticker]) return globalStockPrices[ticker];
+            if (stockCache[ticker]) return stockCache[ticker];
+            
             try {
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`)}`;
-                const response = await fetch(proxyUrl);
-                const raw = await response.json();
-                const data = JSON.parse(raw.contents);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3초 지나면 취소
+                
+                const resp = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`)}`, { signal: controller.signal });
+                const json = await resp.json();
+                const data = JSON.parse(json.contents);
                 const price = data.chart.result[0].meta.regularMarketPrice;
-                globalStockPrices[ticker] = price;
+                
+                stockCache[ticker] = price;
+                clearTimeout(timeoutId);
                 return price;
             } catch (e) {
-                console.error(ticker + " 주가 로드 실패", e);
+                console.warn(ticker + " 주가 실패, 수동 모드");
                 return 0;
             }
         }
 
         function changeMonth(val) {
             currentDate.setMonth(currentDate.getMonth() + val);
-            document.getElementById('current-month-display').innerText = `${currentDate.getFullYear()}.${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('month-display').innerText = `${currentDate.getFullYear()}.${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
             fetchData();
         }
 
         function setUser(name) {
             document.getElementById('user-name').value = name;
-            document.getElementById('btn-h').className = name === '남편' ? 'flex-1 py-3 rounded-xl border font-bold text-sm btn-active' : 'flex-1 py-3 rounded-xl border font-bold text-sm bg-white text-slate-400';
-            document.getElementById('btn-w').className = name === '아내' ? 'flex-1 py-3 rounded-xl border font-bold text-sm btn-active' : 'flex-1 py-3 rounded-xl border font-bold text-sm bg-white text-slate-400';
+            document.getElementById('btn-h').className = name === '남편' ? 'flex-1 py-3 rounded-xl border font-bold text-sm btn-active shadow-inner' : 'flex-1 py-3 rounded-xl border font-bold text-sm bg-white text-slate-400';
+            document.getElementById('btn-w').className = name === '아내' ? 'flex-1 py-3 rounded-xl border font-bold text-sm btn-active shadow-inner' : 'flex-1 py-3 rounded-xl border font-bold text-sm bg-white text-slate-400';
         }
 
         function setType(type) {
@@ -162,74 +163,55 @@
         }
 
         async function fetchData() {
-            document.getElementById('stock-loading').classList.remove('hidden');
-            const { data } = await sb.from('account_v3').select('*').order('created_at', { ascending: false });
+            document.getElementById('stock-status').classList.remove('hidden');
+            const { data, error } = await sb.from('account_v3').select('*').order('created_at', { ascending: false });
             
             if (data) {
                 const filtered = data.filter(r => {
-                    const parts = r.date.split('. ');
-                    return parseInt(parts[0]) === currentDate.getFullYear() && parseInt(parts[1]) === (currentDate.getMonth() + 1);
+                    const [y, m] = r.date.split('. ');
+                    return parseInt(y) === currentDate.getFullYear() && parseInt(m) === (currentDate.getMonth() + 1);
                 });
 
-                // 주식 데이터들에 대한 최신가 업데이트
+                // 주식 데이터 필터링 후 가격 병렬 업데이트
                 const tickers = [...new Set(filtered.filter(r => r.ticker).map(r => r.ticker))];
-                for (let t of tickers) { await fetchStockPrice(t); }
+                await Promise.all(tickers.map(t => getStockPrice(t)));
 
                 render(filtered);
                 updateChart(filtered);
             }
-            document.getElementById('stock-loading').classList.add('hidden');
+            document.getElementById('stock-status').classList.add('hidden');
         }
 
         document.getElementById('finance-form').onsubmit = async (e) => {
             e.preventDefault();
-            const type = document.getElementById('type-select').value;
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true; btn.innerText = "저장 중...";
+
             const cat = document.getElementById('category-select').value;
             const ticker = document.getElementById('ticker').value.toUpperCase();
-            
-            // 주식일 경우 현재가 미리 확인
             let amount = parseInt(document.getElementById('amount').value) || 0;
+
             if (cat.includes("주식") && ticker) {
-                const price = await fetchStockPrice(ticker);
-                const qty = parseFloat(document.getElementById('qty').value) || 0;
-                amount = Math.round(price * qty); // 주식은 현재 평가액으로 저장
+                const p = await getStockPrice(ticker);
+                const q = parseFloat(document.getElementById('qty').value) || 0;
+                amount = p > 0 ? Math.round(p * q) : amount; // 주가 못 가져오면 입력한 금액 사용
             }
 
             const record = {
                 user_name: document.getElementById('user-name').value,
-                type: type,
-                category: cat + (type === '지출' ? ` (${document.getElementById('method-select').value})` : ''),
+                type: document.getElementById('type-select').value,
+                category: cat + (document.getElementById('type-select').value === '지출' ? ` (${document.getElementById('method-select').value})` : ''),
                 amount: amount,
                 ticker: ticker,
                 qty: parseFloat(document.getElementById('qty').value) || 0,
                 description: document.getElementById('desc').value,
                 date: `${currentDate.getFullYear()}. ${currentDate.getMonth() + 1}. ${new Date().getDate()}.`
             };
+
             await sb.from('account_v3').insert([record]);
             e.target.reset(); setType('수입'); fetchData();
+            btn.disabled = false; btn.innerText = "데이터 저장";
         };
-
-        function updateChart(records) {
-            const expenseData = {};
-            records.filter(r => r.type === "지출").forEach(r => {
-                const cat = r.category.split(' (')[0];
-                expenseData[cat] = (expenseData[cat] || 0) + r.amount;
-            });
-
-            const ctx = document.getElementById('expenseChart').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(expenseData),
-                    datasets: [{
-                        data: Object.values(expenseData),
-                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b']
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
-            });
-        }
 
         async function deleteItem(id) {
             if (confirm("삭제하시겠습니까?")) {
@@ -238,42 +220,56 @@
             }
         }
 
+        function updateChart(records) {
+            const expenseData = {};
+            records.filter(r => r.type === "지출").forEach(r => {
+                const cat = r.category.split(' (')[0];
+                expenseData[cat] = (expenseData[cat] || 0) + r.amount;
+            });
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(expenseData),
+                    datasets: [{
+                        data: Object.values(expenseData),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+            });
+        }
+
         function render(records) {
             let sums = { avail: 0, save: 0, stock: 0, future: 0 };
             const list = document.getElementById('list');
 
             list.innerHTML = records.map(r => {
-                let displayAmount = r.amount;
-                // 렌더링 시점에 최신 주가 반영 (캐시된 값 사용)
-                if (r.ticker && globalStockPrices[r.ticker]) {
-                    displayAmount = Math.round(globalStockPrices[r.ticker] * r.qty);
+                let displayAmt = r.amount;
+                if (r.ticker && stockCache[r.ticker]) {
+                    displayAmt = Math.round(stockCache[r.ticker] * r.qty);
                 }
 
                 if (r.type === "수입") {
-                    if (["월급", "기타수입"].includes(r.category)) sums.avail += displayAmount;
-                    else if (["저축/예금", "적금", "청약"].includes(r.category)) sums.save += displayAmount;
-                    else if (["퇴직연금", "퇴직금"].includes(r.category)) sums.future += displayAmount;
-                    else if (r.category.includes("주식")) sums.stock += displayAmount;
-                } else {
-                    sums.avail -= r.amount;
-                }
+                    if (["월급", "기타수입"].includes(r.category)) sums.avail += displayAmt;
+                    else if (["저축/예금", "적금", "청약"].includes(r.category)) sums.save += displayAmt;
+                    else if (["퇴직연금", "퇴직금"].includes(r.category)) sums.future += displayAmt;
+                    else if (r.category.includes("주식")) sums.stock += displayAmt;
+                } else { sums.avail -= r.amount; }
 
                 return `
-                <div class="flex justify-between items-center p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-50 shadow-sm text-sm">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs ${r.user_name === '남편' ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-600'}">
-                            ${r.user_name[0]}
-                        </div>
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ${r.user_name === '남편' ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-600'}">${r.user_name[0]}</div>
                         <div>
-                            <p class="font-bold text-slate-800 text-sm">${r.description || r.category}</p>
-                            <p class="text-[10px] text-slate-400 font-semibold">${r.ticker ? r.ticker + ' (' + r.qty + '주)' : r.category}</p>
+                            <p class="font-bold text-slate-700 leading-tight">${r.description || r.category}</p>
+                            <p class="text-[9px] text-slate-400 font-medium uppercase">${r.ticker ? r.ticker + ' ' + r.qty + '주' : r.category}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <p class="font-bold text-sm ${r.type === '수입' ? 'text-emerald-600' : 'text-slate-700'}">
-                            ${r.type === '수입' ? '+' : '-'} ${displayAmount.toLocaleString()}
-                        </p>
-                        <button onclick="deleteItem('${r.id}')" class="text-slate-300 hover:text-red-500 font-bold px-1">×</button>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold ${r.type === '수입' ? 'text-emerald-600' : 'text-slate-600'}">${r.type === '수입' ? '+' : '-'} ${displayAmt.toLocaleString()}</span>
+                        <button onclick="deleteItem('${r.id}')" class="text-slate-200 hover:text-red-500 font-bold px-1">×</button>
                     </div>
                 </div>`;
             }).join('');
