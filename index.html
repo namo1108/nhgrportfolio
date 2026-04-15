@@ -139,55 +139,74 @@
                     renderList(); calculateAndRender();
                     const tickers = [...new Set(allRecords.filter(r => r.ticker).map(r => r.ticker))];
                     Promise.allSettled(tickers.map(t =>
-                        Promise.race([updateStockCache(t), new Promise((_,rej)=>setTimeout(rej,10000))])
+                        Promise.race([updateStockCache(t), new Promise((_,rej)=>setTimeout(rej,12000))])
                     )).then(() => { renderList(); calculateAndRender(); });
                 }
             } catch(e) { console.error('fetchData:', e); }
             document.getElementById('sync-status').classList.add('hidden');
         }
 
-        // 한국 주식 종목코드 추출 (005930.KS → 005930, 069500.KS → 069500)
+        /**
+         * 티커가 한국 주식인지 판단하고, KR 6자리 코드 반환
+         * 인식 형식:
+         *   "005930"        → "005930"  (6자리 숫자)
+         *   "005930.KS"     → "005930"  (.KS 접미사)
+         *   "316140"        → "316140"  (6자리 숫자)
+         *   "316140.KS"     → "316140"
+         *   "AAPL"          → null  (미국 주식)
+         *   "QQQ"           → null
+         *   "SCHD"          → null
+         */
         function getKrCode(ticker) {
             if (!ticker) return null;
-            const m = ticker.match(/^(\d{6})\.KS$/i);
-            return m ? m[1] : null;
+            // .KS 접미사 형식
+            const m1 = ticker.match(/^(\d{6})\.KS$/i);
+            if (m1) return m1[1];
+            // 순수 6자리 숫자 형식 (한국 종목코드)
+            const m2 = ticker.match(/^(\d{6})$/);
+            if (m2) return m2[1];
+            return null;
         }
 
-        // 네이버 금융 API로 한국 주식 현재가 조회
+        // 네이버 금융 모바일 API로 한국 주식 현재가 + 전일종가 조회
         async function fetchKrPrice(code) {
             const today = new Date();
-            const to = today.toISOString().slice(0,10).replace(/-/g,'');
-            const from = new Date(today - 5*24*60*60*1000).toISOString().slice(0,10).replace(/-/g,'');
+            const to  = today.toISOString().slice(0,10).replace(/-/g,'');
+            const from = new Date(today - 7*24*60*60*1000).toISOString().slice(0,10).replace(/-/g,'');
             const naverUrl = `https://m.stock.naver.com/front-api/external/chart/domestic/info?symbol=${code}&requestType=1&startTime=${from}&endTime=${to}&timeframe=day`;
+
             const proxies = [
                 `https://corsproxy.io/?${encodeURIComponent(naverUrl)}`,
                 `https://api.allorigins.win/get?url=${encodeURIComponent(naverUrl)}`,
             ];
+
             for (let i = 0; i < proxies.length; i++) {
                 try {
-                    const res = await fetch(proxies[i], { signal: AbortSignal.timeout(6000) });
-                    const text = i === 1
-                        ? (await res.json()).contents
-                        : await res.text();
+                    const res  = await fetch(proxies[i], { signal: AbortSignal.timeout(7000) });
+                    const text = i === 1 ? (await res.json()).contents : await res.text();
+                    if (!text || text.trim().length < 10) continue;
+
                     // 응답 형식: [[날짜,시가,고가,저가,종가,거래량,외국인소진율], ...]
-                    // 앞의 BOM 제거 후 파싱
-                    const clean = text.replace(/^\ufeff|\[|\]$/g, '').trim();
-                    // 각 행을 파싱
-                    const rows = text.match(/\[([^\]]+)\]/g);
-                    if (!rows || rows.length < 2) continue;
-                    // 마지막 두 행 (오늘/어제)
-                    const parseRow = r => r.replace(/[\[\]"]/g,'').split(',').map(s=>s.trim());
-                    const last   = parseRow(rows[rows.length - 1]);
-                    const prev   = parseRow(rows[rows.length - 2]);
-                    const price     = parseInt(last[4]);  // 종가
-                    const prevClose = parseInt(prev[4]);  // 전일 종가
-                    if (!isNaN(price) && price > 0) return { price, prevClose: isNaN(prevClose) ? price : prevClose };
-                } catch(e) { console.warn('KR proxy', i, 'failed:', e.message); }
+                    // 각 행을 정규식으로 파싱
+                    const rows = [...text.matchAll(/\[["']?(\d{8})["']?,(\d+),(\d+),(\d+),(\d+),(\d+)/g)];
+                    if (rows.length < 1) continue;
+
+                    const last = rows[rows.length - 1];
+                    const prev = rows.length >= 2 ? rows[rows.length - 2] : null;
+
+                    const price     = parseInt(last[5]);   // 종가 (5번째 컬럼)
+                    const prevClose = prev ? parseInt(prev[5]) : price;
+
+                    if (!isNaN(price) && price > 0) {
+                        console.log(`[KR] ${code}: 현재가=${price.toLocaleString()}원, 전일=${prevClose.toLocaleString()}원`);
+                        return { price, prevClose };
+                    }
+                } catch(e) { console.warn(`KR proxy ${i} fail:`, e.message); }
             }
             return null;
         }
 
-        // 해외 주식 Yahoo Finance 조회
+        // Yahoo Finance로 해외 주식 조회
         async function fetchUsPrice(ticker) {
             const enc = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=2d`);
             const proxies = [
@@ -197,34 +216,38 @@
             ];
             for (let i = 0; i < proxies.length; i++) {
                 try {
-                    const res = await fetch(proxies[i], { signal: AbortSignal.timeout(6000) });
+                    const res  = await fetch(proxies[i], { signal: AbortSignal.timeout(7000) });
                     const json = await res.json();
                     const raw  = (i === 1) ? JSON.parse(json.contents) : json;
                     const meta = raw.chart.result[0].meta;
-                    return { price: meta.regularMarketPrice, prevClose: meta.chartPreviousClose || meta.previousClose || meta.regularMarketPrice };
-                } catch(e) { console.warn('US proxy', i, 'failed:', e.message); }
+                    return {
+                        price:     meta.regularMarketPrice,
+                        prevClose: meta.chartPreviousClose || meta.previousClose || meta.regularMarketPrice
+                    };
+                } catch(e) { console.warn(`US proxy ${i} fail:`, e.message); }
             }
             return null;
         }
 
         async function updateStockCache(ticker) {
-            const now = Date.now();
+            const now    = Date.now();
             if (stockCache[ticker] && stockTS[ticker] && (now - stockTS[ticker]) < STOCK_TTL) return;
 
             const krCode = getKrCode(ticker);
-            let result = null;
+            let result   = null;
 
             if (krCode) {
-                // 한국 주식: 네이버 금융
+                // 한국 주식: 네이버 금융 우선
                 result = await fetchKrPrice(krCode);
                 if (result) {
                     stockCache[ticker]     = result.price;
                     stockPrevCache[ticker] = result.prevClose;
-                    stockTS[ticker] = now;
+                    stockTS[ticker]        = now;
                     return;
                 }
-                // 네이버 실패 시 Yahoo Finance 폴백
-                result = await fetchUsPrice(ticker);
+                // 네이버 실패 → Yahoo (.KS 형식으로 재시도)
+                const yTicker = ticker.includes('.KS') ? ticker : ticker + '.KS';
+                result = await fetchUsPrice(yTicker);
             } else {
                 // 해외 주식: Yahoo Finance
                 result = await fetchUsPrice(ticker);
@@ -234,7 +257,7 @@
                 const isKS = !!krCode;
                 stockCache[ticker]     = isKS ? result.price     : Math.round(result.price     * exchangeRate);
                 stockPrevCache[ticker] = isKS ? result.prevClose  : Math.round(result.prevClose  * exchangeRate);
-                stockTS[ticker] = now;
+                stockTS[ticker]        = now;
             } else if (stockCache[ticker] === undefined) {
                 stockCache[ticker] = 0;
             }
@@ -250,49 +273,52 @@
 
         function getVal(r) {
             if (r.ticker && stockCache[r.ticker]) return Math.round(stockCache[r.ticker] * (r.qty || 1));
+            // 주가 조회 실패 시 평단 × 수량으로 fallback (해외만 환율 적용)
             const isKS = !!getKrCode(r.ticker);
             if (r.ticker && !isKS) return Math.round(r.amount * exchangeRate * (r.qty || 1));
             return r.amount * (r.qty || 1);
         }
 
         function getPriceBadge(ticker) {
-            if (!ticker || !stockCache[ticker]) return '';
-            const price    = stockCache[ticker];
-            const prev     = stockPrevCache[ticker] || price;
-            const isKS     = !!getKrCode(ticker);
-            const diff     = price - prev;
-            const pct      = prev ? ((diff / prev) * 100).toFixed(2) : '0.00';
-            const isUp     = diff >= 0;
-            const col      = isUp ? '#10b981' : '#ef4444';
-            const bg       = isUp ? '#ecfdf5'  : '#fef2f2';
-            const arrow    = isUp ? '▲' : '▼';
+            const price = stockCache[ticker];
+            if (!price) return '';
+            const prev  = stockPrevCache[ticker] || price;
+            const isKS  = !!getKrCode(ticker);
+            const diff  = price - prev;
+            const pct   = prev ? ((diff / prev) * 100).toFixed(2) : '0.00';
+            const isUp  = diff >= 0;
+            const col   = isUp ? '#10b981' : '#ef4444';
+            const bg    = isUp ? '#ecfdf5'  : '#fef2f2';
+            const arrow = isUp ? '▲' : '▼';
             const priceStr = isKS
                 ? price.toLocaleString('ko-KR') + '원'
-                : '$' + (stockCache[ticker] / exchangeRate).toFixed(2);
-            const diffAbs  = Math.abs(diff);
-            const diffStr  = isKS ? diffAbs.toLocaleString('ko-KR') + '원' : '$' + (diffAbs / exchangeRate).toFixed(2);
-            return `<span style="display:inline-flex;align-items:center;gap:3px;background:${bg};color:${col};border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700;">`
-                 + `${arrow} ${priceStr} <span style="opacity:.7">(${isUp?'+':''}${pct}%)</span>`
+                : '$' + (price / exchangeRate).toFixed(2);
+            const diffAbs = Math.abs(diff);
+            const diffStr = isKS
+                ? diffAbs.toLocaleString('ko-KR') + '원'
+                : '$' + (diffAbs / exchangeRate).toFixed(2);
+            return `<span style="display:inline-flex;align-items:center;gap:3px;background:${bg};color:${col};border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;white-space:nowrap;">`
+                 + `${arrow} ${priceStr} <span style="opacity:.75">${isUp?'+':''}${pct}%</span>`
                  + `</span>`;
         }
 
         function calculateAndRender() {
             let sums = { avail:0, save:0, stock:0, future:0 };
-            let mIn = 0, mOut = 0, expByCat = {};
-            const yr = currentMonth.getFullYear(), mo = currentMonth.getMonth()+1;
+            let mIn=0, mOut=0, expByCat={};
+            const yr=currentMonth.getFullYear(), mo=currentMonth.getMonth()+1;
             allRecords.forEach(r => {
-                const val = getVal(r);
-                if (r.type === "수입") {
-                    const pc = r.category.split(' (')[0];
-                    if (["월급","기타","기타수입"].includes(pc)) sums.avail += r.amount;
-                    else if (["저축/예금","적금","청약"].includes(pc)) sums.save += r.amount;
-                    else if (["퇴직연금","퇴직금"].includes(pc)) sums.future += r.amount;
-                    else if (!pc.includes("미환산")) sums.stock += val;
+                const val=getVal(r);
+                if (r.type==="수입") {
+                    const pc=r.category.split(' (')[0];
+                    if (["월급","기타","기타수입"].includes(pc)) sums.avail+=r.amount;
+                    else if (["저축/예금","적금","청약"].includes(pc)) sums.save+=r.amount;
+                    else if (["퇴직연금","퇴직금"].includes(pc)) sums.future+=r.amount;
+                    else if (!pc.includes("미환산")) sums.stock+=val;
                 }
-                const p = r.date.split('. ');
+                const p=r.date.split('. ');
                 if (parseInt(p[0])===yr && parseInt(p[1])===mo) {
-                    if (r.type==="수입") mIn += val;
-                    else { mOut += r.amount; const c=r.category.split(' (')[0]; expByCat[c]=(expByCat[c]||0)+r.amount; }
+                    if (r.type==="수입") mIn+=val;
+                    else { mOut+=r.amount; const c=r.category.split(' (')[0]; expByCat[c]=(expByCat[c]||0)+r.amount; }
                 }
             });
             document.getElementById('sum-avail').innerText  = `₩${sums.avail.toLocaleString()}`;
@@ -304,8 +330,8 @@
         }
 
         function updateCharts(sums, expCat, mIn, mOut) {
-            const opt = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } };
-            ['asset','exp','flow'].forEach(k=>{ if(charts[k]){ charts[k].destroy(); charts[k]=null; } });
+            const opt={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
+            ['asset','exp','flow'].forEach(k=>{if(charts[k]){charts[k].destroy();charts[k]=null;}});
             const aC=document.getElementById('assetRatioChart');
             if(aC) charts.asset=new Chart(aC,{type:'doughnut',data:{labels:['현금','예금','주식','미래'],datasets:[{data:[sums.avail,sums.save,sums.stock,sums.future],backgroundColor:['#3b82f6','#10b981','#8b5cf6','#f59e0b']}]},options:opt});
             const expKeys=Object.keys(expCat).filter(k=>expCat[k]>0);
@@ -341,19 +367,23 @@
                 return;
             }
             list.innerHTML=filtered.map(r=>{
-                const val=getVal(r);
-                const isKS=!!getKrCode(r.ticker);
-                const badge=r.ticker?getPriceBadge(r.ticker):'';
-                const isLoading=r.ticker&&!stockCache[r.ticker]&&stockCache[r.ticker]!==0;
-                const loadTxt=isLoading?'<span style="font-size:9px;color:#94a3b8;margin-left:4px;">조회중…</span>':'';
-                // 주당 단가 표시
-                let perShare='';
-                if(r.ticker&&r.qty&&stockCache[r.ticker]){
-                    const sp=stockCache[r.ticker];
-                    perShare=isKS
-                        ?`<p style="font-size:10px;color:#94a3b8;margin-top:1px;">${r.qty}주 × ${sp.toLocaleString()}원</p>`
-                        :`<p style="font-size:10px;color:#94a3b8;margin-top:1px;">${r.qty}주 × $${(sp/exchangeRate).toFixed(2)}</p>`;
+                const val     = getVal(r);
+                const krCode  = getKrCode(r.ticker);
+                const isKS    = !!krCode;
+                const badge   = r.ticker ? getPriceBadge(r.ticker) : '';
+                const loaded  = r.ticker && stockCache[r.ticker];
+                const loading = r.ticker && !loaded && stockCache[r.ticker]!==0;
+                const loadTxt = loading ? '<span style="font-size:9px;color:#94a3b8;margin-left:3px;">조회중…</span>' : '';
+
+                // 주당 단가 표시 (주가 조회 성공 시)
+                let perShare = '';
+                if (r.ticker && r.qty && loaded) {
+                    const sp = stockCache[r.ticker];
+                    perShare = isKS
+                        ? `<p style="font-size:10px;color:#94a3b8;margin-top:1px;">${Number(r.qty).toLocaleString()}주 × ${sp.toLocaleString()}원</p>`
+                        : `<p style="font-size:10px;color:#94a3b8;margin-top:1px;">${Number(r.qty).toLocaleString()}주 × $${(sp/exchangeRate).toFixed(2)}</p>`;
                 }
+
                 return `<div class="card p-4 flex justify-between items-center cursor-pointer transition-all active:scale-[0.98]" onclick="editRecord('${r.id}')">
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs ${r.user_name==='남편'?'bg-slate-900 text-white':'bg-rose-500 text-white'}">${r.user_name[0]}</div>
