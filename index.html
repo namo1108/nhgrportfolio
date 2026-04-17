@@ -11,140 +11,170 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
         body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; color: #1e293b; letter-spacing: -0.025em; }
-        .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); }
+        .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; }
+        .card-interactive:hover { transform: translateY(-2px); border-color: #cbd5e1; cursor: pointer; }
         .btn-active { background-color: #0f172a; color: white; border-color: #0f172a; }
         .font-mono { font-family: 'ui-monospace', monospace; }
         .spinner { width: 14px; height: 14px; border: 2px solid #f3f3f3; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .bg-navy { background-color: #0f172a; }
+        .modal-bg { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(8px); position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        
+        @media (min-width: 1024px) {
+            .main-container { display: grid; grid-template-columns: 1fr 400px; gap: 1.5rem; align-items: start; }
+            .sticky-side { position: sticky; top: 1.5rem; }
+        }
     </style>
 </head>
-<body class="p-4 pb-24">
-    <div class="max-w-xl mx-auto space-y-5">
-        <!-- 상단 헤더 -->
-        <header class="flex justify-between items-center px-1">
+<body class="p-4 md:p-8 pb-24">
+    <div class="max-w-6xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-1">
             <div>
-                <h1 class="text-2xl font-extrabold flex items-center gap-2 tracking-tighter">
+                <h1 class="text-2xl md:text-3xl font-extrabold flex items-center gap-2 tracking-tighter">
                     💰 NH&GR 가계부
                     <span id="loader" class="hidden"><span class="spinner"></span></span>
                 </h1>
-                <p id="last-update" class="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Live Dashboard Initializing...</p>
+                <p id="last-update" class="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">Live Dashboard Initializing...</p>
             </div>
-            <div class="bg-white px-4 py-2 rounded-2xl shadow-sm border flex items-center gap-4 font-bold text-sm">
-                <button onclick="changeMonth(-1)" class="text-slate-400 hover:text-navy transition-colors">◀</button>
-                <span id="month-display" class="w-16 text-center font-mono">2026.04</span>
-                <button onclick="changeMonth(1)" class="text-slate-400 hover:text-navy transition-colors">▶</button>
+            <div class="bg-white px-5 py-3 rounded-2xl shadow-sm border flex items-center gap-6 font-bold text-sm w-full md:w-auto justify-between">
+                <button onclick="changeMonth(-1)" class="text-slate-400 hover:text-navy transition-all p-1">◀</button>
+                <span id="month-display" class="w-20 text-center font-mono text-base"></span>
+                <button onclick="changeMonth(1)" class="text-slate-400 hover:text-navy transition-all p-1">▶</button>
             </div>
         </header>
 
-        <!-- 이미지 디자인 복원: 4분할 자산 카드 -->
-        <div class="grid grid-cols-2 gap-3">
-            <!-- CASH 카드 -->
-            <div class="card p-4 border-l-4 border-blue-500">
-                <p class="text-[10px] text-slate-400 font-extrabold mb-1 tracking-widest">CASH</p>
-                <p id="sum-avail" class="text-xl font-black font-mono">₩0</p>
-            </div>
-            <!-- SAVING 카드 -->
-            <div class="card p-4 border-l-4 border-emerald-500">
-                <p class="text-[10px] text-slate-400 font-extrabold mb-1 tracking-widest">SAVING</p>
-                <p id="sum-save" class="text-xl font-black font-mono">₩0</p>
-            </div>
-            <!-- STOCKS 카드 -->
-            <div class="card p-4 border-l-4 border-purple-500">
-                <p class="text-[10px] text-slate-400 font-extrabold mb-1 tracking-widest flex justify-between">
-                    STOCKS <span class="animate-pulse text-purple-400">●</span>
-                </p>
-                <p id="sum-stock" class="text-xl font-black font-mono">₩0</p>
-            </div>
-            <!-- FUTURE 카드 -->
-            <div class="card p-4 border-l-4 border-amber-500">
-                <p class="text-[10px] text-slate-400 font-extrabold mb-1 tracking-widest">FUTURE</p>
-                <p id="sum-future" class="text-xl font-black font-mono">₩0</p>
-            </div>
-            
-            <!-- TOTAL 통합 카드 (가로 전체) -->
-            <div class="card p-6 col-span-2 bg-navy text-white flex flex-col items-center relative overflow-hidden shadow-xl">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-purple-400"></div>
-                <p class="text-[11px] text-slate-400 font-black mb-1 tracking-[0.2em] uppercase">Total Asset Value</p>
-                <p id="sum-total" class="text-3xl font-black font-mono text-white tracking-tighter">₩0</p>
-                <div id="exchange-info" class="text-[9px] text-slate-500 mt-2 font-bold tracking-tight">Loading exchange rate...</div>
-            </div>
-        </div>
+        <div class="main-container">
+            <!-- Left Column -->
+            <div class="space-y-6">
+                <!-- Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div class="card p-5 border-l-4 border-blue-500">
+                        <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest">Cash</p>
+                        <p id="sum-avail" class="text-xl font-black font-mono">₩0</p>
+                    </div>
+                    <div class="card p-5 border-l-4 border-emerald-500">
+                        <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest">Saving</p>
+                        <p id="sum-save" class="text-xl font-black font-mono">₩0</p>
+                    </div>
+                    <div class="card p-5 border-l-4 border-purple-500">
+                        <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest flex justify-between">
+                            Stocks <span class="animate-pulse text-purple-400 font-sans text-[8px]">● LIVE</span>
+                        </p>
+                        <p id="sum-stock" class="text-xl font-black font-mono">₩0</p>
+                    </div>
+                    <div class="card p-5 border-l-4 border-amber-500">
+                        <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest">Future</p>
+                        <p id="sum-future" class="text-xl font-black font-mono">₩0</p>
+                    </div>
+                </div>
 
-        <!-- 이미지 디자인 복원: 2분할 도넛 차트 -->
-        <div class="grid grid-cols-2 gap-3">
-            <div class="card p-4 h-44 flex flex-col items-center justify-center">
-                <p class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Asset Ratio</p>
-                <div class="relative w-full h-full max-h-[110px]">
-                    <canvas id="chart-asset"></canvas>
+                <!-- Graphs -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="card p-8 bg-navy text-white flex flex-col justify-center items-center relative overflow-hidden shadow-xl">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-purple-400"></div>
+                        <p class="text-[11px] text-slate-400 font-black mb-1 tracking-[0.2em] uppercase">Total Asset Value</p>
+                        <p id="sum-total" class="text-3xl font-black font-mono text-white tracking-tighter">₩0</p>
+                        <div id="exchange-info" class="text-[9px] text-slate-500 mt-4 font-bold uppercase text-center leading-tight">Loading...</div>
+                    </div>
+                    <div onclick="showChartDetail('asset')" class="card card-interactive p-5 h-56 flex flex-col items-center justify-center relative">
+                        <p class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Asset Ratio</p>
+                        <div class="relative w-full h-full"><canvas id="chart-asset"></canvas></div>
+                    </div>
+                    <div onclick="showChartDetail('expense')" class="card card-interactive p-5 h-56 flex flex-col items-center justify-center relative">
+                        <p class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Expenses</p>
+                        <div class="relative w-full h-full"><canvas id="chart-expense"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Tabs & List -->
+                <div class="space-y-4">
+                    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar sticky top-0 bg-[#f1f5f9] z-10 py-2">
+                        <button onclick="setTab('all')" id="tab-all" class="px-6 py-2.5 rounded-xl text-xs font-black btn-active whitespace-nowrap shadow-sm">전체 내역</button>
+                        <button onclick="setTab('asset')" id="tab-asset" class="px-6 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">자산 관리</button>
+                        <button onclick="setTab('income')" id="tab-income" class="px-6 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">수입</button>
+                        <button onclick="setTab('expense')" id="tab-expense" class="px-6 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">지출</button>
+                    </div>
+                    <div id="list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-12"></div>
                 </div>
             </div>
-            <div class="card p-4 h-44 flex flex-col items-center justify-center">
-                <p class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Expenses</p>
-                <div class="relative w-full h-full max-h-[110px]">
-                    <canvas id="chart-expense"></canvas>
-                </div>
+
+            <!-- Right Column -->
+            <div class="sticky-side">
+                <section class="card p-6 space-y-5 border-2 border-dashed border-slate-200 bg-slate-50/50">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-base font-black flex items-center gap-2">📝 내역 입력</h2>
+                        <div id="save-status" class="hidden text-[10px] text-blue-600 font-bold bg-blue-100 px-2.5 py-1 rounded-full animate-pulse uppercase">Syncing...</div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="setUser('남편')" id="btn-user-h" class="flex-1 py-3.5 rounded-2xl border-2 font-black text-xs btn-active">남편</button>
+                        <button onclick="setUser('아내')" id="btn-user-w" class="flex-1 py-3.5 rounded-2xl border-2 font-black text-xs bg-white text-slate-400 border-slate-100">아내</button>
+                    </div>
+
+                    <div class="flex gap-1.5 bg-white p-1.5 rounded-2xl shadow-inner border">
+                        <button onclick="setType('수입')" id="btn-type-in" class="flex-1 py-2.5 rounded-xl font-black text-xs btn-active">수입</button>
+                        <button onclick="setType('지출')" id="btn-type-out" class="flex-1 py-2.5 rounded-xl font-black text-xs text-slate-400 border-none">지출</button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">Category</label>
+                            <select id="category-select" onchange="checkCategory()" class="w-full p-4 rounded-2xl border bg-white text-sm font-bold shadow-sm outline-none focus:ring-2 ring-navy"></select>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black text-slate-400 ml-1 uppercase text-blue-500">Amount (₩)</label>
+                            <input type="number" id="input-amount" placeholder="0" class="w-full p-4 rounded-2xl border text-sm font-bold shadow-sm outline-none focus:ring-2 ring-navy">
+                        </div>
+                    </div>
+
+                    <div id="stock-fields" class="hidden space-y-4 p-4 bg-white rounded-2xl border-2 border-purple-100">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black text-purple-500 ml-1 uppercase font-mono">Ticker (005930.KS / TSLA)</label>
+                            <input type="text" id="input-ticker" placeholder="TICKER" class="w-full p-4 rounded-xl border text-sm font-bold uppercase outline-none focus:ring-2 ring-purple-400">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black text-purple-500 ml-1 uppercase">Quantity (수량)</label>
+                            <input type="number" id="input-qty" placeholder="0.0" step="0.0001" class="w-full p-4 rounded-xl border text-sm font-bold outline-none focus:ring-2 ring-purple-400">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">Description</label>
+                        <input type="text" id="input-desc" placeholder="메모" class="w-full p-4 rounded-2xl border text-sm font-bold shadow-sm outline-none">
+                    </div>
+                    
+                    <button onclick="saveRecord()" class="w-full py-4.5 bg-navy text-white rounded-2xl font-black text-sm shadow-xl hover:bg-black active:scale-[0.98] transition-all">
+                        데이터 저장하기
+                    </button>
+                </section>
             </div>
         </div>
+    </div>
 
-        <!-- 입력 섹션 -->
-        <section class="card p-5 space-y-4 border-2 border-dashed border-slate-200 bg-slate-50/50">
+    <!-- Modals -->
+    <div id="detail-modal" class="modal-bg hidden">
+        <div class="bg-white w-full max-w-2xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center">
-                <h2 class="text-sm font-black flex items-center gap-2">📝 내역 입력</h2>
-                <div id="save-status" class="hidden text-[10px] text-blue-600 font-bold bg-blue-100 px-2 py-0.5 rounded-full">저장 중...</div>
+                <h3 id="detail-title" class="text-2xl font-black tracking-tighter">상세 데이터</h3>
+                <button onclick="closeDetailModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500">✕</button>
             </div>
-            
-            <div class="flex gap-2">
-                <button onclick="setUser('남편')" id="btn-user-h" class="flex-1 py-3 rounded-xl border-2 font-black text-xs btn-active transition-all">남편</button>
-                <button onclick="setUser('아내')" id="btn-user-w" class="flex-1 py-3 rounded-xl border-2 font-black text-xs bg-white text-slate-400 border-slate-100 transition-all">아내</button>
-            </div>
-
-            <div class="flex gap-2 bg-white p-1 rounded-xl shadow-inner">
-                <button onclick="setType('수입')" id="btn-type-in" class="flex-1 py-2 rounded-lg font-black text-xs btn-active transition-all">수입</button>
-                <button onclick="setType('지출')" id="btn-type-out" class="flex-1 py-2 rounded-lg font-black text-xs text-slate-400">지출</button>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 ml-1 uppercase">Category</label>
-                    <select id="category-select" onchange="checkCategory()" class="w-full p-3 rounded-xl border bg-white text-xs font-bold shadow-sm"></select>
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 ml-1 uppercase">Amount</label>
-                    <input type="number" id="input-amount" placeholder="0" class="w-full p-3 rounded-xl border text-xs font-bold shadow-sm">
-                </div>
-            </div>
-
-            <div id="stock-fields" class="hidden grid grid-cols-2 gap-2 p-3 bg-white rounded-2xl border-2 border-purple-100 animate-fadeIn">
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-purple-400 ml-1">TICKER (ex: TSLA, 005930.KS)</label>
-                    <input type="text" id="input-ticker" placeholder="AAPL" class="w-full p-3 rounded-xl border text-xs font-bold uppercase">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-purple-400 ml-1">QTY (수량)</label>
-                    <input type="number" id="input-qty" placeholder="0.0" step="0.0001" class="w-full p-3 rounded-xl border text-xs font-bold">
-                </div>
-            </div>
-
-            <input type="text" id="input-desc" placeholder="메모 (선택사항)" class="w-full p-4 rounded-xl border text-xs font-bold shadow-sm">
-            
-            <button onclick="saveRecord()" class="w-full py-4 bg-navy text-white rounded-2xl font-black text-sm shadow-xl hover:bg-black active:scale-[0.98] transition-all">
-                데이터 저장 및 실시간 갱신
-            </button>
-        </section>
-
-        <!-- 탭 메뉴 -->
-        <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar sticky top-0 bg-[#f1f5f9] z-10 py-2">
-            <button onclick="setTab('all')" id="tab-all" class="px-5 py-2.5 rounded-xl text-xs font-black btn-active whitespace-nowrap shadow-sm">전체</button>
-            <button onclick="setTab('asset')" id="tab-asset" class="px-5 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">자산</button>
-            <button onclick="setTab('income')" id="tab-income" class="px-5 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">수입</button>
-            <button onclick="setTab('expense')" id="tab-expense" class="px-5 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">지출</button>
+            <div id="detail-content" class="space-y-4"></div>
+            <button onclick="closeDetailModal()" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold">닫기</button>
         </div>
+    </div>
 
-        <!-- 리스트 컨테이너 -->
-        <div id="list-container" class="space-y-3 pb-12">
-            <!-- 리스트 아이템 -->
+    <div id="edit-modal" class="modal-bg hidden">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <h3 class="text-xl font-black">내역 관리</h3>
+                <p id="modal-desc" class="text-sm text-slate-500 font-medium"></p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="deleteRecord()" class="flex-1 py-4 bg-rose-500 text-white rounded-2xl font-black text-sm">삭제</button>
+                <button onclick="closeModal()" class="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm">취소</button>
+            </div>
         </div>
     </div>
 
@@ -152,7 +182,8 @@
         const SB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
         const SB_KEY = 'sb_publishable_kl5FAdM9mGEZttyFqzbNfw_TlLSgRLY';
         let sb, allRecords = [], currentMonth = new Date(), currentTab = 'all';
-        let exchangeRate = 1420, stockCache = {}, charts = {};
+        let exchangeRate = 1420, stockCache = {}, charts = {}, selectedId = null;
+        let lastSums = {}, lastExp = {};
         
         let formData = { user: '남편', type: '수입' };
         const categories = {
@@ -161,30 +192,28 @@
             '자산': ['저축/예금', '적금', '청약', '주식 (국내)', '주식 (해외)', '연금/퇴직금']
         };
 
-        document.addEventListener('DOMContentLoaded', async () => {
+        window.onload = async () => {
             sb = supabase.createClient(SB_URL, SB_KEY);
             setType('수입');
             updateMonthDisplay();
             await refreshData();
-            
-            // 5분마다 주가 갱신
-            setInterval(refreshData, 300000); 
-        });
+            setInterval(refreshData, 300000);
+        };
 
         async function refreshData() {
             document.getElementById('loader').classList.remove('hidden');
             await fetchExchangeRate();
             await fetchData();
             document.getElementById('loader').classList.add('hidden');
-            document.getElementById('last-update').innerText = `Updated: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('last-update').innerText = `UPDATED: ${new Date().toLocaleTimeString()}`;
         }
 
         async function fetchExchangeRate() {
             try {
                 const res = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
                 exchangeRate = res.rates.KRW;
-                document.getElementById('exchange-info').innerText = `LIVE RATE: 1 USD = ${exchangeRate.toFixed(1)} KRW (Auto-synced)`;
-            } catch(e) { console.error("Exchange fetch failed"); }
+                document.getElementById('exchange-info').innerHTML = `1 USD = ${exchangeRate.toFixed(1)} KRW<br><span class="opacity-40 font-normal">Yahoo Finance Live</span>`;
+            } catch(e) { console.error("Exchange fetch error"); }
         }
 
         async function fetchData() {
@@ -193,131 +222,155 @@
                 allRecords = data;
                 const tickers = [...new Set(allRecords.filter(r => r.ticker).map(r => r.ticker))];
                 await Promise.all(tickers.map(updateStockPrice));
-                calculateAndRender();
+                processData();
             }
         }
 
         async function updateStockPrice(ticker) {
             if (!ticker) return;
             try {
-                const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`)}`;
+                const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + ticker)}`;
                 const response = await fetch(proxy);
                 const rawData = await response.json();
                 const stockData = JSON.parse(rawData.contents);
                 const price = stockData.chart.result[0].meta.regularMarketPrice;
-                
-                const isOverseas = !ticker.endsWith('.KS') && !ticker.endsWith('.KQ');
-                stockCache[ticker] = isOverseas ? price * exchangeRate : price;
+                const isDomestic = ticker.toUpperCase().endsWith('.KS') || ticker.toUpperCase().endsWith('.KQ');
+                stockCache[ticker] = isDomestic ? price : (price * exchangeRate);
             } catch (e) { 
                 if(!stockCache[ticker]) stockCache[ticker] = 0; 
             }
         }
 
-        function calculateAndRender() {
+        function processData() {
             let sums = { avail: 0, stock: 0, save: 0, future: 0 };
             let expMap = {};
+            const viewYear = currentMonth.getFullYear();
+            const viewMonth = currentMonth.getMonth() + 1;
 
             allRecords.forEach(r => {
                 let amt = parseFloat(r.amount) || 0;
-                let isStock = r.category?.includes("주식") && r.ticker;
-                
-                if (isStock && stockCache[r.ticker]) {
-                    amt = stockCache[r.ticker] * (parseFloat(r.qty) || 1);
+                if (r.category?.includes("주식") && r.ticker && stockCache[r.ticker]) {
+                    amt = stockCache[r.ticker] * (parseFloat(r.qty) || 0);
                 }
 
-                const c = r.category || "";
-                if (["월급", "기타", "상여금", "이자/배당"].includes(c) && r.type === "수입") sums.avail += amt;
-                else if (c.includes("주식")) sums.stock += amt;
-                else if (["저축/예금", "적금", "청약"].some(x => c.includes(x))) sums.save += amt;
-                else if (c.includes("연금") || c.includes("퇴직")) sums.future += amt;
+                const cat = r.category || "";
+                if (r.type === "수입" && ["월급", "기타", "상여금", "이자/배당"].includes(cat)) sums.avail += amt;
+                else if (cat.includes("주식")) sums.stock += amt;
+                else if (["저축", "적금", "청약"].some(x => cat.includes(x))) sums.save += amt;
+                else if (cat.includes("연금") || cat.includes("퇴직")) sums.future += amt;
 
-                if (r.type === "지출") {
-                    expMap[c] = (expMap[c] || 0) + (parseFloat(r.amount) || 0);
+                const dateArr = r.date.split('. ');
+                if (r.type === "지출" && parseInt(dateArr[0]) === viewYear && parseInt(dateArr[1]) === viewMonth) {
+                    expMap[cat] = (expMap[cat] || 0) + (parseFloat(r.amount) || 0);
                 }
             });
 
-            // 자산별 합계 텍스트 업데이트
+            lastSums = sums; lastExp = expMap;
             document.getElementById('sum-avail').innerText = `₩${Math.round(sums.avail).toLocaleString()}`;
             document.getElementById('sum-save').innerText = `₩${Math.round(sums.save).toLocaleString()}`;
             document.getElementById('sum-stock').innerText = `₩${Math.round(sums.stock).toLocaleString()}`;
             document.getElementById('sum-future').innerText = `₩${Math.round(sums.future).toLocaleString()}`;
             document.getElementById('sum-total').innerText = `₩${Math.round(sums.avail + sums.stock + sums.save + sums.future).toLocaleString()}`;
             
-            updateCharts(sums, expMap);
-            renderList();
+            updateVisuals(sums, expMap);
+            renderItems();
         }
 
-        function updateCharts(sums, expMap) {
-            const chartConfig = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '75%' };
-
+        function updateVisuals(sums, expMap) {
+            const config = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '78%' };
             if (charts.asset) charts.asset.destroy();
+            const total = sums.avail + sums.stock + sums.save + sums.future;
             charts.asset = new Chart(document.getElementById('chart-asset'), {
                 type: 'doughnut',
-                data: { 
-                    labels: ['Cash', 'Stocks', 'Saving', 'Future'], 
-                    datasets: [{ data: [sums.avail, sums.stock, sums.save, sums.future], backgroundColor: ['#3b82f6', '#a855f7', '#10b981', '#f59e0b'], borderWidth: 0 }] 
-                },
-                options: chartConfig
+                data: { labels: ['C', 'S', 'V', 'F'], datasets: [{ data: total > 0 ? [sums.avail, sums.stock, sums.save, sums.future] : [1], backgroundColor: ['#3b82f6', '#a855f7', '#10b981', '#f59e0b'], borderWidth: 0 }] },
+                options: config
             });
-
             if (charts.exp) charts.exp.destroy();
-            const expLabels = Object.keys(expMap);
+            const keys = Object.keys(expMap);
             charts.exp = new Chart(document.getElementById('chart-expense'), {
                 type: 'doughnut',
-                data: { 
-                    labels: expLabels.length > 0 ? expLabels : ['지출 없음'], 
-                    datasets: [{ 
-                        data: expLabels.length > 0 ? Object.values(expMap) : [1], 
-                        backgroundColor: expLabels.length > 0 ? ['#ef4444', '#f97316', '#facc15', '#4ade80', '#2dd4bf', '#38bdf8', '#818cf8', '#c084fc'] : ['#f1f5f9'], 
-                        borderWidth: 0 
-                    }] 
-                },
-                options: chartConfig
+                data: { labels: keys, datasets: [{ data: keys.length > 0 ? Object.values(expMap) : [1], backgroundColor: ['#ef4444', '#f97316', '#facc15', '#4ade80', '#2dd4bf', '#38bdf8'], borderWidth: 0 }] },
+                options: config
             });
         }
+
+        function showChartDetail(mode) {
+            const title = mode === 'asset' ? '자산 구성 상세' : '지출 통계 상세';
+            document.getElementById('detail-title').innerText = title;
+            const target = document.getElementById('detail-content');
+            target.innerHTML = '';
+
+            if (mode === 'asset') {
+                const tot = lastSums.avail + lastSums.stock + lastSums.save + lastSums.future;
+                const rows = [
+                    { l: '현금 자산', v: lastSums.avail, c: 'bg-blue-500' },
+                    { l: '주식/투자', v: lastSums.stock, c: 'bg-purple-500' },
+                    { l: '예적금', v: lastSums.save, c: 'bg-emerald-500' },
+                    { l: '미래 자산', v: lastSums.future, c: 'bg-amber-500' }
+                ];
+                rows.forEach(i => {
+                    const p = tot > 0 ? ((i.v/tot)*100).toFixed(1) : 0;
+                    target.innerHTML += createBar(i.l, i.v, p, i.c);
+                });
+            } else {
+                const totExp = Object.values(lastExp).reduce((a,b)=>a+b, 0);
+                const sorted = Object.entries(lastExp).sort((a,b)=>b[1]-a[1]);
+                if (sorted.length === 0) target.innerHTML = '<p class="text-center py-10 text-slate-400">데이터가 없습니다.</p>';
+                else sorted.forEach(([l,v]) => {
+                    const p = ((v/totExp)*100).toFixed(1);
+                    target.innerHTML += createBar(l, v, p, 'bg-rose-400');
+                });
+            }
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        function createBar(l, v, p, c) {
+            return `<div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-bold text-slate-700 flex items-center gap-2"><div class="w-2 h-2 rounded-full ${c}"></div>${l}</span>
+                    <span class="font-mono font-black">₩${Math.round(v).toLocaleString()}</span>
+                </div>
+                <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                    <div class="${c} h-full" style="width:${p}%"></div>
+                </div>
+                <div class="text-right mt-1 text-[10px] font-bold text-slate-400">${p}%</div>
+            </div>`;
+        }
+
+        function closeDetailModal() { document.getElementById('detail-modal').classList.add('hidden'); }
 
         function setUser(u) {
             formData.user = u;
-            document.getElementById('btn-user-h').className = u==='남편' ? 'flex-1 py-3 rounded-xl border-2 font-black text-xs btn-active' : 'flex-1 py-3 rounded-xl border-2 font-black text-xs bg-white text-slate-400 border-slate-100 shadow-sm';
-            document.getElementById('btn-user-w').className = u==='아내' ? 'flex-1 py-3 rounded-xl border-2 font-black text-xs btn-active' : 'flex-1 py-3 rounded-xl border-2 font-black text-xs bg-white text-slate-400 border-slate-100 shadow-sm';
+            document.getElementById('btn-user-h').className = u==='남편' ? 'flex-1 py-3.5 rounded-2xl border-2 font-black text-xs btn-active' : 'flex-1 py-3.5 rounded-2xl border-2 font-black text-xs bg-white text-slate-400 border-slate-100';
+            document.getElementById('btn-user-w').className = u==='아내' ? 'flex-1 py-3.5 rounded-2xl border-2 font-black text-xs btn-active' : 'flex-1 py-3.5 rounded-2xl border-2 font-black text-xs bg-white text-slate-400 border-slate-100';
         }
 
         function setType(t) {
             formData.type = t;
-            document.getElementById('btn-type-in').className = t==='수입' ? 'flex-1 py-2 rounded-lg font-black text-xs btn-active shadow-sm' : 'flex-1 py-2 rounded-lg font-black text-xs text-slate-400';
-            document.getElementById('btn-type-out').className = t==='지출' ? 'flex-1 py-2 rounded-lg font-black text-xs btn-active shadow-sm' : 'flex-1 py-2 rounded-lg font-black text-xs text-slate-400';
-            
-            const list = t === '수입' ? [...categories['수입'], ...categories['자산']] : categories['지출'];
-            document.getElementById('category-select').innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('btn-type-in').className = t==='수입' ? 'flex-1 py-2.5 rounded-xl font-black text-xs btn-active' : 'flex-1 py-2.5 rounded-xl font-black text-xs text-slate-400';
+            document.getElementById('btn-type-out').className = t==='지출' ? 'flex-1 py-2.5 rounded-xl font-black text-xs btn-active' : 'flex-1 py-2.5 rounded-xl font-black text-xs text-slate-400';
+            const opts = t === '수입' ? [...categories['수입'], ...categories['자산']] : categories['지출'];
+            document.getElementById('category-select').innerHTML = opts.map(o => `<option value="${o}">${o}</option>`).join('');
             checkCategory();
         }
 
         function checkCategory() {
-            const isStock = document.getElementById('category-select').value.includes("주식");
-            document.getElementById('stock-fields').classList.toggle('hidden', !isStock);
+            const isS = document.getElementById('category-select').value.includes("주식");
+            document.getElementById('stock-fields').classList.toggle('hidden', !isS);
         }
 
         async function saveRecord() {
-            const category = document.getElementById('category-select').value;
-            const amount = parseFloat(document.getElementById('input-amount').value) || 0;
-            const ticker = document.getElementById('input-ticker').value.trim().toUpperCase();
+            const cat = document.getElementById('category-select').value;
+            const amt = parseFloat(document.getElementById('input-amount').value) || 0;
+            const tic = document.getElementById('input-ticker').value.trim().toUpperCase();
             const qty = parseFloat(document.getElementById('input-qty').value) || 0;
-            const description = document.getElementById('input-desc').value;
-
-            if (amount <= 0 && !category.includes("주식")) return;
-
+            const dsc = document.getElementById('input-desc').value;
+            if (amt <= 0 && !cat.includes("주식")) return;
             document.getElementById('save-status').classList.remove('hidden');
             const { error } = await sb.from('account_v3').insert([{
-                user_name: formData.user,
-                type: formData.type,
-                category,
-                amount,
-                ticker: ticker || null,
-                qty: qty || null,
-                description,
-                date: `${currentMonth.getFullYear()}. ${String(currentMonth.getMonth()+1).padStart(2,'0')}. ${new Date().getDate()}`
+                user_name: formData.user, type: formData.type, category: cat, amount: amt, ticker: tic || null, qty: qty || null, description: dsc,
+                date: currentMonth.getFullYear() + ". " + String(currentMonth.getMonth()+1).padStart(2,'0') + ". " + new Date().getDate()
             }]);
-            
             if (!error) {
                 document.getElementById('input-amount').value = '';
                 document.getElementById('input-ticker').value = '';
@@ -328,68 +381,65 @@
             document.getElementById('save-status').classList.add('hidden');
         }
 
-        function renderList() {
-            const container = document.getElementById('list-container');
-            const filtered = allRecords.filter(r => {
-                const parts = r.date.split('. ');
-                const isMonth = parseInt(parts[0]) === currentMonth.getFullYear() && parseInt(parts[1]) === (currentMonth.getMonth() + 1);
-                if (!isMonth) return false;
-                
+        function openEditModal(id, desc) {
+            selectedId = id;
+            document.getElementById('modal-desc').innerText = '"' + desc + '" 내역을 삭제할까요?';
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function closeModal() { selectedId = null; document.getElementById('edit-modal').classList.add('hidden'); }
+
+        async function deleteRecord() {
+            if (!selectedId) return;
+            await sb.from('account_v3').delete().eq('id', selectedId);
+            await refreshData(); closeModal();
+        }
+
+        function renderItems() {
+            const box = document.getElementById('list-container');
+            const items = allRecords.filter(r => {
+                const d = r.date.split('. ');
+                const isM = parseInt(d[0]) === currentMonth.getFullYear() && parseInt(d[1]) === (currentMonth.getMonth()+1);
+                if (!isM) return false;
                 if (currentTab === 'all') return true;
                 if (currentTab === 'income') return r.type === '수입';
                 if (currentTab === 'expense') return r.type === '지출';
-                if (currentTab === 'asset') return ["저축","적금","청약","주식"].some(c => r.category.includes(c));
+                if (currentTab === 'asset') return ["저축","적금","청약","주식","연금"].some(c => r.category.includes(c));
                 return false;
             });
-
-            if(filtered.length === 0) {
-                container.innerHTML = `<div class="text-center py-16 text-slate-300 text-xs font-bold uppercase tracking-widest">No Records Found</div>`;
+            if(items.length === 0) {
+                box.innerHTML = '<div class="col-span-full py-20 text-center text-slate-300 font-black uppercase text-[10px]">No Data</div>';
                 return;
             }
-
-            container.innerHTML = filtered.map(r => {
-                let val = parseFloat(r.amount) || 0;
-                let isStock = r.category.includes("주식") && r.ticker && stockCache[r.ticker];
-                if (isStock) val = stockCache[r.ticker] * (parseFloat(r.qty) || 1);
-                
-                return `
-                    <div class="card p-4 flex justify-between items-center active:scale-[0.98] transition-all">
-                        <div class="flex flex-col">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-[8px] font-black text-white bg-navy px-2 py-0.5 rounded-full uppercase tracking-tighter">${r.category}</span>
-                                <span class="text-[9px] font-black text-blue-500">${r.user_name}</span>
-                            </div>
-                            <span class="font-bold text-sm text-slate-700">${r.description || r.category}</span>
-                            <span class="text-[8px] text-slate-400 mt-1 font-mono">${r.date} ${r.ticker ? '· ' + r.ticker : ''}</span>
+            box.innerHTML = items.map(r => {
+                let v = parseFloat(r.amount) || 0;
+                if (r.category.includes("주식") && r.ticker && stockCache[r.ticker]) v = stockCache[r.ticker] * (parseFloat(r.qty) || 0);
+                return `<div onclick="openEditModal(${r.id}, '${r.description || r.category}')" 
+                    class="card p-5 flex justify-between items-center cursor-pointer active:scale-95 group">
+                    <div class="flex flex-col gap-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[8px] font-black text-white bg-navy px-2 py-0.5 rounded-full">${r.category}</span>
+                            <span class="text-[9px] font-bold text-blue-500">${r.user_name}</span>
                         </div>
-                        <div class="text-right">
-                            <p class="font-mono font-black text-sm ${r.type==='수입' ? 'text-emerald-500' : 'text-rose-500'}">
-                                ${r.type==='수입' ? '+' : '-'} ₩${Math.round(val).toLocaleString()}
-                            </p>
-                            ${isStock ? `<span class="text-[7px] text-blue-400 font-black bg-blue-50 px-1.5 py-0.5 rounded uppercase">Realtime</span>` : ''}
-                        </div>
+                        <span class="font-bold text-sm">${r.description || r.category}</span>
+                        <span class="text-[8px] text-slate-400 font-mono">${r.date} ${r.ticker ? '· '+r.ticker : ''}</span>
                     </div>
-                `;
+                    <div class="text-right">
+                        <p class="font-mono font-black text-sm ${r.type==='수입' ? 'text-emerald-500' : 'text-rose-500'}">
+                            ${r.type==='수입' ? '+' : '-'} ₩${Math.round(v).toLocaleString()}
+                        </p>
+                    </div>
+                </div>`;
             }).join('');
         }
 
-        function changeMonth(delta) {
-            currentMonth.setMonth(currentMonth.getMonth() + delta);
-            updateMonthDisplay();
-            renderList();
-        }
-
-        function updateMonthDisplay() {
-            document.getElementById('month-display').innerText = `${currentMonth.getFullYear()}.${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
-        }
-
-        function setTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('[id^="tab-"]').forEach(b => {
-                b.className = 'px-5 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm';
-            });
-            document.getElementById(`tab-${tab}`).className = 'px-5 py-2.5 rounded-xl text-xs font-black btn-active whitespace-nowrap shadow-md';
-            renderList();
+        function changeMonth(d) { currentMonth.setMonth(currentMonth.getMonth()+d); updateMonthDisplay(); processData(); }
+        function updateMonthDisplay() { document.getElementById('month-display').innerText = currentMonth.getFullYear() + "." + String(currentMonth.getMonth()+1).padStart(2,'0'); }
+        function setTab(t) {
+            currentTab = t;
+            document.querySelectorAll('[id^="tab-"]').forEach(b => b.className = 'px-6 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 shadow-sm');
+            document.getElementById('tab-' + t).className = 'px-6 py-2.5 rounded-xl text-xs font-black btn-active shadow-md';
+            renderItems();
         }
     </script>
 </body>
