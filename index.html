@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; color: #1e293b; letter-spacing: -0.025em; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; letter-spacing: -0.025em; }
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; }
         .card-interactive:hover { transform: translateY(-2px); border-color: #cbd5e1; cursor: pointer; }
         .btn-active { background-color: #0f172a; color: white; border-color: #0f172a; }
@@ -34,10 +34,10 @@
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-1">
             <div>
                 <h1 class="text-2xl md:text-3xl font-extrabold flex items-center gap-2 tracking-tighter">
-                    💰 NH&GR 가계부
+                    💰 NH&GR 자산현황
                     <span id="loader" class="hidden"><span class="spinner"></span></span>
                 </h1>
-                <p id="last-update" class="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">실시간 데이터 연결 중...</p>
+                <p id="last-update" class="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest">데이터 동기화 중...</p>
             </div>
             <div class="bg-white px-5 py-3 rounded-2xl shadow-sm border flex items-center gap-6 font-bold text-sm w-full md:w-auto justify-between">
                 <button onclick="changeMonth(-1)" class="text-slate-400 hover:text-navy transition-all p-1">◀</button>
@@ -47,53 +47,55 @@
         </header>
 
         <div class="main-container">
-            <!-- Left Column -->
+            <!-- Left Column: Dashboard -->
             <div class="space-y-6">
-                <!-- Summary Cards -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div class="card p-5 border-l-4 border-blue-500">
-                        <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest">현금성 자산</p>
-                        <p id="sum-avail" class="text-xl font-black font-mono">₩0</p>
+                <!-- Main Asset Display -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="card p-8 bg-navy text-white flex flex-col justify-center items-center relative overflow-hidden shadow-2xl min-h-[180px]">
+                        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400"></div>
+                        <p class="text-[11px] text-slate-400 font-black mb-1 tracking-[0.2em] uppercase">순자산 평가액 (실시간 반영)</p>
+                        <p id="sum-total" class="text-4xl font-black font-mono text-white tracking-tighter">₩0</p>
+                        <div id="exchange-info" class="text-[10px] text-slate-500 mt-4 font-bold uppercase text-center leading-tight">환율 정보를 불러오는 중...</div>
                     </div>
-                    <div class="card p-5 border-l-4 border-emerald-500">
-                        <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest">예적금/청약</p>
-                        <p id="sum-save" class="text-xl font-black font-mono">₩0</p>
-                    </div>
-                    <div class="card p-5 border-l-4 border-purple-500">
-                        <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest flex justify-between">
-                            주식/투자 <span id="stock-status" class="text-purple-400 font-sans text-[8px] uppercase tracking-tighter">Live Wait</span>
-                        </p>
-                        <p id="sum-stock" class="text-xl font-black font-mono">₩0</p>
-                    </div>
-                    <div class="card p-5 border-l-4 border-amber-500">
-                        <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest">미래 자산</p>
-                        <p id="sum-future" class="text-xl font-black font-mono">₩0</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="card p-5 border-l-4 border-blue-500">
+                            <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest">현금성 자산 (보증금 포함)</p>
+                            <p id="sum-avail" class="text-xl font-black font-mono">₩0</p>
+                        </div>
+                        <div class="card p-5 border-l-4 border-purple-500">
+                            <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest flex justify-between">
+                                주식/투자 <span id="stock-status" class="text-purple-400 font-sans text-[8px] uppercase tracking-tighter">Live Wait</span>
+                            </p>
+                            <p id="sum-stock" class="text-xl font-black font-mono">₩0</p>
+                        </div>
+                        <div class="card p-5 border-l-4 border-emerald-500">
+                            <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest">예적금/청약</p>
+                            <p id="sum-save" class="text-xl font-black font-mono">₩0</p>
+                        </div>
+                        <div class="card p-5 border-l-4 border-amber-500">
+                            <p class="text-[10px] text-slate-400 font-extrabold mb-1 uppercase tracking-widest">미래 자산/연금</p>
+                            <p id="sum-future" class="text-xl font-black font-mono">₩0</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Graphs -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div class="card p-8 bg-navy text-white flex flex-col justify-center items-center relative overflow-hidden shadow-xl">
-                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-purple-400"></div>
-                        <p class="text-[11px] text-slate-400 font-black mb-1 tracking-[0.2em] uppercase">전체 자산 평가액</p>
-                        <p id="sum-total" class="text-3xl font-black font-mono text-white tracking-tighter">₩0</p>
-                        <div id="exchange-info" class="text-[9px] text-slate-500 mt-4 font-bold uppercase text-center leading-tight">환율 로딩 중...</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div onclick="showChartDetail('asset')" class="card card-interactive p-6 h-64 flex flex-col items-center justify-center relative">
+                        <p class="text-[11px] font-black text-slate-400 mb-4 uppercase tracking-widest">자산 배분 비율</p>
+                        <div class="relative w-full h-full max-h-[160px]"><canvas id="chart-asset"></canvas></div>
                     </div>
-                    <div onclick="showChartDetail('asset')" class="card card-interactive p-5 h-56 flex flex-col items-center justify-center relative">
-                        <p class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">자산 비율 상세</p>
-                        <div class="relative w-full h-full"><canvas id="chart-asset"></canvas></div>
-                    </div>
-                    <div onclick="showChartDetail('expense')" class="card card-interactive p-5 h-56 flex flex-col items-center justify-center relative">
-                        <p class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">이번 달 지출 현황</p>
-                        <div class="relative w-full h-full"><canvas id="chart-expense"></canvas></div>
+                    <div onclick="showChartDetail('expense')" class="card card-interactive p-6 h-64 flex flex-col items-center justify-center relative">
+                        <p class="text-[11px] font-black text-slate-400 mb-4 uppercase tracking-widest">이달의 지출 카테고리</p>
+                        <div class="relative w-full h-full max-h-[160px]"><canvas id="chart-expense"></canvas></div>
                     </div>
                 </div>
 
-                <!-- Tabs & List -->
+                <!-- List Section -->
                 <div class="space-y-4">
-                    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar sticky top-0 bg-[#f1f5f9] z-10 py-2">
-                        <button onclick="setTab('all')" id="tab-all" class="px-6 py-2.5 rounded-xl text-xs font-black btn-active whitespace-nowrap shadow-sm">전체 내역</button>
-                        <button onclick="setTab('asset')" id="tab-asset" class="px-6 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">자산 관리</button>
+                    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar sticky top-0 bg-[#f8fafc] z-10 py-2">
+                        <button onclick="setTab('all')" id="tab-all" class="px-6 py-2.5 rounded-xl text-xs font-black btn-active whitespace-nowrap shadow-sm">이달의 전체내역</button>
+                        <button onclick="setTab('asset')" id="tab-asset" class="px-6 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">자산 목록</button>
                         <button onclick="setTab('income')" id="tab-income" class="px-6 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">수입</button>
                         <button onclick="setTab('expense')" id="tab-expense" class="px-6 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-100 whitespace-nowrap shadow-sm">지출</button>
                     </div>
@@ -101,12 +103,12 @@
                 </div>
             </div>
 
-            <!-- Right Column -->
+            <!-- Right Column: Input Form -->
             <div class="sticky-side">
                 <section id="input-section" class="card p-6 space-y-5 border-2 border-dashed border-slate-200 bg-slate-50/50">
                     <div class="flex justify-between items-center">
-                        <h2 id="input-title" class="text-base font-black flex items-center gap-2">📝 내역 입력</h2>
-                        <div id="save-status" class="hidden text-[10px] text-blue-600 font-bold bg-blue-100 px-2.5 py-1 rounded-full animate-pulse uppercase">Saving...</div>
+                        <h2 id="input-title" class="text-base font-black flex items-center gap-2">📝 내역 기록</h2>
+                        <div id="save-status" class="hidden text-[10px] text-blue-600 font-bold bg-blue-100 px-2.5 py-1 rounded-full animate-pulse uppercase">Syncing...</div>
                     </div>
                     
                     <div class="flex gap-2">
@@ -115,13 +117,13 @@
                     </div>
 
                     <div class="flex gap-1.5 bg-white p-1.5 rounded-2xl shadow-inner border">
-                        <button onclick="setType('수입')" id="btn-type-in" class="flex-1 py-2.5 rounded-xl font-black text-xs btn-active">수입</button>
+                        <button onclick="setType('수입')" id="btn-type-in" class="flex-1 py-2.5 rounded-xl font-black text-xs btn-active">수입/자산</button>
                         <button onclick="setType('지출')" id="btn-type-out" class="flex-1 py-2.5 rounded-xl font-black text-xs text-slate-400 border-none">지출</button>
                     </div>
 
                     <div class="space-y-4">
                         <div class="space-y-1.5">
-                            <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">분류 (Category)</label>
+                            <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">분류</label>
                             <select id="category-select" onchange="checkCategory()" class="w-full p-4 rounded-2xl border bg-white text-sm font-bold shadow-sm outline-none focus:ring-2 ring-navy"></select>
                         </div>
                         <div class="space-y-1.5">
@@ -132,7 +134,7 @@
 
                     <div id="stock-fields" class="hidden space-y-4 p-4 bg-white rounded-2xl border-2 border-purple-100">
                         <div class="space-y-1.5">
-                            <label class="text-[10px] font-black text-purple-500 ml-1 uppercase font-mono">티커 (TSLA / 005930.KS)</label>
+                            <label class="text-[10px] font-black text-purple-500 ml-1 uppercase font-mono">종목코드/티커 (예: 005930.KS, TSLA)</label>
                             <input type="text" id="input-ticker" placeholder="TICKER" class="w-full p-4 rounded-xl border text-sm font-bold uppercase outline-none focus:ring-2 ring-purple-400">
                         </div>
                         <div class="space-y-1.5">
@@ -142,8 +144,8 @@
                     </div>
 
                     <div class="space-y-1.5">
-                        <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">메모/적요</label>
-                        <input type="text" id="input-desc" placeholder="내용 입력" class="w-full p-4 rounded-2xl border text-sm font-bold shadow-sm outline-none">
+                        <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">메모</label>
+                        <input type="text" id="input-desc" placeholder="항목 상세 설명" class="w-full p-4 rounded-2xl border text-sm font-bold shadow-sm outline-none">
                     </div>
                     
                     <div id="action-buttons" class="space-y-2">
@@ -159,27 +161,15 @@
         </div>
     </div>
 
-    <!-- Chart Detail Modal -->
+    <!-- Modals -->
     <div id="detail-modal" class="modal-bg hidden">
         <div class="bg-white w-full max-w-2xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center">
-                <h3 id="detail-title" class="text-2xl font-black tracking-tighter">데이터 상세</h3>
+                <h3 id="detail-title" class="text-2xl font-black tracking-tighter">상세 통계</h3>
                 <button onclick="closeDetailModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500">✕</button>
             </div>
             <div id="detail-content" class="space-y-4"></div>
             <button onclick="closeDetailModal()" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold">닫기</button>
-        </div>
-    </div>
-
-    <!-- Delete Confirm Modal -->
-    <div id="delete-modal" class="modal-bg hidden">
-        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl space-y-6 text-center">
-            <h3 class="text-xl font-black">내역 삭제</h3>
-            <p id="delete-desc" class="text-sm text-slate-500 font-medium"></p>
-            <div class="flex gap-3">
-                <button onclick="confirmDelete()" class="flex-1 py-4 bg-rose-500 text-white rounded-2xl font-black text-sm">삭제</button>
-                <button onclick="closeDeleteModal()" class="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm">취소</button>
-            </div>
         </div>
     </div>
 
@@ -189,6 +179,9 @@
         let sb, allRecords = [], currentMonth = new Date(), currentTab = 'all';
         let exchangeRate = 1420, stockCache = {}, charts = {}, editingId = null;
         let lastSums = {}, lastExp = {};
+        
+        // 고정 보증금 설정
+        const BASE_DEPOSIT = 15800000;
         
         let formData = { user: '남편', type: '수입' };
         const categories = {
@@ -214,7 +207,7 @@
                 const res = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
                 if(res && res.rates && res.rates.KRW) {
                     exchangeRate = res.rates.KRW;
-                    document.getElementById('exchange-info').innerHTML = `1 USD = ${exchangeRate.toFixed(1)} KRW<br><span class="opacity-40 font-normal">실시간 환율 반영</span>`;
+                    document.getElementById('exchange-info').innerHTML = `1 USD = ${exchangeRate.toFixed(1)} KRW<br><span class="opacity-40 font-normal">글로벌 실시간 환율 적용</span>`;
                 }
             } catch(e) { console.error("환율 로드 실패"); }
         }
@@ -222,6 +215,7 @@
         async function updateStockPrice(ticker) {
             if (!ticker) return;
             let formattedTicker = ticker.toUpperCase();
+            // 한국 주식 코드 처리
             if (/^\d{6}$/.test(formattedTicker)) formattedTicker += '.KS';
 
             const statusEl = document.getElementById('stock-status');
@@ -244,7 +238,9 @@
                     const price = stock?.chart?.result?.[0]?.meta?.regularMarketPrice;
                     if (price === undefined || price === null) throw new Error("Price not found");
 
+                    // 주식 종류 판별
                     const isKR = formattedTicker.includes('.KS') || formattedTicker.includes('.KQ');
+                    // 해외 주식이면 가격에 환율 적용
                     stockCache[ticker] = isKR ? price : (price * exchangeRate);
                     success = true;
                     statusEl.innerText = "LIVE ACTIVE";
@@ -282,52 +278,54 @@
         }
 
         function processAndRender() {
-            let sums = { avail: 0, stock: 0, save: 0, future: 0 };
+            // 현금성 자산의 기본값에 보증금 미리 더함
+            let sums = { avail: BASE_DEPOSIT, stock: 0, save: 0, future: 0 };
             let expMap = {};
             const viewYear = currentMonth.getFullYear();
             const viewMonth = currentMonth.getMonth() + 1;
 
             allRecords.forEach(r => {
-                let amt = parseFloat(r.amount) || 0;
+                const amtOriginal = Number(r.amount) || 0;
                 const cat = (r.category || "").trim();
                 const type = (r.type || "").trim();
+                const qty = Number(r.qty) || 0;
                 
-                // 1. 주식 가치 실시간 합산 (최우선)
+                // 1. 주식 (실시간 평가액 기준 합산)
                 if (cat.includes("주식")) {
-                    if (r.ticker && stockCache[r.ticker]) {
-                        sums.stock += (stockCache[r.ticker] * (parseFloat(r.qty) || 0));
+                    if (r.ticker && stockCache[r.ticker] > 0) {
+                        sums.stock += (stockCache[r.ticker] * qty);
                     } else {
-                        sums.stock += amt;
+                        sums.stock += amtOriginal;
                     }
                 } 
-                // 2. 보증금 처리 (타입 불문 보증금 단어가 있으면 현금성 자산 합산)
+                // 2. 보증금 (이미 BASE_DEPOSIT에 반영했으므로 추가 입력된 보증금만 더함)
                 else if (cat.includes("보증금")) {
-                    sums.avail += amt;
+                    // 수동 입력된 보증금이 있다면 현금으로 합산
+                    sums.avail += amtOriginal;
                 }
-                // 3. 일반 수입 및 현금성 자산 분류
+                // 3. 일반 수입 및 현금성 자산
                 else if (type === "수입" && (cat === "월급" || cat === "기타" || cat === "상여금" || cat === "이자/배당")) {
-                    sums.avail += amt;
+                    sums.avail += amtOriginal;
                 } 
                 // 4. 예적금/청약
                 else if (cat === "저축/예금" || cat.includes("적금") || cat.includes("청약")) {
-                    sums.save += amt;
+                    sums.save += amtOriginal;
                 } 
-                // 5. 연금/미래자산
+                // 5. 미래자산 (연금 등)
                 else if (cat.includes("연금") || cat.includes("퇴직")) {
-                    sums.future += amt;
+                    sums.future += amtOriginal;
                 }
 
-                // 당월 지출 합산 (차트용)
+                // 이달의 지출 합산 (차트용)
                 const dArr = r.date ? r.date.split('. ') : [];
-                if (type === "지출" && dArr.length >= 2 && parseInt(dArr[0]) === viewYear && parseInt(dArr[1]) === viewMonth) {
-                    expMap[cat] = (expMap[cat] || 0) + amt;
+                if (type === "지출" && dArr.length >= 2 && Number(dArr[0]) === viewYear && Number(dArr[1]) === viewMonth) {
+                    expMap[cat] = (expMap[cat] || 0) + amtOriginal;
                 }
             });
 
             lastSums = sums; 
             lastExp = expMap;
 
-            // UI 업데이트
             document.getElementById('sum-avail').innerText = `₩${Math.round(sums.avail).toLocaleString()}`;
             document.getElementById('sum-save').innerText = `₩${Math.round(sums.save).toLocaleString()}`;
             document.getElementById('sum-stock').innerText = `₩${Math.round(sums.stock).toLocaleString()}`;
@@ -350,7 +348,7 @@
                 charts.asset = new Chart(ctxAsset, {
                     type: 'doughnut',
                     data: { 
-                        labels: ['현금성', '투자', '예적금', '미래자산'], 
+                        labels: ['현금/보증금', '주식/투자', '예적금', '미래자산'], 
                         datasets: [{ 
                             data: total > 0 ? [sums.avail, sums.stock, sums.save, sums.future] : [1], 
                             backgroundColor: ['#3b82f6', '#a855f7', '#10b981', '#f59e0b'], 
@@ -395,19 +393,20 @@
             });
 
             if(items.length === 0) {
-                container.innerHTML = '<div class="col-span-full py-20 text-center text-slate-300 font-black text-[10px] uppercase">내역이 없습니다</div>';
+                container.innerHTML = '<div class="col-span-full py-16 text-center text-slate-300 font-black text-[10px] uppercase tracking-widest">이 기간의 데이터가 없습니다</div>';
                 return;
             }
 
             container.innerHTML = items.map(r => {
-                let v = parseFloat(r.amount) || 0;
+                let displayVal = Number(r.amount) || 0;
                 let isStock = r.category && r.category.includes("주식") && r.ticker && stockCache[r.ticker];
-                if (isStock) v = stockCache[r.ticker] * (parseFloat(r.qty) || 0);
+                if (isStock) displayVal = stockCache[r.ticker] * (Number(r.qty) || 0);
+
                 return `<div onclick="handleItemClick(${r.id})" 
                     class="card p-5 flex justify-between items-center cursor-pointer active:scale-95 group hover:border-blue-200">
                     <div class="flex flex-col gap-1">
                         <div class="flex items-center gap-2">
-                            <span class="text-[8px] font-black text-white bg-navy px-2 py-0.5 rounded-full">${r.category}</span>
+                            <span class="text-[8px] font-black text-white bg-slate-800 px-2 py-0.5 rounded-full">${r.category}</span>
                             <span class="text-[9px] font-bold text-blue-500">${r.user_name}</span>
                         </div>
                         <span class="font-bold text-sm text-slate-800">${r.description || r.category}</span>
@@ -415,9 +414,9 @@
                     </div>
                     <div class="text-right">
                         <p class="font-mono font-black text-sm ${r.type==='수입' || r.type==='자산' ? 'text-emerald-500' : 'text-rose-500'}">
-                            ${r.type==='수입' || r.type==='자산' ? '+' : '-'} ₩${Math.round(v).toLocaleString()}
+                            ${r.type==='수입' || r.type==='자산' ? '+' : '-'} ₩${Math.round(displayVal).toLocaleString()}
                         </p>
-                        ${isStock ? '<span class="text-[7px] text-purple-400 font-bold">LIVE반영됨</span>' : ''}
+                        ${isStock ? '<span class="text-[7px] text-purple-400 font-bold">LIVE EVAL</span>' : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -429,8 +428,8 @@
             
             editingId = id;
             document.getElementById('input-section').classList.add('edit-highlight');
-            document.getElementById('input-title').innerText = "✏️ 내역 수정 중";
-            document.getElementById('main-action-btn').innerText = "수정 완료하기";
+            document.getElementById('input-title').innerText = "✏️ 내역 수정 모드";
+            document.getElementById('main-action-btn').innerText = "수정 완료";
             document.getElementById('cancel-edit-btn').classList.remove('hidden');
 
             setUser(record.user_name);
@@ -448,10 +447,9 @@
         function cancelEdit() {
             editingId = null;
             document.getElementById('input-section').classList.remove('edit-highlight');
-            document.getElementById('input-title').innerText = "📝 내역 입력";
+            document.getElementById('input-title').innerText = "📝 내역 기록";
             document.getElementById('main-action-btn').innerText = "데이터 저장하기";
             document.getElementById('cancel-edit-btn').classList.add('hidden');
-            
             document.getElementById('input-amount').value = '';
             document.getElementById('input-ticker').value = '';
             document.getElementById('input-qty').value = '';
@@ -460,9 +458,9 @@
 
         async function saveRecord() {
             const cat = document.getElementById('category-select').value;
-            const amt = parseFloat(document.getElementById('input-amount').value) || 0;
+            const amt = Number(document.getElementById('input-amount').value) || 0;
             const tic = document.getElementById('input-ticker').value.trim().toUpperCase();
-            const qty = parseFloat(document.getElementById('input-qty').value) || 0;
+            const qty = Number(document.getElementById('input-qty').value) || 0;
             const dsc = document.getElementById('input-desc').value;
             
             if (amt <= 0 && !cat.includes("주식")) return;
@@ -495,21 +493,8 @@
             document.getElementById('save-status').classList.add('hidden');
         }
 
-        let deleteTargetId = null;
-        function openDeleteModal(id, desc) {
-            deleteTargetId = id;
-            document.getElementById('delete-desc').innerText = `"${desc}" 내역을 삭제하시겠습니까?`;
-            document.getElementById('delete-modal').classList.remove('hidden');
-        }
-        function closeDeleteModal() { deleteTargetId = null; document.getElementById('delete-modal').classList.add('hidden'); }
-        async function confirmDelete() {
-            if(!deleteTargetId) return;
-            await sb.from('account_v3').delete().eq('id', deleteTargetId);
-            await refreshData(); closeDeleteModal();
-        }
-
         function showChartDetail(mode) {
-            const title = mode === 'asset' ? '자산 구성 상세' : '지출 통계 상세';
+            const title = mode === 'asset' ? '자산 구성 상세' : '지출 상세 통계';
             document.getElementById('detail-title').innerText = title;
             const target = document.getElementById('detail-content');
             target.innerHTML = '';
@@ -517,8 +502,8 @@
             if (mode === 'asset') {
                 const tot = lastSums.avail + lastSums.stock + lastSums.save + lastSums.future;
                 const rows = [
-                    { l: '현금 자산', v: lastSums.avail, c: 'bg-blue-500' },
-                    { l: '주식/투자', v: lastSums.stock, c: 'bg-purple-500' },
+                    { l: '현금/보증금', v: lastSums.avail, c: 'bg-blue-500' },
+                    { l: '주식/투자(평가액)', v: lastSums.stock, c: 'bg-purple-500' },
                     { l: '예적금/청약', v: lastSums.save, c: 'bg-emerald-500' },
                     { l: '미래 자산', v: lastSums.future, c: 'bg-amber-500' }
                 ];
