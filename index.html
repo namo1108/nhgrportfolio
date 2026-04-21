@@ -1,408 +1,659 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NH&GR Asset Intelligence v8</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; color: #0f172a; -webkit-tap-highlight-color: transparent; }
-        .card { background: white; border-radius: 1.5rem; border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .edit-active { border: 2px solid #3b82f6 !important; background-color: #f8faff !important; box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.1); }
-        .btn-navy { background-color: #0f172a; color: white; }
-        .spinner { width: 14px; height: 14px; border: 2px solid #e2e8f0; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        input, select { outline: none; transition: border 0.2s; }
-        input:focus, select:focus { border-color: #3b82f6; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NH&GR Asset Intelligence v9</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f1f5f9;
+    color: #0f172a;
+    -webkit-tap-highlight-color: transparent;
+    padding: 16px;
+    padding-bottom: 120px;
+    min-height: 100vh;
+}
+
+.wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── 카드 ── */
+.card {
+    background: white;
+    border-radius: 24px;
+    border: 1px solid rgba(0,0,0,0.06);
+    transition: all 0.2s ease;
+}
+
+/* ── 헤더 ── */
+.header-card {
+    background: #0f172a;
+    color: white;
+    border-radius: 24px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);
+}
+.header-card::after {
+    content: '';
+    position: absolute;
+    right: -40px; bottom: -40px;
+    width: 160px; height: 160px;
+    background: rgba(37,99,235,0.2);
+    border-radius: 50%;
+    filter: blur(40px);
+    pointer-events: none;
+}
+.header-inner { position: relative; z-index: 1; }
+.header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.header-label { font-size: 10px; color: #64748b; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+.sync-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; font-weight: 700; color: #34d399;
+    background: rgba(52,211,153,0.1);
+    padding: 4px 10px; border-radius: 999px;
+}
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.total-display { font-size: 36px; font-weight: 900; font-family: monospace; letter-spacing: -0.05em; font-style: italic; margin-bottom: 24px; margin-top: 4px; }
+.header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.header-stat { background: rgba(255,255,255,0.06); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
+.stat-label { font-size: 9px; color: #475569; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+.stat-value { font-size: 13px; font-family: monospace; font-weight: 700; }
+.stat-blue { color: #93c5fd; }
+.stat-slate { color: #cbd5e1; }
+
+/* ── 폼 ── */
+.form-card { padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 2px solid transparent; }
+.form-card.edit-active { border-color: #3b82f6; background: #f8faff; box-shadow: 0 20px 40px -10px rgba(59,130,246,0.12); }
+.form-header { display: flex; justify-content: space-between; align-items: center; }
+.form-title { font-size: 17px; font-weight: 900; color: #1e293b; }
+.month-nav { display: flex; align-items: center; background: #f1f5f9; border-radius: 12px; padding: 4px; font-family: monospace; font-size: 11px; font-weight: 700; }
+.month-nav button { background: none; border: none; cursor: pointer; padding: 2px 10px; color: #94a3b8; font-size: 13px; line-height: 1; }
+.month-nav button:hover { color: #0f172a; }
+#month-label { padding: 0 4px; }
+
+.btn-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn-toggle {
+    padding: 16px 0;
+    border-radius: 16px;
+    border: 2px solid #f1f5f9;
+    font-size: 12px; font-weight: 900;
+    cursor: pointer; transition: all 0.15s;
+    background: white; color: #cbd5e1;
+    font-family: inherit;
+}
+.btn-toggle.active { background: #0f172a; color: white; border-color: #0f172a; }
+
+.type-wrap { display: flex; background: #f1f5f9; border-radius: 16px; padding: 6px; gap: 4px; }
+.btn-type {
+    flex: 1; padding: 12px 0; border-radius: 12px; border: none;
+    font-size: 12px; font-weight: 900; cursor: pointer; transition: all 0.15s;
+    background: transparent; color: #94a3b8; font-family: inherit;
+}
+.btn-type.active { background: white; color: #0f172a; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+.input-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.input-group { display: flex; flex-direction: column; gap: 6px; }
+.input-label { font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; padding-left: 4px; }
+.input-field {
+    width: 100%; padding: 14px 16px;
+    border-radius: 16px; border: 1.5px solid #e2e8f0;
+    background: white; font-size: 13px; font-weight: 700;
+    color: #0f172a; outline: none; transition: border-color 0.2s;
+    font-family: inherit; -webkit-appearance: none; appearance: none;
+}
+.input-field:focus { border-color: #3b82f6; }
+select.input-field {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+}
+
+.stock-box { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.stock-box.hidden { display: none; }
+.stock-label { font-size: 10px; font-weight: 900; color: #3b82f6; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+.stock-note { font-size: 9px; color: #93c5fd; }
+
+.btn-primary {
+    width: 100%; padding: 18px;
+    background: #0f172a; color: white;
+    border: none; border-radius: 16px;
+    font-size: 14px; font-weight: 900;
+    cursor: pointer; transition: transform 0.1s, opacity 0.1s;
+    font-family: inherit;
+}
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-cancel {
+    width: 100%; padding: 14px; margin-top: 8px;
+    background: #f1f5f9; color: #64748b;
+    border: none; border-radius: 16px;
+    font-size: 12px; font-weight: 900;
+    cursor: pointer; font-family: inherit;
+    display: none;
+}
+
+/* ── 탭 ── */
+.tab-wrap { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.tab-wrap::-webkit-scrollbar { display: none; }
+.tab-btn {
+    padding: 10px 20px; border-radius: 16px;
+    font-size: 11px; font-weight: 900; cursor: pointer;
+    white-space: nowrap; font-family: inherit; transition: all 0.15s;
+    background: white; color: #94a3b8; border: 1.5px solid #e2e8f0;
+}
+.tab-btn.active { background: #0f172a; color: white; border-color: #0f172a; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+/* ── 리스트 ── */
+#list-container { display: flex; flex-direction: column; gap: 10px; min-height: 300px; }
+.empty-msg { padding: 80px 0; text-align: center; color: #cbd5e1; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; font-style: italic; }
+.spinner-wrap { padding: 80px 0; text-align: center; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner-text { font-size: 10px; font-weight: 700; color: #cbd5e1; margin-top: 12px; text-transform: uppercase; letter-spacing: 0.15em; display: block; }
+
+.record-item {
+    background: white; border-radius: 20px; border: 1.5px solid rgba(0,0,0,0.05);
+    padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; transition: all 0.15s; gap: 12px;
+}
+.record-item:active { transform: scale(0.985); background: #f8faff; }
+.record-left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.record-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.record-cat { font-size: 8px; font-weight: 900; padding: 2px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b; text-transform: uppercase; }
+.record-user { font-size: 9px; font-weight: 700; color: #3b82f6; }
+.record-desc { font-size: 13px; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.record-meta { font-size: 8px; font-family: monospace; color: #94a3b8; }
+.record-right { text-align: right; flex-shrink: 0; }
+.record-amt { font-size: 14px; font-weight: 900; font-family: monospace; }
+.income { color: #10b981; }
+.expense { color: #f43f5e; }
+.live-badge { font-size: 7px; font-weight: 900; color: #60a5fa; background: #eff6ff; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 2px; }
+.record-hint { font-size: 9px; color: #cbd5e1; font-weight: 700; margin-top: 3px; }
+
+/* ── 바텀시트 ── */
+#bs-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+#bs-overlay.open { opacity: 1; pointer-events: auto; }
+#bottom-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: white; border-radius: 24px 24px 0 0;
+    z-index: 51; padding: 20px;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    max-width: 640px; margin: 0 auto;
+}
+#bottom-sheet.open { transform: translateY(0); }
+.bs-handle-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+.bs-handle { width: 40px; height: 4px; background: #e2e8f0; border-radius: 999px; }
+
+.bs-summary { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.bs-info { flex: 1; min-width: 0; }
+.bs-tags { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.bs-cat { font-size: 9px; font-weight: 900; padding: 2px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b; }
+.bs-user { font-size: 10px; font-weight: 700; color: #3b82f6; }
+.bs-desc { font-size: 16px; font-weight: 900; color: #1e293b; margin-bottom: 4px; }
+.bs-meta { font-size: 10px; font-family: monospace; color: #94a3b8; }
+.bs-amt-wrap { text-align: right; flex-shrink: 0; }
+.bs-amt { font-size: 22px; font-weight: 900; font-family: monospace; }
+.bs-divider { border: none; border-top: 1px solid #f1f5f9; margin-bottom: 16px; }
+.bs-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.bs-btn-edit {
+    padding: 16px; background: #2563eb; color: white;
+    border: none; border-radius: 16px; font-size: 14px; font-weight: 900;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: inherit; transition: transform 0.1s;
+}
+.bs-btn-edit:active { transform: scale(0.97); }
+.bs-btn-delete {
+    padding: 16px; background: #fff1f2; color: #f43f5e;
+    border: 1.5px solid #fecdd3; border-radius: 16px; font-size: 14px; font-weight: 900;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: inherit; transition: transform 0.1s;
+}
+.bs-btn-delete:active { transform: scale(0.97); }
+.bs-close {
+    width: 100%; padding: 12px; background: none; border: none;
+    font-size: 12px; font-weight: 700; color: #94a3b8; cursor: pointer; font-family: inherit;
+}
+
+/* ── 토스트 ── */
+#toast {
+    position: fixed; bottom: 80px; left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: #0f172a; color: white;
+    padding: 12px 24px; border-radius: 999px;
+    font-size: 13px; font-weight: 700;
+    z-index: 100; opacity: 0;
+    transition: all 0.25s ease; pointer-events: none;
+    white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
 </head>
-<body class="p-4 md:p-8 pb-32">
-    <div class="max-w-2xl mx-auto space-y-6">
-        <!-- 상단 평가 금액 섹션 -->
-        <header class="card p-8 bg-[#0f172a] text-white relative overflow-hidden shadow-2xl">
-            <div class="relative z-10">
-                <div class="flex justify-between items-start mb-2">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">실시간 순자산 평가액</p>
-                    <div id="sync-indicator" class="flex items-center gap-2 text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        LIVE
-                    </div>
-                </div>
-                <h1 id="total-asset-display" class="text-4xl font-black font-mono tracking-tighter italic">₩0</h1>
-                <div class="mt-6 grid grid-cols-2 gap-4">
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
-                        <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">USD 환율 (실시간)</p>
-                        <p id="exchange-rate-display" class="text-sm font-mono font-bold text-blue-300">₩1,420.0</p>
-                    </div>
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
-                        <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">마지막 업데이트</p>
-                        <p id="last-update-time" class="text-sm font-mono font-bold text-slate-300">--:--:--</p>
-                    </div>
+<body>
+
+<div id="toast">저장 완료</div>
+<div id="bs-overlay" onclick="closeBS()"></div>
+<div id="bottom-sheet">
+    <div class="bs-handle-wrap"><div class="bs-handle"></div></div>
+    <div id="bs-content"></div>
+</div>
+
+<div class="wrap">
+
+    <!-- 헤더 -->
+    <div class="header-card">
+        <div class="header-inner">
+            <div class="header-top">
+                <span class="header-label">실시간 순자산 평가액</span>
+                <div id="sync-indicator" class="sync-badge">
+                    <span class="sync-dot"></span>LIVE
                 </div>
             </div>
-            <!-- 배경 장식 -->
-            <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>
-        </header>
-
-        <!-- 입력 및 수정 폼 -->
-        <section id="main-form" class="card p-6 space-y-5 shadow-sm border-2 border-transparent">
-            <div class="flex justify-between items-center">
-                <h2 id="form-mode-title" class="text-lg font-black tracking-tight text-slate-800">📝 내역 입력</h2>
-                <div class="flex items-center bg-slate-100 rounded-xl p-1 font-mono text-[11px] font-bold">
-                    <button onclick="moveMonth(-1)" class="px-2 text-slate-400 hover:text-black">◀</button>
-                    <span id="month-label" class="px-2">2026.04</span>
-                    <button onclick="moveMonth(1)" class="px-2 text-slate-400 hover:text-black">▶</button>
+            <div id="total-asset-display" class="total-display">₩0</div>
+            <div class="header-grid">
+                <div class="header-stat">
+                    <div class="stat-label">USD 환율 (실시간)</div>
+                    <div id="exchange-rate-display" class="stat-value stat-blue">₩1,420.0</div>
                 </div>
-            </div>
-
-            <!-- 유저 및 유형 선택 -->
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="updateState('user_name', '남편')" id="btn-user-h" class="py-4 rounded-2xl border-2 font-black text-xs btn-navy">남편</button>
-                <button onclick="updateState('user_name', '아내')" id="btn-user-w" class="py-4 rounded-2xl border-2 font-black text-xs bg-white text-slate-300 border-slate-100">아내</button>
-            </div>
-            <div class="flex p-1.5 bg-slate-100 rounded-2xl">
-                <button onclick="updateState('type', '수입')" id="btn-type-in" class="flex-1 py-3 rounded-xl font-black text-xs bg-white shadow-sm">수입/자산</button>
-                <button onclick="updateState('type', '지출')" id="btn-type-out" class="flex-1 py-3 rounded-xl font-black text-xs text-slate-400">지출</button>
-            </div>
-
-            <!-- 기본 정보 입력 -->
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1.5">
-                    <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">날짜</label>
-                    <input type="date" id="input-date" class="w-full p-4 rounded-2xl border bg-white text-xs font-bold shadow-sm">
+                <div class="header-stat">
+                    <div class="stat-label">마지막 업데이트</div>
+                    <div id="last-update-time" class="stat-value stat-slate">--:--:--</div>
                 </div>
-                <div class="space-y-1.5">
-                    <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">금액 (원가/평단가)</label>
-                    <input type="number" id="input-amount" placeholder="0" class="w-full p-4 rounded-2xl border text-xs font-bold shadow-sm">
-                </div>
-            </div>
-
-            <div class="space-y-1.5">
-                <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">카테고리</label>
-                <select id="input-category" onchange="toggleStockFields()" class="w-full p-4 rounded-2xl border bg-white text-xs font-bold shadow-sm"></select>
-            </div>
-
-            <!-- 주식 전용 필드 (수량/티커) -->
-            <div id="stock-fields" class="hidden p-5 bg-blue-50 border border-blue-100 rounded-2xl space-y-4">
-                <p class="text-[10px] font-black text-blue-500 uppercase flex items-center gap-2">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                    실시간 자산 평가 정보
-                </p>
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="text" id="input-ticker" placeholder="티커 (AAPL / 005930)" class="p-4 rounded-xl border text-[10px] font-black uppercase outline-none focus:ring-2 ring-blue-500/20">
-                    <input type="number" id="input-qty" placeholder="보유 수량" step="0.000001" class="p-4 rounded-xl border text-[10px] font-black outline-none focus:ring-2 ring-blue-500/20">
-                </div>
-                <p class="text-[9px] text-blue-400 font-medium">* 미국 주식은 원화로 자동 환산, 한국 주식은 종가로 계산됩니다.</p>
-            </div>
-
-            <input type="text" id="input-desc" placeholder="메모 (상세내역)" class="w-full p-4 rounded-2xl border text-xs font-bold shadow-sm">
-
-            <!-- 저장 및 수정/삭제 버튼 -->
-            <div id="form-actions" class="pt-2">
-                <button id="main-submit-btn" onclick="handleSave()" class="w-full py-5 btn-navy rounded-2xl font-black text-sm shadow-xl active:scale-[0.98] transition-transform">
-                    데이터 저장하기
-                </button>
-                <div id="edit-mode-actions" class="hidden grid grid-cols-2 gap-2 mt-2">
-                    <button onclick="cancelEdit()" class="py-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-xs">수정 취소</button>
-                    <button onclick="handleDelete()" class="py-4 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl font-black text-xs hover:bg-rose-100">내역 삭제</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- 필터 탭 -->
-        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
-            <button onclick="setTab('all')" id="tab-all" class="px-6 py-3 rounded-2xl text-[11px] font-black btn-navy shadow-lg">전체내역</button>
-            <button onclick="setTab('asset')" id="tab-asset" class="px-6 py-3 rounded-2xl text-[11px] font-black bg-white text-slate-400 border border-slate-100">자산현황</button>
-            <button onclick="setTab('income')" id="tab-income" class="px-6 py-3 rounded-2xl text-[11px] font-black bg-white text-slate-400 border border-slate-100">수입</button>
-            <button onclick="setTab('expense')" id="tab-expense" class="px-6 py-3 rounded-2xl text-[11px] font-black bg-white text-slate-400 border border-slate-100">지출</button>
-        </div>
-
-        <!-- 리스트 렌더링 영역 -->
-        <div id="list-container" class="space-y-3 min-h-[300px]">
-            <!-- 데이터가 비었을 때의 기본 스켈레톤 -->
-            <div class="py-20 text-center">
-                <span class="spinner"></span>
-                <p class="text-[10px] font-bold text-slate-300 mt-4 uppercase tracking-widest">데이터 동기화 중...</p>
             </div>
         </div>
     </div>
 
-    <script>
-        const SB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
-        const SB_KEY = 'sb_publishable_kl5FAdM9mGEZttyFqzbNfw_TlLSgRLY';
-        let sb, allRecords = [], currentTab = 'all', editingId = null;
-        let usdRate = 1420, livePrices = {}, viewMonth = new Date();
-        
-        const state = { user_name: '남편', type: '수입' };
-        const categories = {
-            '수입': ['월급', '상여금', '이자/배당', '기타'],
-            '지출': ['식비', '생활용품', '교통', '여가', '경조사', '의료', '통신', '보험', '기타'],
-            '자산': ['보증금', '저축/예금', '적금', '주식 (해외)', '주식 (국내)', '연금/퇴직금']
-        };
+    <!-- 입력 폼 -->
+    <div id="main-form" class="card form-card">
+        <div class="form-header">
+            <span class="form-title">📝 내역 입력</span>
+            <div class="month-nav">
+                <button onclick="moveMonth(-1)">◀</button>
+                <span id="month-label">2026.04</span>
+                <button onclick="moveMonth(1)">▶</button>
+            </div>
+        </div>
 
-        window.onload = async () => {
-            sb = supabase.createClient(SB_URL, SB_KEY);
-            document.getElementById('input-date').valueAsDate = new Date();
-            updateMonthUI();
-            updateCategoryList();
-            
-            // 환율 및 데이터 로드 시작
-            await Promise.all([fetchUsdRate(), refreshData()]);
-        };
+        <div class="btn-grid2">
+            <button id="btn-user-h" class="btn-toggle active" onclick="updateState('user_name','남편')">남편</button>
+            <button id="btn-user-w" class="btn-toggle" onclick="updateState('user_name','아내')">아내</button>
+        </div>
 
-        // 환율 정보 (실시간)
-        async function fetchUsdRate() {
-            try {
-                const res = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
-                if(res?.rates?.KRW) {
-                    usdRate = res.rates.KRW;
-                    document.getElementById('exchange-rate-display').innerText = `₩${usdRate.toLocaleString(undefined, {minimumFractionDigits:1})}`;
-                }
-            } catch(e) { console.error("환율 로드 오류"); }
+        <div class="type-wrap">
+            <button id="btn-type-in" class="btn-type active" onclick="updateState('type','수입')">수입/자산</button>
+            <button id="btn-type-out" class="btn-type" onclick="updateState('type','지출')">지출</button>
+        </div>
+
+        <div class="input-grid2">
+            <div class="input-group">
+                <label class="input-label">날짜</label>
+                <input type="date" id="input-date" class="input-field">
+            </div>
+            <div class="input-group">
+                <label class="input-label">금액 (원가/평단가)</label>
+                <input type="number" id="input-amount" placeholder="0" class="input-field">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label class="input-label">카테고리</label>
+            <select id="input-category" class="input-field" onchange="toggleStockFields()"></select>
+        </div>
+
+        <div id="stock-fields" class="stock-box hidden">
+            <span class="stock-label">
+                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                실시간 자산 평가 정보
+            </span>
+            <div class="input-grid2">
+                <input type="text" id="input-ticker" placeholder="티커 (AAPL / 005930)" class="input-field" style="text-transform:uppercase">
+                <input type="number" id="input-qty" placeholder="보유 수량" step="0.000001" class="input-field">
+            </div>
+            <span class="stock-note">* 미국 주식은 원화로 자동 환산, 한국 주식은 종가로 계산됩니다.</span>
+        </div>
+
+        <input type="text" id="input-desc" placeholder="메모 (상세내역)" class="input-field">
+
+        <div>
+            <button id="main-submit-btn" class="btn-primary" onclick="handleSave()">데이터 저장하기</button>
+            <button id="cancel-edit-btn" class="btn-cancel" onclick="cancelEdit()">수정 취소</button>
+        </div>
+    </div>
+
+    <!-- 탭 -->
+    <div class="tab-wrap">
+        <button id="tab-all" class="tab-btn active" onclick="setTab('all')">전체내역</button>
+        <button id="tab-asset" class="tab-btn" onclick="setTab('asset')">자산현황</button>
+        <button id="tab-income" class="tab-btn" onclick="setTab('income')">수입</button>
+        <button id="tab-expense" class="tab-btn" onclick="setTab('expense')">지출</button>
+    </div>
+
+    <!-- 리스트 -->
+    <div id="list-container">
+        <div class="spinner-wrap">
+            <span class="spinner"></span>
+            <span class="spinner-text">데이터 동기화 중...</span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const SB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
+const SB_KEY = 'sb_publishable_kl5FAdM9mGEZttyFqzbNfw_TlLSgRLY';
+let sb, allRecords = [], currentTab = 'all', editingId = null;
+let usdRate = 1420, livePrices = {}, viewMonth = new Date();
+const state = { user_name: '남편', type: '수입' };
+const categories = {
+    수입: ['월급','상여금','이자/배당','기타'],
+    지출: ['식비','생활용품','교통','여가','경조사','의료','통신','보험','기타'],
+    자산: ['보증금','저축/예금','적금','주식 (해외)','주식 (국내)','연금/퇴직금']
+};
+
+window.onload = async () => {
+    sb = supabase.createClient(SB_URL, SB_KEY);
+    document.getElementById('input-date').valueAsDate = new Date();
+    updateMonthUI();
+    updateCategoryList();
+    await Promise.all([fetchUsdRate(), refreshData()]);
+};
+
+async function fetchUsdRate() {
+    try {
+        const res = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
+        if (res?.rates?.KRW) {
+            usdRate = res.rates.KRW;
+            document.getElementById('exchange-rate-display').innerText = `₩${usdRate.toLocaleString(undefined,{minimumFractionDigits:1})}`;
         }
+    } catch(e) {}
+}
 
-        // 주가 정보 (개별 티커별 최신가 조회)
-        async function fetchStockPrice(ticker) {
-            if (!ticker || livePrices[ticker]) return;
-            let symbol = ticker.toUpperCase().trim();
-            const isKR = /^\d{6}$/.test(symbol); // 6자리 숫자는 한국 주식
-            if (isKR) symbol += '.KS';
+async function fetchStockPrice(ticker) {
+    if (!ticker || livePrices[ticker]) return;
+    let symbol = ticker.toUpperCase().trim();
+    const isKR = /^\d{6}$/.test(symbol);
+    if (isKR) symbol += '.KS';
+    const url = `https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/'+symbol)}`;
+    try {
+        const r = await fetch(url).then(r=>r.json());
+        const data = JSON.parse(r.contents);
+        const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+        if (price) livePrices[ticker] = isKR ? price : price * usdRate;
+    } catch(e) {}
+}
 
-            const url = `https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol)}`;
-            try {
-                const response = await fetch(url).then(r => r.json());
-                const data = JSON.parse(response.contents);
-                const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-                if (price) {
-                    // 해외 주식은 환율 곱함, 국내 주식은 그대로
-                    livePrices[ticker] = isKR ? price : (price * usdRate);
-                }
-            } catch (e) { console.error(`${ticker} 조회 실패`); }
+async function refreshData() {
+    setLoadingUI(true);
+    try {
+        const { data } = await sb.from('account_v3').select('*').order('date', { ascending: false });
+        if (data) {
+            allRecords = data;
+            const tickers = [...new Set(allRecords.filter(r => r.ticker).map(r => r.ticker))];
+            await Promise.allSettled(tickers.map(fetchStockPrice));
+            calculateAndRender();
         }
+    } finally { setLoadingUI(false); }
+}
 
-        // 전체 데이터 리프레시
-        async function refreshData() {
-            setLoadingUI(true);
-            try {
-                const { data, error } = await sb.from('account_v3').select('*').order('date', { ascending: false });
-                if (data) {
-                    allRecords = data;
-                    // 티커 중복 제거 후 가격 병렬 조회
-                    const tickers = [...new Set(allRecords.filter(r => r.ticker).map(r => r.ticker))];
-                    await Promise.allSettled(tickers.map(fetchStockPrice));
-                    calculateAndRender();
-                }
-            } finally {
-                setLoadingUI(false);
-            }
+function calculateAndRender() {
+    let total = 15800000;
+    allRecords.forEach(r => {
+        let val = Number(r.amount) || 0;
+        if (r.category?.includes('주식') && r.ticker && livePrices[r.ticker]) val = livePrices[r.ticker] * (Number(r.qty) || 0);
+        if (['보증금','주식','저축','적금','연금'].some(c => r.category?.includes(c))) total += val;
+        else if (r.type === '수입') total += val;
+    });
+    document.getElementById('total-asset-display').innerText = `₩${Math.round(total).toLocaleString()}`;
+    renderList();
+}
+
+function renderList() {
+    const container = document.getElementById('list-container');
+    const filtered = allRecords.filter(r => {
+        const dp = r.date.split('.');
+        const isMo = parseInt(dp[0]) === viewMonth.getFullYear() && parseInt(dp[1]) === (viewMonth.getMonth()+1);
+        if (currentTab === 'all') return isMo;
+        if (currentTab === 'asset') return ['보증금','주식','저축','적금','연금'].some(c => r.category?.includes(c));
+        if (currentTab === 'income') return isMo && r.type === '수입';
+        if (currentTab === 'expense') return isMo && r.type === '지출';
+        return false;
+    });
+
+    if (!filtered.length) {
+        container.innerHTML = '<div class="empty-msg">기록된 내역이 없습니다</div>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(r => {
+        let displayAmt = Number(r.amount) || 0;
+        let isLive = false;
+        if (r.category?.includes('주식') && r.ticker && livePrices[r.ticker]) {
+            displayAmt = livePrices[r.ticker] * (Number(r.qty) || 0);
+            isLive = true;
         }
+        const cls = r.type === '지출' ? 'expense' : 'income';
+        const sign = r.type === '지출' ? '-' : '+';
+        return `
+        <div class="record-item" onclick="openBS(${r.id})">
+            <div class="record-left">
+                <div class="record-tags">
+                    <span class="record-cat">${r.category}</span>
+                    <span class="record-user">${r.user_name}</span>
+                </div>
+                <div class="record-desc">${r.description || r.category}</div>
+                <div class="record-meta">${r.date}${r.ticker ? ' • '+r.ticker : ''}</div>
+            </div>
+            <div class="record-right">
+                <div class="record-amt ${cls}">${sign}₩${Math.round(displayAmt).toLocaleString()}</div>
+                ${isLive ? '<div class="live-badge">평가액 반영됨</div>' : ''}
+                <div class="record-hint">탭하여 수정/삭제</div>
+            </div>
+        </div>`;
+    }).join('');
+}
 
-        function calculateAndRender() {
-            let totalEvaluated = 15800000; // 기초 보증금 고정값
-            
-            // 전체 자산 합산 로직 (평가액 반영)
-            allRecords.forEach(r => {
-                let val = Number(r.amount) || 0;
-                const isStock = r.category?.includes("주식");
-                
-                // 주식인 경우 실시간 주가 반영 (수량 * 현재가)
-                if (isStock && r.ticker && livePrices[r.ticker]) {
-                    val = livePrices[r.ticker] * (Number(r.qty) || 0);
-                }
+function openBS(id) {
+    const r = allRecords.find(x => x.id === id);
+    if (!r) return;
+    let displayAmt = Number(r.amount) || 0;
+    let isLive = false;
+    if (r.category?.includes('주식') && r.ticker && livePrices[r.ticker]) {
+        displayAmt = livePrices[r.ticker] * (Number(r.qty) || 0);
+        isLive = true;
+    }
+    const cls = r.type === '지출' ? 'expense' : 'income';
+    const sign = r.type === '지출' ? '-' : '+';
+    document.getElementById('bs-content').innerHTML = `
+        <div class="bs-summary">
+            <div class="bs-info">
+                <div class="bs-tags"><span class="bs-cat">${r.category}</span><span class="bs-user">${r.user_name}</span></div>
+                <div class="bs-desc">${r.description || r.category}</div>
+                <div class="bs-meta">${r.date}${r.ticker ? ' • '+r.ticker+(r.qty?' × '+r.qty:'') : ''}</div>
+            </div>
+            <div class="bs-amt-wrap">
+                <div class="bs-amt ${cls}">${sign}₩${Math.round(displayAmt).toLocaleString()}</div>
+                ${isLive ? '<div class="live-badge" style="margin-top:4px">평가액</div>' : ''}
+            </div>
+        </div>
+        <hr class="bs-divider">
+        <div class="bs-actions">
+            <button class="bs-btn-edit" onclick="startEdit(${id})">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                수정하기
+            </button>
+            <button class="bs-btn-delete" onclick="handleDelete(${id})">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                삭제하기
+            </button>
+        </div>
+        <button class="bs-close" onclick="closeBS()">닫기</button>`;
+    document.getElementById('bs-overlay').classList.add('open');
+    document.getElementById('bottom-sheet').classList.add('open');
+}
 
-                // 자산성 카테고리거나 수입인 경우 합산
-                if (["보증금", "주식", "저축", "적금", "연금"].some(c => r.category?.includes(c))) {
-                    totalEvaluated += val;
-                } else if (r.type === '수입') {
-                    totalEvaluated += val;
-                }
-                // 지출은 순자산 총계에서 제외하거나, 수입에서 이미 차감된 개념이므로 합산에서 제외 (가계부 성격)
-            });
+function closeBS() {
+    document.getElementById('bs-overlay').classList.remove('open');
+    document.getElementById('bottom-sheet').classList.remove('open');
+}
 
-            document.getElementById('total-asset-display').innerText = `₩${Math.round(totalEvaluated).toLocaleString()}`;
-            renderList();
+function startEdit(id) {
+    closeBS();
+    const target = allRecords.find(r => r.id === id);
+    if (!target) return;
+    editingId = id;
+    document.getElementById('main-form').classList.add('edit-active');
+    document.getElementById('main-submit-btn').innerText = '✅ 변경사항 저장하기';
+    document.getElementById('cancel-edit-btn').style.display = 'block';
+
+    updateState('user_name', target.user_name);
+    updateState('type', target.type);
+    const dStr = target.date.replace(/ /g,'').replace(/\./g,'-').substring(0,10);
+    document.getElementById('input-date').value = dStr;
+    document.getElementById('input-amount').value = target.amount;
+    document.getElementById('input-desc').value = target.description || '';
+    setTimeout(() => {
+        document.getElementById('input-category').value = target.category;
+        if (target.ticker) {
+            document.getElementById('input-ticker').value = target.ticker;
+            document.getElementById('input-qty').value = target.qty;
         }
+        toggleStockFields();
+    }, 50);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-        function renderList() {
-            const container = document.getElementById('list-container');
-            const filtered = allRecords.filter(r => {
-                const dp = r.date.split('.');
-                const isThisMonth = parseInt(dp[0]) === viewMonth.getFullYear() && parseInt(dp[1]) === (viewMonth.getMonth() + 1);
-                
-                if (currentTab === 'all') return isThisMonth;
-                if (currentTab === 'asset') return ["보증금","주식","저축","적금","연금"].some(c => r.category?.includes(c));
-                if (currentTab === 'income') return isThisMonth && r.type === '수입';
-                if (currentTab === 'expense') return isThisMonth && r.type === '지출';
-                return false;
-            });
+function cancelEdit() {
+    editingId = null;
+    document.getElementById('main-form').classList.remove('edit-active');
+    document.getElementById('main-submit-btn').innerText = '데이터 저장하기';
+    document.getElementById('cancel-edit-btn').style.display = 'none';
+    document.getElementById('input-amount').value = '';
+    document.getElementById('input-desc').value = '';
+    document.getElementById('input-ticker').value = '';
+    document.getElementById('input-qty').value = '';
+    document.getElementById('input-date').valueAsDate = new Date();
+    updateCategoryList();
+}
 
-            container.innerHTML = filtered.length ? filtered.map(r => {
-                let displayAmt = Number(r.amount) || 0;
-                let isLive = false;
-                if (r.category?.includes("주식") && r.ticker && livePrices[r.ticker]) {
-                    displayAmt = livePrices[r.ticker] * (Number(r.qty) || 0);
-                    isLive = true;
-                }
+async function handleSave() {
+    const amt = Number(document.getElementById('input-amount').value);
+    if (!amt) return showToast('⚠️ 금액을 입력하세요', true);
 
-                return `
-                <div onclick="initiateEdit(${r.id})" class="card p-5 flex justify-between items-center cursor-pointer hover:border-blue-400 active:scale-[0.98] group">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[8px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500 uppercase tracking-tighter">${r.category}</span>
-                            <span class="text-[9px] font-bold text-blue-500">${r.user_name}</span>
-                        </div>
-                        <p class="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">${r.description || r.category}</p>
-                        <p class="text-[8px] font-mono text-slate-400">${r.date} ${r.ticker ? '• ' + r.ticker : ''}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[14px] font-black font-mono ${r.type==='지출'?'text-rose-500':'text-emerald-500'}">
-                            ${r.type==='지출' ? '-' : '+'}₩${Math.round(displayAmt).toLocaleString()}
-                        </p>
-                        ${isLive ? '<span class="text-[7px] font-black text-blue-400 bg-blue-50 px-1 rounded">평가액 반영됨</span>' : ''}
-                    </div>
-                </div>`;
-            }).join('') : '<div class="py-20 text-center text-slate-300 text-[10px] font-black uppercase tracking-widest italic">기록된 내역이 없습니다</div>';
+    const btn = document.getElementById('main-submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> 처리 중...';
+
+    const payload = {
+        user_name: state.user_name, type: state.type,
+        category: document.getElementById('input-category').value,
+        amount: amt,
+        date: document.getElementById('input-date').value.replace(/-/g, '. ') + '. ',
+        description: document.getElementById('input-desc').value,
+        ticker: document.getElementById('input-ticker').value.toUpperCase().trim() || null,
+        qty: Number(document.getElementById('input-qty').value) || null
+    };
+
+    if (editingId) {
+        const idx = allRecords.findIndex(r => r.id === editingId);
+        const old = { ...allRecords[idx] };
+        allRecords[idx] = { ...allRecords[idx], ...payload };
+        calculateAndRender(); cancelEdit(); showToast('✅ 수정 완료');
+        const res = await sb.from('account_v3').update(payload).eq('id', old.id);
+        if (res.error) { allRecords[idx] = old; calculateAndRender(); showToast('❌ 수정 실패', true); }
+    } else {
+        const tempId = 'tmp_' + Date.now();
+        allRecords.unshift({ id: tempId, ...payload });
+        calculateAndRender(); cancelEdit(); showToast('✅ 저장 완료');
+        const res = await sb.from('account_v3').insert([payload]).select().single();
+        if (res.error) {
+            allRecords = allRecords.filter(r => r.id !== tempId);
+            calculateAndRender(); showToast('❌ 저장 실패', true);
+        } else {
+            const i = allRecords.findIndex(r => r.id === tempId);
+            if (i !== -1) allRecords[i] = res.data;
         }
+    }
 
-        // --- 수정 및 삭제 기능의 핵심 ---
-        function initiateEdit(id) {
-            const target = allRecords.find(r => r.id === id);
-            if (!target) return;
+    btn.disabled = false;
+    btn.innerText = '데이터 저장하기';
+}
 
-            editingId = id; // 현재 수정 중인 고유 ID 저장
-            
-            // UI 상태 변경
-            const form = document.getElementById('main-form');
-            form.classList.add('edit-active');
-            document.getElementById('form-mode-title').innerText = "✏️ 내역 수정 모드";
-            document.getElementById('main-submit-btn').innerText = "변경사항 저장하기";
-            document.getElementById('edit-mode-actions').classList.remove('hidden');
+async function handleDelete(id) {
+    closeBS();
+    if (!confirm('이 내역을 정말 삭제하시겠습니까?')) return;
+    const removed = allRecords.find(r => r.id === id);
+    allRecords = allRecords.filter(r => r.id !== id);
+    calculateAndRender(); showToast('🗑️ 삭제 완료');
+    const { error } = await sb.from('account_v3').delete().eq('id', id);
+    if (error) {
+        allRecords.push(removed);
+        allRecords.sort((a,b) => b.date.localeCompare(a.date));
+        calculateAndRender(); showToast('❌ 삭제 실패', true);
+    }
+}
 
-            // 데이터 폼에 채우기
-            updateState('user_name', target.user_name);
-            updateState('type', target.type);
-            
-            // 날짜 변환 (YYYY. MM. DD. -> YYYY-MM-DD)
-            const dStr = target.date.replace(/ /g, '').replace(/\./g, '-').substring(0, 10);
-            document.getElementById('input-date').value = dStr;
-            document.getElementById('input-amount').value = target.amount;
-            document.getElementById('input-desc').value = target.description || '';
-            
-            // 카테고리 및 주식 정보 (Select 로딩 대기)
-            setTimeout(() => {
-                document.getElementById('input-category').value = target.category;
-                if (target.ticker) {
-                    document.getElementById('input-ticker').value = target.ticker;
-                    document.getElementById('input-qty').value = target.qty;
-                }
-                toggleStockFields();
-            }, 50);
+let toastTimer;
+function showToast(msg, err=false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = err ? '#ef4444' : '#0f172a';
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
 
-            // 상단으로 스크롤 이동
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+function updateState(key, val) {
+    state[key] = val;
+    if (key === 'user_name') {
+        document.getElementById('btn-user-h').classList.toggle('active', val === '남편');
+        document.getElementById('btn-user-w').classList.toggle('active', val === '아내');
+    } else {
+        document.getElementById('btn-type-in').classList.toggle('active', val === '수입');
+        document.getElementById('btn-type-out').classList.toggle('active', val === '지출');
+        updateCategoryList();
+    }
+}
 
-        async function handleSave() {
-            const amt = Number(document.getElementById('input-amount').value);
-            if (!amt) return alert("금액을 입력하세요.");
+function updateCategoryList() {
+    const list = state.type === '수입' ? [...categories.수입, ...categories.자산] : categories.지출;
+    document.getElementById('input-category').innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
+    toggleStockFields();
+}
 
-            const payload = {
-                user_name: state.user_name,
-                type: state.type,
-                category: document.getElementById('input-category').value,
-                amount: amt,
-                date: document.getElementById('input-date').value.replace(/-/g, '. ') + '. ',
-                description: document.getElementById('input-desc').value,
-                ticker: document.getElementById('input-ticker').value.toUpperCase().trim() || null,
-                qty: Number(document.getElementById('input-qty').value) || null
-            };
+function toggleStockFields() {
+    const isStock = document.getElementById('input-category').value.includes('주식');
+    document.getElementById('stock-fields').classList.toggle('hidden', !isStock);
+}
 
-            let res;
-            if (editingId) {
-                // 수정: 해당 ID의 데이터 업데이트
-                res = await sb.from('account_v3').update(payload).eq('id', editingId);
-            } else {
-                // 신규: 데이터 삽입
-                res = await sb.from('account_v3').insert([payload]);
-            }
+function setTab(t) {
+    currentTab = t;
+    ['all','asset','income','expense'].forEach(tab => {
+        document.getElementById('tab-'+tab).classList.toggle('active', tab === t);
+    });
+    renderList();
+}
 
-            if (!res.error) {
-                cancelEdit();
-                await refreshData();
-            } else {
-                alert("처리 중 오류가 발생했습니다.");
-            }
-        }
+function moveMonth(d) { viewMonth.setMonth(viewMonth.getMonth()+d); updateMonthUI(); renderList(); }
+function updateMonthUI() {
+    document.getElementById('month-label').innerText = `${viewMonth.getFullYear()}.${String(viewMonth.getMonth()+1).padStart(2,'0')}`;
+}
 
-        async function handleDelete() {
-            if (!editingId || !confirm("이 내역을 정말 삭제하시겠습니까?")) return;
-            
-            const { error } = await sb.from('account_v3').delete().eq('id', editingId);
-            if (!error) {
-                cancelEdit();
-                await refreshData();
-            }
-        }
-
-        function cancelEdit() {
-            editingId = null;
-            const form = document.getElementById('main-form');
-            form.classList.remove('edit-active');
-            document.getElementById('form-mode-title').innerText = "📝 내역 입력";
-            document.getElementById('main-submit-btn').innerText = "데이터 저장하기";
-            document.getElementById('edit-mode-actions').classList.add('hidden');
-            
-            document.getElementById('input-amount').value = '';
-            document.getElementById('input-desc').value = '';
-            document.getElementById('input-ticker').value = '';
-            document.getElementById('input-qty').value = '';
-            document.getElementById('input-date').valueAsDate = new Date();
-            toggleStockFields();
-        }
-
-        // --- 기타 UI 헬퍼 ---
-        function updateState(key, val) {
-            state[key] = val;
-            if (key === 'user_name') {
-                document.getElementById('btn-user-h').className = val === '남편' ? 'py-4 rounded-2xl border-2 font-black text-xs btn-navy' : 'py-4 rounded-2xl border-2 font-black text-xs bg-white text-slate-300 border-slate-100';
-                document.getElementById('btn-user-w').className = val === '아내' ? 'py-4 rounded-2xl border-2 font-black text-xs btn-navy' : 'py-4 rounded-2xl border-2 font-black text-xs bg-white text-slate-300 border-slate-100';
-            } else {
-                document.getElementById('btn-type-in').className = val === '수입' ? 'flex-1 py-3 rounded-xl font-black text-xs bg-white shadow-sm' : 'flex-1 py-3 rounded-xl font-black text-xs text-slate-400';
-                document.getElementById('btn-type-out').className = val === '지출' ? 'flex-1 py-3 rounded-xl font-black text-xs bg-white shadow-sm' : 'flex-1 py-3 rounded-xl font-black text-xs text-slate-400';
-                updateCategoryList();
-            }
-        }
-
-        function updateCategoryList() {
-            const list = state.type === '수입' ? [...categories.수입, ...categories.자산] : categories.지출;
-            document.getElementById('input-category').innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
-            toggleStockFields();
-        }
-
-        function toggleStockFields() {
-            const isStock = document.getElementById('input-category').value.includes("주식");
-            document.getElementById('stock-fields').classList.toggle('hidden', !isStock);
-        }
-
-        function setTab(t) {
-            currentTab = t;
-            const tabs = ['all', 'asset', 'income', 'expense'];
-            tabs.forEach(tab => {
-                document.getElementById('tab-' + tab).className = t === tab ? 'px-6 py-3 rounded-2xl text-[11px] font-black btn-navy shadow-lg' : 'px-6 py-3 rounded-2xl text-[11px] font-black bg-white text-slate-400 border border-slate-100';
-            });
-            renderList();
-        }
-
-        function moveMonth(d) { viewMonth.setMonth(viewMonth.getMonth() + d); updateMonthUI(); renderList(); }
-        function updateMonthUI() { document.getElementById('month-label').innerText = `${viewMonth.getFullYear()}.${String(viewMonth.getMonth()+1).padStart(2,'0')}`; }
-        
-        function setLoadingUI(b) {
-            document.getElementById('sync-indicator').innerHTML = b ? '<span class="spinner"></span> SYNCING' : '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE';
-            if(!b) document.getElementById('last-update-time').innerText = new Date().toLocaleTimeString();
-        }
-    </script>
+function setLoadingUI(b) {
+    document.getElementById('sync-indicator').innerHTML = b
+        ? '<span class="spinner" style="width:10px;height:10px;border-width:1.5px;margin-right:4px"></span>SYNCING'
+        : '<span class="sync-dot"></span>LIVE';
+    if (!b) document.getElementById('last-update-time').innerText = new Date().toLocaleTimeString();
+}
+</script>
 </body>
 </html>
