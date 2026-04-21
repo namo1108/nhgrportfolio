@@ -3,382 +3,343 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NH&GR 가계부 - 초고속 관리자</title>
+    <title>NH&GR Asset Intelligence v8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; color: #1e293b; letter-spacing: -0.025em; -webkit-tap-highlight-color: transparent; }
-        .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-active:active { transform: scale(0.97); background-color: #f8fafc; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; color: #0f172a; -webkit-tap-highlight-color: transparent; }
+        .card { background: white; border-radius: 1.5rem; border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .edit-active { border: 2px solid #3b82f6 !important; background-color: #f8faff !important; box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.1); }
         .btn-navy { background-color: #0f172a; color: white; }
-        .font-mono { font-family: 'ui-monospace', monospace; }
-        .edit-highlight { border: 2px solid #3b82f6 !important; background-color: #eff6ff !important; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1) !important; }
-        .spinner { width: 16px; height: 16px; border: 2px solid #e2e8f0; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spinner { width: 14px; height: 14px; border: 2px solid #e2e8f0; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input, select { outline: none; transition: border 0.2s; }
+        input:focus, select:focus { border-color: #3b82f6; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
-        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body class="p-4 md:p-8 pb-32">
-    <div class="max-w-6xl mx-auto space-y-6">
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div id="loader-icon" class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
-                    <span class="spinner"></span>
+    <div class="max-w-2xl mx-auto space-y-6">
+        <!-- 상단 평가 금액 섹션 -->
+        <header class="card p-8 bg-[#0f172a] text-white relative overflow-hidden shadow-2xl">
+            <div class="relative z-10">
+                <div class="flex justify-between items-start mb-2">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">실시간 순자산 평가액</p>
+                    <div id="sync-indicator" class="flex items-center gap-2 text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        LIVE
+                    </div>
                 </div>
-                <div>
-                    <h1 class="text-2xl font-black tracking-tighter">NH&GR 자산현황</h1>
-                    <p id="sync-status" class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">데이터 동기화 중...</p>
+                <h1 id="total-asset-display" class="text-4xl font-black font-mono tracking-tighter italic">₩0</h1>
+                <div class="mt-6 grid grid-cols-2 gap-4">
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">USD 환율 (실시간)</p>
+                        <p id="exchange-rate-display" class="text-sm font-mono font-bold text-blue-300">₩1,420.0</p>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">마지막 업데이트</p>
+                        <p id="last-update-time" class="text-sm font-mono font-bold text-slate-300">--:--:--</p>
+                    </div>
                 </div>
             </div>
-            <div class="bg-white p-1 rounded-2xl shadow-sm border flex items-center font-bold text-sm">
-                <button onclick="changeMonth(-1)" class="p-3 text-slate-400 hover:text-black transition-colors">◀</button>
-                <span id="month-display" class="px-4 font-mono text-base border-x border-slate-50">2026.04</span>
-                <button onclick="changeMonth(1)" class="p-3 text-slate-400 hover:text-black transition-colors">▶</button>
-            </div>
+            <!-- 배경 장식 -->
+            <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <!-- Left Side: Dashboard -->
-            <div class="lg:col-span-7 space-y-6">
-                <!-- Total Assets Card -->
-                <div class="card p-8 bg-[#0f172a] text-white relative overflow-hidden shadow-2xl">
-                    <div class="absolute top-0 right-0 p-4 opacity-10"><svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg></div>
-                    <p class="text-[11px] text-slate-400 font-black mb-1 uppercase tracking-widest">실시간 순자산 합계</p>
-                    <p id="sum-total" class="text-4xl font-black font-mono tracking-tighter">₩0</p>
-                    <div class="flex gap-4 mt-6">
-                        <div class="flex-1 bg-white/5 p-3 rounded-xl border border-white/10">
-                            <p class="text-[9px] text-slate-500 font-bold uppercase">USD 환율</p>
-                            <p id="rate-display" class="text-sm font-mono font-bold">1,420.0</p>
-                        </div>
-                        <div class="flex-1 bg-white/5 p-3 rounded-xl border border-white/10">
-                            <p class="text-[9px] text-slate-500 font-bold uppercase">업데이트</p>
-                            <p id="time-display" class="text-sm font-mono font-bold">--:--</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Category Summary -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div class="card p-4 border-b-4 border-blue-500">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase">현금/보증금</p>
-                        <p id="sum-avail" class="text-sm font-black font-mono mt-1 truncate">₩0</p>
-                    </div>
-                    <div class="card p-4 border-b-4 border-purple-500">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase">주식/투자</p>
-                        <p id="sum-stock" class="text-sm font-black font-mono mt-1 truncate">₩0</p>
-                    </div>
-                    <div class="card p-4 border-b-4 border-emerald-500">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase">예적금</p>
-                        <p id="sum-save" class="text-sm font-black font-mono mt-1 truncate">₩0</p>
-                    </div>
-                    <div class="card p-4 border-b-4 border-amber-500">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase">미래자산</p>
-                        <p id="sum-future" class="text-sm font-black font-mono mt-1 truncate">₩0</p>
-                    </div>
-                </div>
-
-                <!-- Charts (Mobile Toggleable or Stacked) -->
-                <div class="card p-6 h-72 flex flex-col items-center justify-center relative">
-                    <p class="text-[11px] font-black text-slate-400 mb-4 uppercase absolute top-6 left-6">자산 분포</p>
-                    <div class="w-full h-full pt-6"><canvas id="chart-asset"></canvas></div>
-                </div>
-
-                <!-- List View -->
-                <div class="space-y-4">
-                    <div class="flex gap-2 overflow-x-auto py-2 no-scrollbar sticky top-0 bg-[#f1f5f9] z-10">
-                        <button onclick="setTab('all')" id="tab-all" class="px-5 py-2.5 rounded-xl text-xs font-black btn-navy shadow-lg shadow-slate-200 transition-all whitespace-nowrap">전체내역</button>
-                        <button onclick="setTab('asset')" id="tab-asset" class="px-5 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-200 shadow-sm transition-all whitespace-nowrap">자산목록</button>
-                        <button onclick="setTab('income')" id="tab-income" class="px-5 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-200 shadow-sm transition-all whitespace-nowrap">수입</button>
-                        <button onclick="setTab('expense')" id="tab-expense" class="px-5 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-200 shadow-sm transition-all whitespace-nowrap">지출</button>
-                    </div>
-                    <div id="list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-8">
-                        <!-- List Items -->
-                    </div>
+        <!-- 입력 및 수정 폼 -->
+        <section id="main-form" class="card p-6 space-y-5 shadow-sm border-2 border-transparent">
+            <div class="flex justify-between items-center">
+                <h2 id="form-mode-title" class="text-lg font-black tracking-tight text-slate-800">📝 내역 입력</h2>
+                <div class="flex items-center bg-slate-100 rounded-xl p-1 font-mono text-[11px] font-bold">
+                    <button onclick="moveMonth(-1)" class="px-2 text-slate-400 hover:text-black">◀</button>
+                    <span id="month-label" class="px-2">2026.04</span>
+                    <button onclick="moveMonth(1)" class="px-2 text-slate-400 hover:text-black">▶</button>
                 </div>
             </div>
 
-            <!-- Right Side: Input/Edit Form -->
-            <div class="lg:col-span-5 lg:sticky lg:top-8">
-                <section id="form-container" class="card p-6 space-y-6 border-2 border-transparent">
-                    <div class="flex justify-between items-center">
-                        <h2 id="form-title" class="text-lg font-black tracking-tight">📝 내역 추가</h2>
-                        <span id="edit-indicator" class="hidden px-2 py-1 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase animate-pulse">수정 중</span>
-                    </div>
+            <!-- 유저 및 유형 선택 -->
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="updateState('user_name', '남편')" id="btn-user-h" class="py-4 rounded-2xl border-2 font-black text-xs btn-navy">남편</button>
+                <button onclick="updateState('user_name', '아내')" id="btn-user-w" class="py-4 rounded-2xl border-2 font-black text-xs bg-white text-slate-300 border-slate-100">아내</button>
+            </div>
+            <div class="flex p-1.5 bg-slate-100 rounded-2xl">
+                <button onclick="updateState('type', '수입')" id="btn-type-in" class="flex-1 py-3 rounded-xl font-black text-xs bg-white shadow-sm">수입/자산</button>
+                <button onclick="updateState('type', '지출')" id="btn-type-out" class="flex-1 py-3 rounded-xl font-black text-xs text-slate-400">지출</button>
+            </div>
 
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="setUser('남편')" id="btn-user-h" class="py-4 rounded-2xl border-2 font-black text-xs btn-navy transition-all">남편</button>
-                        <button onclick="setUser('아내')" id="btn-user-w" class="py-4 rounded-2xl border-2 font-black text-xs bg-white text-slate-400 border-slate-100 transition-all">아내</button>
-                    </div>
+            <!-- 기본 정보 입력 -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">날짜</label>
+                    <input type="date" id="input-date" class="w-full p-4 rounded-2xl border bg-white text-xs font-bold shadow-sm">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">금액 (원가/평단가)</label>
+                    <input type="number" id="input-amount" placeholder="0" class="w-full p-4 rounded-2xl border text-xs font-bold shadow-sm">
+                </div>
+            </div>
 
-                    <div class="flex p-1.5 bg-slate-100 rounded-2xl">
-                        <button onclick="setType('수입')" id="btn-type-in" class="flex-1 py-3 rounded-xl font-black text-xs btn-navy">수입/자산</button>
-                        <button onclick="setType('지출')" id="btn-type-out" class="flex-1 py-3 rounded-xl font-black text-xs text-slate-400">지출</button>
-                    </div>
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">카테고리</label>
+                <select id="input-category" onchange="toggleStockFields()" class="w-full p-4 rounded-2xl border bg-white text-xs font-bold shadow-sm"></select>
+            </div>
 
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="space-y-1.5">
-                                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">분류</label>
-                                <select id="category-select" onchange="checkCategory()" class="w-full p-4 rounded-2xl border bg-white text-sm font-bold shadow-sm outline-none focus:ring-2 ring-blue-500/20"></select>
-                            </div>
-                            <div class="space-y-1.5">
-                                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">금액 (₩)</label>
-                                <input type="number" id="input-amount" placeholder="0" class="w-full p-4 rounded-2xl border text-sm font-bold shadow-sm outline-none focus:ring-2 ring-blue-500/20">
-                            </div>
-                        </div>
+            <!-- 주식 전용 필드 (수량/티커) -->
+            <div id="stock-fields" class="hidden p-5 bg-blue-50 border border-blue-100 rounded-2xl space-y-4">
+                <p class="text-[10px] font-black text-blue-500 uppercase flex items-center gap-2">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    실시간 자산 평가 정보
+                </p>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="input-ticker" placeholder="티커 (AAPL / 005930)" class="p-4 rounded-xl border text-[10px] font-black uppercase outline-none focus:ring-2 ring-blue-500/20">
+                    <input type="number" id="input-qty" placeholder="보유 수량" step="0.000001" class="p-4 rounded-xl border text-[10px] font-black outline-none focus:ring-2 ring-blue-500/20">
+                </div>
+                <p class="text-[9px] text-blue-400 font-medium">* 미국 주식은 원화로 자동 환산, 한국 주식은 종가로 계산됩니다.</p>
+            </div>
 
-                        <div id="stock-fields" class="hidden p-4 bg-purple-50 rounded-2xl border border-purple-100 space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="space-y-1.5">
-                                    <label class="text-[10px] font-black text-purple-500 uppercase ml-1">티커 (예: AAPL)</label>
-                                    <input type="text" id="input-ticker" placeholder="TICKER" class="w-full p-3 rounded-xl border-purple-200 text-sm font-bold uppercase outline-none focus:ring-2 ring-purple-400/20">
-                                </div>
-                                <div class="space-y-1.5">
-                                    <label class="text-[10px] font-black text-purple-500 uppercase ml-1">보유 수량</label>
-                                    <input type="number" id="input-qty" placeholder="0.0" step="0.0001" class="w-full p-3 rounded-xl border-purple-200 text-sm font-bold outline-none focus:ring-2 ring-purple-400/20">
-                                </div>
-                            </div>
-                        </div>
+            <input type="text" id="input-desc" placeholder="메모 (상세내역)" class="w-full p-4 rounded-2xl border text-xs font-bold shadow-sm">
 
-                        <div class="space-y-1.5">
-                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1">메모</label>
-                            <input type="text" id="input-desc" placeholder="상세 내용 입력" class="w-full p-4 rounded-2xl border text-sm font-bold shadow-sm outline-none focus:ring-2 ring-blue-500/20">
-                        </div>
-                    </div>
+            <!-- 저장 및 수정/삭제 버튼 -->
+            <div id="form-actions" class="pt-2">
+                <button id="main-submit-btn" onclick="handleSave()" class="w-full py-5 btn-navy rounded-2xl font-black text-sm shadow-xl active:scale-[0.98] transition-transform">
+                    데이터 저장하기
+                </button>
+                <div id="edit-mode-actions" class="hidden grid grid-cols-2 gap-2 mt-2">
+                    <button onclick="cancelEdit()" class="py-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-xs">수정 취소</button>
+                    <button onclick="handleDelete()" class="py-4 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl font-black text-xs hover:bg-rose-100">내역 삭제</button>
+                </div>
+            </div>
+        </section>
 
-                    <div id="form-actions" class="flex flex-col gap-2">
-                        <button id="btn-save" onclick="saveRecord()" class="w-full py-5 bg-[#0f172a] text-white rounded-2xl font-black text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-all">
-                            데이터 저장하기
-                        </button>
-                        <div id="edit-buttons" class="hidden flex gap-2">
-                            <button onclick="cancelEdit()" class="flex-1 py-4 bg-slate-200 text-slate-600 rounded-2xl font-bold text-xs transition-all">취소</button>
-                            <button onclick="deleteRecord()" class="flex-1 py-4 bg-rose-50 text-rose-500 rounded-2xl font-bold text-xs border border-rose-100 transition-all">삭제</button>
-                        </div>
-                    </div>
-                </section>
+        <!-- 필터 탭 -->
+        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <button onclick="setTab('all')" id="tab-all" class="px-6 py-3 rounded-2xl text-[11px] font-black btn-navy shadow-lg">전체내역</button>
+            <button onclick="setTab('asset')" id="tab-asset" class="px-6 py-3 rounded-2xl text-[11px] font-black bg-white text-slate-400 border border-slate-100">자산현황</button>
+            <button onclick="setTab('income')" id="tab-income" class="px-6 py-3 rounded-2xl text-[11px] font-black bg-white text-slate-400 border border-slate-100">수입</button>
+            <button onclick="setTab('expense')" id="tab-expense" class="px-6 py-3 rounded-2xl text-[11px] font-black bg-white text-slate-400 border border-slate-100">지출</button>
+        </div>
+
+        <!-- 리스트 렌더링 영역 -->
+        <div id="list-container" class="space-y-3 min-h-[300px]">
+            <!-- 데이터가 비었을 때의 기본 스켈레톤 -->
+            <div class="py-20 text-center">
+                <span class="spinner"></span>
+                <p class="text-[10px] font-bold text-slate-300 mt-4 uppercase tracking-widest">데이터 동기화 중...</p>
             </div>
         </div>
     </div>
 
     <script>
-        // Supabase 설정
         const SB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
         const SB_KEY = 'sb_publishable_kl5FAdM9mGEZttyFqzbNfw_TlLSgRLY';
-        let sb, allRecords = [], currentMonth = new Date(), currentTab = 'all';
-        let exchangeRate = 1420, stockCache = {}, charts = {}, editingId = null;
-        const BASE_DEPOSIT = 15800000;
+        let sb, allRecords = [], currentTab = 'all', editingId = null;
+        let usdRate = 1420, livePrices = {}, viewMonth = new Date();
         
-        let formData = { user: '남편', type: '수입' };
+        const state = { user_name: '남편', type: '수입' };
         const categories = {
             '수입': ['월급', '상여금', '이자/배당', '기타'],
-            '지출': ['식비', '생활용품', '교통', '문화/여가', '경조사', '교육', '의료', '보험', '통신', '기타'],
-            '자산': ['아파트 보증금', '저축/예금', '적금', '청약', '주식 (국내)', '주식 (해외)', '연금/퇴직금']
+            '지출': ['식비', '생활용품', '교통', '여가', '경조사', '의료', '통신', '보험', '기타'],
+            '자산': ['보증금', '저축/예금', '적금', '주식 (해외)', '주식 (국내)', '연금/퇴직금']
         };
 
-        // 초기화
         window.onload = async () => {
             sb = supabase.createClient(SB_URL, SB_KEY);
-            setType('수입');
-            updateMonthDisplay();
-            // 로딩 속도 최적화를 위해 환율/DB 로드를 병렬 실행 (최대 5초 이내 목표)
-            await Promise.all([
-                fetchExchangeRate(),
-                refreshData()
-            ]);
+            document.getElementById('input-date').valueAsDate = new Date();
+            updateMonthUI();
+            updateCategoryList();
+            
+            // 환율 및 데이터 로드 시작
+            await Promise.all([fetchUsdRate(), refreshData()]);
         };
 
-        // 환율 정보 (초고속 API)
-        async function fetchExchangeRate() {
+        // 환율 정보 (실시간)
+        async function fetchUsdRate() {
             try {
                 const res = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
                 if(res?.rates?.KRW) {
-                    exchangeRate = res.rates.KRW;
-                    document.getElementById('rate-display').innerText = exchangeRate.toLocaleString(undefined, {minimumFractionDigits:1});
+                    usdRate = res.rates.KRW;
+                    document.getElementById('exchange-rate-display').innerText = `₩${usdRate.toLocaleString(undefined, {minimumFractionDigits:1})}`;
                 }
-            } catch(e) {}
+            } catch(e) { console.error("환율 로드 오류"); }
         }
 
-        // 주가 정보 최적화 (캐싱 활용)
-        async function updateStockPrice(ticker) {
-            if (!ticker || stockCache[ticker]) return; // 이미 이번 세션에 로드했다면 통과
-            let ft = ticker.toUpperCase();
-            if (/^\d{6}$/.test(ft)) ft += '.KS';
-            const url = `https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + ft)}`;
+        // 주가 정보 (개별 티커별 최신가 조회)
+        async function fetchStockPrice(ticker) {
+            if (!ticker || livePrices[ticker]) return;
+            let symbol = ticker.toUpperCase().trim();
+            const isKR = /^\d{6}$/.test(symbol); // 6자리 숫자는 한국 주식
+            if (isKR) symbol += '.KS';
+
+            const url = `https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol)}`;
             try {
-                const res = await fetch(url).then(r => r.json());
-                const data = JSON.parse(res.contents);
+                const response = await fetch(url).then(r => r.json());
+                const data = JSON.parse(response.contents);
                 const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-                if (price != null) {
-                    const isKR = ft.includes('.KS') || ft.includes('.KQ');
-                    stockCache[ticker] = isKR ? price : (price * exchangeRate);
+                if (price) {
+                    // 해외 주식은 환율 곱함, 국내 주식은 그대로
+                    livePrices[ticker] = isKR ? price : (price * usdRate);
                 }
-            } catch (e) {}
+            } catch (e) { console.error(`${ticker} 조회 실패`); }
         }
 
-        // 데이터 리프레시 로직 (5초 이내 완료 목표)
+        // 전체 데이터 리프레시
         async function refreshData() {
-            document.getElementById('loader-icon').innerHTML = '<span class="spinner"></span>';
-            document.getElementById('sync-status').innerText = "데이터 동기화 중...";
-            
+            setLoadingUI(true);
             try {
-                const { data, error } = await sb.from('account_v3').select('*').order('created_at', { ascending: false });
+                const { data, error } = await sb.from('account_v3').select('*').order('date', { ascending: false });
                 if (data) {
                     allRecords = data;
+                    // 티커 중복 제거 후 가격 병렬 조회
                     const tickers = [...new Set(allRecords.filter(r => r.ticker).map(r => r.ticker))];
-                    // 주가 업데이트도 병렬로 실행하여 시간 단축
-                    if (tickers.length > 0) {
-                        await Promise.allSettled(tickers.map(updateStockPrice));
-                    }
-                    processAndRender();
+                    await Promise.allSettled(tickers.map(fetchStockPrice));
+                    calculateAndRender();
                 }
             } finally {
-                document.getElementById('loader-icon').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                document.getElementById('sync-status').innerText = "실시간 동기화 완료";
-                document.getElementById('time-display').innerText = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                setLoadingUI(false);
             }
         }
 
-        function processAndRender() {
-            let sums = { avail: BASE_DEPOSIT, stock: 0, save: 0, future: 0 };
-            const viewY = currentMonth.getFullYear();
-            const viewM = currentMonth.getMonth() + 1;
-
+        function calculateAndRender() {
+            let totalEvaluated = 15800000; // 기초 보증금 고정값
+            
+            // 전체 자산 합산 로직 (평가액 반영)
             allRecords.forEach(r => {
-                const amt = Number(r.amount) || 0;
-                const cat = (r.category || "").trim();
-                const type = (r.type || "").trim();
+                let val = Number(r.amount) || 0;
+                const isStock = r.category?.includes("주식");
                 
-                if (cat.includes("주식")) {
-                    sums.stock += (r.ticker && stockCache[r.ticker]) ? (stockCache[r.ticker] * (r.qty || 0)) : amt;
-                } else if (cat.includes("보증금") || (type === "수입" && ['월급','기타','상여금','이자/배당'].includes(cat))) {
-                    sums.avail += amt;
-                } else if (['저축','적금','청약'].some(k => cat.includes(k))) {
-                    sums.save += amt;
-                } else if (['연금','퇴직'].some(k => cat.includes(k))) {
-                    sums.future += amt;
+                // 주식인 경우 실시간 주가 반영 (수량 * 현재가)
+                if (isStock && r.ticker && livePrices[r.ticker]) {
+                    val = livePrices[r.ticker] * (Number(r.qty) || 0);
                 }
+
+                // 자산성 카테고리거나 수입인 경우 합산
+                if (["보증금", "주식", "저축", "적금", "연금"].some(c => r.category?.includes(c))) {
+                    totalEvaluated += val;
+                } else if (r.type === '수입') {
+                    totalEvaluated += val;
+                }
+                // 지출은 순자산 총계에서 제외하거나, 수입에서 이미 차감된 개념이므로 합산에서 제외 (가계부 성격)
             });
 
-            document.getElementById('sum-avail').innerText = `₩${Math.round(sums.avail).toLocaleString()}`;
-            document.getElementById('sum-save').innerText = `₩${Math.round(sums.save).toLocaleString()}`;
-            document.getElementById('sum-stock').innerText = `₩${Math.round(sums.stock).toLocaleString()}`;
-            document.getElementById('sum-future').innerText = `₩${Math.round(sums.future).toLocaleString()}`;
-            document.getElementById('sum-total').innerText = `₩${Math.round(sums.avail + sums.stock + sums.save + sums.future).toLocaleString()}`;
-            
-            drawAssetChart(sums);
+            document.getElementById('total-asset-display').innerText = `₩${Math.round(totalEvaluated).toLocaleString()}`;
             renderList();
         }
 
-        function drawAssetChart(sums) {
-            const ctx = document.getElementById('chart-asset');
-            if (charts.asset) charts.asset.destroy();
-            charts.asset = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['현금','주식','예적금','미래'],
-                    datasets: [{
-                        data: [sums.avail, sums.stock, sums.save, sums.future],
-                        backgroundColor: ['#3b82f6', '#a855f7', '#10b981', '#f59e0b'],
-                        borderWidth: 0,
-                        hoverOffset: 10
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { weight: 'bold', size: 10 } } } },
-                    cutout: '75%'
-                }
+        function renderList() {
+            const container = document.getElementById('list-container');
+            const filtered = allRecords.filter(r => {
+                const dp = r.date.split('.');
+                const isThisMonth = parseInt(dp[0]) === viewMonth.getFullYear() && parseInt(dp[1]) === (viewMonth.getMonth() + 1);
+                
+                if (currentTab === 'all') return isThisMonth;
+                if (currentTab === 'asset') return ["보증금","주식","저축","적금","연금"].some(c => r.category?.includes(c));
+                if (currentTab === 'income') return isThisMonth && r.type === '수입';
+                if (currentTab === 'expense') return isThisMonth && r.type === '지출';
+                return false;
             });
+
+            container.innerHTML = filtered.length ? filtered.map(r => {
+                let displayAmt = Number(r.amount) || 0;
+                let isLive = false;
+                if (r.category?.includes("주식") && r.ticker && livePrices[r.ticker]) {
+                    displayAmt = livePrices[r.ticker] * (Number(r.qty) || 0);
+                    isLive = true;
+                }
+
+                return `
+                <div onclick="initiateEdit(${r.id})" class="card p-5 flex justify-between items-center cursor-pointer hover:border-blue-400 active:scale-[0.98] group">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[8px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500 uppercase tracking-tighter">${r.category}</span>
+                            <span class="text-[9px] font-bold text-blue-500">${r.user_name}</span>
+                        </div>
+                        <p class="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">${r.description || r.category}</p>
+                        <p class="text-[8px] font-mono text-slate-400">${r.date} ${r.ticker ? '• ' + r.ticker : ''}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[14px] font-black font-mono ${r.type==='지출'?'text-rose-500':'text-emerald-500'}">
+                            ${r.type==='지출' ? '-' : '+'}₩${Math.round(displayAmt).toLocaleString()}
+                        </p>
+                        ${isLive ? '<span class="text-[7px] font-black text-blue-400 bg-blue-50 px-1 rounded">평가액 반영됨</span>' : ''}
+                    </div>
+                </div>`;
+            }).join('') : '<div class="py-20 text-center text-slate-300 text-[10px] font-black uppercase tracking-widest italic">기록된 내역이 없습니다</div>';
         }
 
-        // 수정 모드: 리스트 클릭 시 호출
-        function editItem(id) {
-            const item = allRecords.find(r => r.id === id);
-            if (!item) return;
+        // --- 수정 및 삭제 기능의 핵심 ---
+        function initiateEdit(id) {
+            const target = allRecords.find(r => r.id === id);
+            if (!target) return;
 
-            editingId = id;
-            document.getElementById('form-container').classList.add('edit-highlight');
-            document.getElementById('form-title').innerText = "✏️ 내역 수정";
-            document.getElementById('edit-indicator').classList.remove('hidden');
-            document.getElementById('edit-buttons').classList.remove('hidden');
-            document.getElementById('btn-save').innerText = "변경사항 저장하기";
-
-            // 데이터 채우기
-            setUser(item.user_name);
-            setType(item.type);
+            editingId = id; // 현재 수정 중인 고유 ID 저장
             
-            // 탭 변경/분류 로딩 대기 후 설정
+            // UI 상태 변경
+            const form = document.getElementById('main-form');
+            form.classList.add('edit-active');
+            document.getElementById('form-mode-title').innerText = "✏️ 내역 수정 모드";
+            document.getElementById('main-submit-btn').innerText = "변경사항 저장하기";
+            document.getElementById('edit-mode-actions').classList.remove('hidden');
+
+            // 데이터 폼에 채우기
+            updateState('user_name', target.user_name);
+            updateState('type', target.type);
+            
+            // 날짜 변환 (YYYY. MM. DD. -> YYYY-MM-DD)
+            const dStr = target.date.replace(/ /g, '').replace(/\./g, '-').substring(0, 10);
+            document.getElementById('input-date').value = dStr;
+            document.getElementById('input-amount').value = target.amount;
+            document.getElementById('input-desc').value = target.description || '';
+            
+            // 카테고리 및 주식 정보 (Select 로딩 대기)
             setTimeout(() => {
-                document.getElementById('category-select').value = item.category;
-                document.getElementById('input-amount').value = item.amount;
-                document.getElementById('input-ticker').value = item.ticker || '';
-                document.getElementById('input-qty').value = item.qty || '';
-                document.getElementById('input-desc').value = item.description || '';
-                checkCategory();
+                document.getElementById('input-category').value = target.category;
+                if (target.ticker) {
+                    document.getElementById('input-ticker').value = target.ticker;
+                    document.getElementById('input-qty').value = target.qty;
+                }
+                toggleStockFields();
             }, 50);
 
-            // 폼으로 스크롤 이동
-            document.getElementById('form-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 상단으로 스크롤 이동
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function cancelEdit() {
-            editingId = null;
-            document.getElementById('form-container').classList.remove('edit-highlight');
-            document.getElementById('form-title').innerText = "📝 내역 추가";
-            document.getElementById('edit-indicator').classList.add('hidden');
-            document.getElementById('edit-buttons').classList.add('hidden');
-            document.getElementById('btn-save').innerText = "데이터 저장하기";
-            
-            // 폼 리셋
-            document.getElementById('input-amount').value = '';
-            document.getElementById('input-ticker').value = '';
-            document.getElementById('input-qty').value = '';
-            document.getElementById('input-desc').value = '';
-        }
-
-        async function saveRecord() {
-            const cat = document.getElementById('category-select').value;
-            const amt = Number(document.getElementById('input-amount').value) || 0;
-            const tic = document.getElementById('input-ticker').value.trim().toUpperCase();
-            const qty = Number(document.getElementById('input-qty').value) || 0;
-            const dsc = document.getElementById('input-desc').value;
-            
-            if (amt === 0 && !editingId) return;
+        async function handleSave() {
+            const amt = Number(document.getElementById('input-amount').value);
+            if (!amt) return alert("금액을 입력하세요.");
 
             const payload = {
-                user_name: formData.user,
-                type: formData.type,
-                category: cat,
+                user_name: state.user_name,
+                type: state.type,
+                category: document.getElementById('input-category').value,
                 amount: amt,
-                ticker: tic || null,
-                qty: qty || null,
-                description: dsc
+                date: document.getElementById('input-date').value.replace(/-/g, '. ') + '. ',
+                description: document.getElementById('input-desc').value,
+                ticker: document.getElementById('input-ticker').value.toUpperCase().trim() || null,
+                qty: Number(document.getElementById('input-qty').value) || null
             };
 
-            let result;
+            let res;
             if (editingId) {
-                result = await sb.from('account_v3').update(payload).eq('id', editingId);
+                // 수정: 해당 ID의 데이터 업데이트
+                res = await sb.from('account_v3').update(payload).eq('id', editingId);
             } else {
-                result = await sb.from('account_v3').insert([{
-                    ...payload,
-                    date: new Date().toLocaleDateString('ko-KR').replace(/\//g, '. ')
-                }]);
+                // 신규: 데이터 삽입
+                res = await sb.from('account_v3').insert([payload]);
             }
 
-            if (!result.error) {
+            if (!res.error) {
                 cancelEdit();
                 await refreshData();
+            } else {
+                alert("처리 중 오류가 발생했습니다.");
             }
         }
 
-        async function deleteRecord() {
-            if (!editingId || !confirm("이 항목을 정말 삭제하시겠습니까?")) return;
+        async function handleDelete() {
+            if (!editingId || !confirm("이 내역을 정말 삭제하시겠습니까?")) return;
+            
             const { error } = await sb.from('account_v3').delete().eq('id', editingId);
             if (!error) {
                 cancelEdit();
@@ -386,80 +347,61 @@
             }
         }
 
-        function renderList() {
-            const container = document.getElementById('list-container');
-            const items = allRecords.filter(r => {
-                if (!r.date) return false;
-                const d = r.date.split('. ');
-                const isM = parseInt(d[0]) === currentMonth.getFullYear() && parseInt(d[1]) === (currentMonth.getMonth()+1);
-                
-                if (currentTab === 'all') return isM;
-                if (currentTab === 'income') return isM && r.type === '수입';
-                if (currentTab === 'expense') return isM && r.type === '지출';
-                if (currentTab === 'asset') return ["보증금","저축","적금","청약","주식","연금"].some(c => r.category?.includes(c));
-                return false;
-            });
-
-            container.innerHTML = items.length ? items.map(r => {
-                let v = Number(r.amount) || 0;
-                const isS = r.category?.includes("주식") && r.ticker && stockCache[r.ticker];
-                if (isS) v = stockCache[r.ticker] * (r.qty || 0);
-
-                return `<div onclick="editItem(${r.id})" class="card p-5 flex justify-between items-center card-active cursor-pointer">
-                    <div class="flex flex-col gap-1">
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[8px] font-black text-white bg-slate-800 px-1.5 py-0.5 rounded-md uppercase">${r.category}</span>
-                            <span class="text-[9px] font-bold text-blue-500">${r.user_name}</span>
-                        </div>
-                        <span class="font-bold text-sm text-slate-800">${r.description || r.category}</span>
-                        <span class="text-[8px] text-slate-400 font-mono">${r.date} ${r.ticker ? '· ' + r.ticker : ''}</span>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-mono font-black text-sm ${r.type==='지출' ? 'text-rose-500' : 'text-emerald-500'}">
-                            ${r.type==='지출' ? '-' : '+'} ₩${Math.round(v).toLocaleString()}
-                        </p>
-                        ${isS ? '<span class="text-[7px] text-purple-400 font-bold uppercase">Live Eval</span>' : ''}
-                    </div>
-                </div>`;
-            }).join('') : '<div class="col-span-full py-12 text-center text-slate-300 font-black text-[10px] uppercase tracking-widest">데이터가 없습니다</div>';
+        function cancelEdit() {
+            editingId = null;
+            const form = document.getElementById('main-form');
+            form.classList.remove('edit-active');
+            document.getElementById('form-mode-title').innerText = "📝 내역 입력";
+            document.getElementById('main-submit-btn').innerText = "데이터 저장하기";
+            document.getElementById('edit-mode-actions').classList.add('hidden');
+            
+            document.getElementById('input-amount').value = '';
+            document.getElementById('input-desc').value = '';
+            document.getElementById('input-ticker').value = '';
+            document.getElementById('input-qty').value = '';
+            document.getElementById('input-date').valueAsDate = new Date();
+            toggleStockFields();
         }
 
-        // UI Helpers
-        function setUser(u) {
-            formData.user = u;
-            document.getElementById('btn-user-h').className = u==='남편' ? 'py-4 rounded-2xl border-2 font-black text-xs btn-navy transition-all' : 'py-4 rounded-2xl border-2 font-black text-xs bg-white text-slate-400 border-slate-100 transition-all';
-            document.getElementById('btn-user-w').className = u==='아내' ? 'py-4 rounded-2xl border-2 font-black text-xs btn-navy transition-all' : 'py-4 rounded-2xl border-2 font-black text-xs bg-white text-slate-400 border-slate-100 transition-all';
+        // --- 기타 UI 헬퍼 ---
+        function updateState(key, val) {
+            state[key] = val;
+            if (key === 'user_name') {
+                document.getElementById('btn-user-h').className = val === '남편' ? 'py-4 rounded-2xl border-2 font-black text-xs btn-navy' : 'py-4 rounded-2xl border-2 font-black text-xs bg-white text-slate-300 border-slate-100';
+                document.getElementById('btn-user-w').className = val === '아내' ? 'py-4 rounded-2xl border-2 font-black text-xs btn-navy' : 'py-4 rounded-2xl border-2 font-black text-xs bg-white text-slate-300 border-slate-100';
+            } else {
+                document.getElementById('btn-type-in').className = val === '수입' ? 'flex-1 py-3 rounded-xl font-black text-xs bg-white shadow-sm' : 'flex-1 py-3 rounded-xl font-black text-xs text-slate-400';
+                document.getElementById('btn-type-out').className = val === '지출' ? 'flex-1 py-3 rounded-xl font-black text-xs bg-white shadow-sm' : 'flex-1 py-3 rounded-xl font-black text-xs text-slate-400';
+                updateCategoryList();
+            }
         }
 
-        function setType(t) {
-            formData.type = t;
-            document.getElementById('btn-type-in').className = t==='수입' ? 'flex-1 py-3 rounded-xl font-black text-xs btn-navy' : 'flex-1 py-3 rounded-xl font-black text-xs text-slate-400';
-            document.getElementById('btn-type-out').className = t==='지출' ? 'flex-1 py-3 rounded-xl font-black text-xs btn-navy' : 'flex-1 py-3 rounded-xl font-black text-xs text-slate-400';
-            const opts = t === '수입' ? [...categories['수입'], ...categories['자산']] : categories['지출'];
-            document.getElementById('category-select').innerHTML = opts.map(o => `<option value="${o}">${o}</option>`).join('');
-            checkCategory();
+        function updateCategoryList() {
+            const list = state.type === '수입' ? [...categories.수입, ...categories.자산] : categories.지출;
+            document.getElementById('input-category').innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
+            toggleStockFields();
         }
 
-        function checkCategory() {
-            const isS = document.getElementById('category-select').value.includes("주식");
-            document.getElementById('stock-fields').classList.toggle('hidden', !isS);
+        function toggleStockFields() {
+            const isStock = document.getElementById('input-category').value.includes("주식");
+            document.getElementById('stock-fields').classList.toggle('hidden', !isStock);
         }
-        
-        function changeMonth(d) { 
-            currentMonth.setMonth(currentMonth.getMonth() + d); 
-            updateMonthDisplay(); 
-            processAndRender(); 
-        }
-        
-        function updateMonthDisplay() { 
-            document.getElementById('month-display').innerText = currentMonth.getFullYear() + "." + String(currentMonth.getMonth()+1).padStart(2,'0'); 
-        }
-        
+
         function setTab(t) {
             currentTab = t;
-            document.querySelectorAll('[id^="tab-"]').forEach(b => b.className = 'px-5 py-2.5 rounded-xl text-xs font-black bg-white text-slate-400 border border-slate-200 shadow-sm transition-all whitespace-nowrap');
-            document.getElementById('tab-' + t).className = 'px-5 py-2.5 rounded-xl text-xs font-black btn-navy shadow-lg shadow-slate-200 transition-all whitespace-nowrap';
+            const tabs = ['all', 'asset', 'income', 'expense'];
+            tabs.forEach(tab => {
+                document.getElementById('tab-' + tab).className = t === tab ? 'px-6 py-3 rounded-2xl text-[11px] font-black btn-navy shadow-lg' : 'px-6 py-3 rounded-2xl text-[11px] font-black bg-white text-slate-400 border border-slate-100';
+            });
             renderList();
+        }
+
+        function moveMonth(d) { viewMonth.setMonth(viewMonth.getMonth() + d); updateMonthUI(); renderList(); }
+        function updateMonthUI() { document.getElementById('month-label').innerText = `${viewMonth.getFullYear()}.${String(viewMonth.getMonth()+1).padStart(2,'0')}`; }
+        
+        function setLoadingUI(b) {
+            document.getElementById('sync-indicator').innerHTML = b ? '<span class="spinner"></span> SYNCING' : '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE';
+            if(!b) document.getElementById('last-update-time').innerText = new Date().toLocaleTimeString();
         }
     </script>
 </body>
