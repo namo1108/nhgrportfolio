@@ -13,12 +13,14 @@
         .main-gradient { background: linear-gradient(135deg, #1a1f2c 0%, #2d364d 100%); border-radius: 2rem; }
         .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 1.25rem; }
         .swipe-item { position: relative; overflow: hidden; border-radius: 1.25rem; transition: transform 0.3s ease; touch-action: pan-y; margin-bottom: 0.75rem; }
-        .swipe-content { position: relative; z-index: 10; background: white; transition: transform 0.3s ease; border: 1px solid #e2e8f0; border-radius: 1.25rem; }
+        .swipe-content { position: relative; z-index: 10; background: white; transition: transform 0.3s ease; border: 1px solid #e2e8f0; border-radius: 1.25rem; cursor: pointer; }
+        .swipe-content:active { background: #f1f5f9; }
         .swipe-action { position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; z-index: 5; border-radius: 0 1.25rem 1.25rem 0; cursor: pointer; }
         .input-premium { width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1.5px solid #e2e8f0; font-size: 15px; font-weight: 600; outline: none; transition: 0.2s; }
         .input-premium:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
         .btn-primary { background-color: var(--primary); color: white; border-radius: 0.75rem; font-weight: 800; transition: 0.2s; border: none; cursor: pointer; }
         .btn-primary:active { transform: scale(0.98); }
+        .btn-edit { background-color: #f59e0b; color: white; }
         .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.1); border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .tab-active { background-color: var(--primary) !important; color: white !important; font-weight: 800; border-color: var(--primary) !important; }
@@ -57,9 +59,9 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
             <aside class="space-y-6">
-                <div class="glass-card p-6 shadow-xl border-t-4 border-t-blue-500">
+                <div id="input-card" class="glass-card p-6 shadow-xl border-t-4 border-t-blue-500 transition-all duration-300">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-black tracking-tight">자산 기록</h2>
+                        <h2 id="input-title" class="text-xl font-black tracking-tight">자산 기록</h2>
                         <div class="flex items-center bg-slate-100 rounded-xl p-1 font-mono text-[11px] font-black">
                             <button onclick="moveMonth(-1)" class="p-2">◀</button>
                             <span id="current-month" class="px-2"></span>
@@ -85,18 +87,20 @@
                             <input type="number" id="input-qty" placeholder="수량" step="any" class="input-premium text-xs font-mono">
                         </div>
                         <input type="text" id="input-desc" placeholder="메모" class="input-premium text-xs">
-                        <button id="btn-save" onclick="saveData()" class="w-full py-4 btn-primary shadow-lg flex justify-center items-center gap-2">
-                            <span id="save-text">데이터 저장하기</span>
-                            <div id="save-loader" class="spinner hidden" style="border-top-color: white;"></div>
-                        </button>
+                        
+                        <div class="flex flex-col gap-2">
+                            <button id="btn-save" onclick="saveData()" class="w-full py-4 btn-primary shadow-lg flex justify-center items-center gap-2">
+                                <span id="save-text">데이터 저장하기</span>
+                                <div id="save-loader" class="spinner hidden" style="border-top-color: white;"></div>
+                            </button>
+                            <button id="btn-cancel-edit" onclick="cancelEdit()" class="hidden w-full py-3 bg-slate-200 text-slate-600 rounded-xl font-black text-xs">수정 취소</button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 날짜별 필터 섹션 추가 -->
                 <div id="date-picker-box" class="glass-card p-6 shadow-lg border-t-4 border-t-emerald-500 hidden">
                     <h3 class="text-sm font-black mb-3 text-slate-500 uppercase tracking-wider">특정 날짜 조회</h3>
                     <input type="date" id="filter-specific-date" onchange="setFilter('date')" class="input-premium text-xs">
-                    <p class="mt-2 text-[10px] text-slate-400 font-bold">* 선택한 날짜의 모든 내역을 불러옵니다.</p>
                 </div>
             </aside>
 
@@ -120,7 +124,7 @@
 
         let dataRecords = [], currentFilter = 'all', viewDate = new Date();
         let exchangeRate = 1470, livePrices = {};
-        const state = { user: '남편', type: '수입' };
+        const state = { user: '남편', type: '수입', editId: null };
 
         const categorySet = {
             '수입': ['월급', '상여금', '이자/배당', '기타'],
@@ -144,13 +148,12 @@
                     exchangeRate = res.rates.KRW;
                     document.getElementById('rate-display').innerText = exchangeRate.toLocaleString(undefined, {maximumFractionDigits:1});
                 }
-            } catch(e) { console.error("Rate Error"); }
+            } catch(e) {}
         }
 
         async function loadData() {
             setLoading(true);
             try {
-                // date 기준 내림차순(최신순)으로 가져오기
                 const { data, error } = await sb.from('account_v3').select('*').order('date', { ascending: false });
                 if(error) throw error;
                 if(data) {
@@ -196,14 +199,11 @@
             let total = 0, flow = 0;
             const vY = viewDate.getFullYear(), vM = viewDate.getMonth() + 1;
 
-            // 총 자산 계산 (날짜 무관 전체 합산)
             dataRecords.forEach(function(r) {
                 const val = calculateItemValue(r);
                 const isAsset = ["보증금", "주식", "저축", "적금", "연금", "청약"].some(function(c) { return r.category && r.category.indexOf(c) !== -1; });
                 if (isAsset) total += val;
                 else { if (r.type === '수입') total += val; else total -= val; }
-                
-                // 이번 달 수지 계산
                 const dPart = r.date ? r.date.match(/\d+/g) : [];
                 if(dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM) {
                     if(r.type === '수입') flow += val; else if(r.type === '지출') flow -= val;
@@ -216,37 +216,23 @@
             flowEl.className = "text-xl font-black font-mono " + (flow >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
             const filtered = dataRecords.filter(function(r) {
-                // 자산 현황 탭은 날짜 필터 무시하고 모든 자산 표시
-                if (currentFilter === 'asset') {
-                    return ["보증금", "주식", "저축", "적금", "연금", "청약"].some(function(c) { return r.category && r.category.indexOf(c) !== -1; });
-                }
-
-                // 날짜별 보기 모드
+                if (currentFilter === 'asset') return ["보증금", "주식", "저축", "적금", "연금", "청약"].some(function(c) { return r.category && r.category.indexOf(c) !== -1; });
                 if (currentFilter === 'date') {
-                    const selDate = document.getElementById('filter-specific-date').value; // YYYY-MM-DD
+                    const selDate = document.getElementById('filter-specific-date').value;
                     if(!selDate) return false;
                     const d = selDate.split('-');
-                    const formatD = d[0] + ". " + d[1] + ". " + d[2] + ".";
-                    return r.date === formatD;
+                    return r.date === d[0] + ". " + d[1] + ". " + d[2] + ".";
                 }
-
-                // 월별 필터 (전체/수입/지출)
                 const dPart = r.date ? r.date.match(/\d+/g) : [];
                 const isCurrentMonth = dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM;
                 if (!isCurrentMonth) return false;
-
                 if (currentFilter === 'all') return true;
                 if (currentFilter === 'income') return r.type === '수입';
                 if (currentFilter === 'expense') return r.type === '지출';
                 return false;
             });
 
-            // 최종 리스트 정렬 (최신 날짜순)
-            filtered.sort((a, b) => {
-                const da = a.date.replace(/[^0-9]/g, '');
-                const db = b.date.replace(/[^0-9]/g, '');
-                return db - da;
-            });
+            filtered.sort((a, b) => b.date.replace(/[^0-9]/g, '') - a.date.replace(/[^0-9]/g, ''));
 
             const container = document.getElementById('main-list');
             if (filtered.length === 0) {
@@ -265,8 +251,8 @@
                 
                 let item = '<div class="swipe-item" id="item-' + r.id + '">';
                 item += '<div class="swipe-action" data-id="' + r.id + '">삭제</div>';
-                item += '<div class="swipe-content p-5 flex justify-between items-center relative">';
-                item += '<div class="flex-1">';
+                item += '<div class="swipe-content p-5 flex justify-between items-center relative" data-id="' + r.id + '">';
+                item += '<div class="flex-1 pointer-events-none">';
                 item += '<div class="flex items-center gap-2 mb-1 text-[10px] font-black uppercase">';
                 item += '<span class="' + userColor + '">' + r.user_name + '</span>';
                 item += '<span class="text-slate-300">|</span><span class="text-slate-500">' + r.category + '</span>';
@@ -275,7 +261,7 @@
                 item += '<p class="text-[11px] font-mono font-bold text-slate-400">' + r.date + tickerStr + qtyStr + '</p>';
                 item += '</div>';
                 item += '<div class="text-right flex items-center gap-4">';
-                item += '<p class="text-[17px] font-black font-mono ' + typeColor + '">' + sign + '₩' + Math.round(val).toLocaleString() + '</p>';
+                item += '<p class="text-[17px] font-black font-mono ' + typeColor + ' pointer-events-none">' + sign + '₩' + Math.round(val).toLocaleString() + '</p>';
                 item += '<button class="pc-delete-btn hidden w-8 h-8 items-center justify-center rounded-full bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all" data-id="' + r.id + '">';
                 item += '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
                 item += '</button></div></div></div>';
@@ -286,6 +272,15 @@
         }
 
         function bindEvents() {
+            // 카드 클릭 시 수정 모드 진입
+            document.querySelectorAll('.swipe-content').forEach(function(content) {
+                content.onclick = function() {
+                    const id = this.getAttribute('data-id');
+                    startEdit(id);
+                };
+            });
+
+            // 삭제 버튼
             document.querySelectorAll('.swipe-action, .pc-delete-btn').forEach(function(btn) {
                 btn.onclick = function(e) {
                     e.stopPropagation();
@@ -294,12 +289,78 @@
                 };
             });
 
+            // 모바일 스와이프
             document.querySelectorAll('.swipe-item').forEach(function(item) {
                 const id = item.id.replace('item-', '');
                 item.ontouchstart = function(e) { handleStart(e, id); };
                 item.ontouchmove = function(e) { handleMove(e, id); };
                 item.ontouchend = function(e) { handleEnd(e, id); };
             });
+        }
+
+        // 수정 모드 시작
+        function startEdit(id) {
+            const r = dataRecords.find(function(item) { return String(item.id) === String(id); });
+            if(!r) return;
+
+            state.editId = id;
+            
+            // UI 상태 반영
+            toggleUser(r.user_name);
+            toggleType(r.type === '자산' ? '수입' : r.type); // UI상 자산은 수입 탭에서 관리
+            
+            // 폼 채우기
+            const dPart = r.date.match(/\d+/g);
+            if(dPart && dPart.length === 3) {
+                document.getElementById('input-date').value = dPart[0] + "-" + dPart[1].padStart(2, '0') + "-" + dPart[2].padStart(2, '0');
+            }
+            document.getElementById('input-amount').value = r.amount;
+            document.getElementById('input-cat').value = r.category;
+            document.getElementById('input-desc').value = r.description;
+            document.getElementById('input-ticker').value = r.ticker || "";
+            document.getElementById('input-qty').value = r.qty || "";
+            
+            toggleStockFields();
+
+            // 저장 버튼을 수정 버튼으로 변경
+            const saveBtn = document.getElementById('btn-save');
+            const saveText = document.getElementById('save-text');
+            const inputCard = document.getElementById('input-card');
+            const inputTitle = document.getElementById('input-title');
+
+            saveBtn.classList.add('btn-edit');
+            saveText.innerText = "데이터 수정하기";
+            inputTitle.innerText = "내역 수정 중";
+            inputCard.classList.remove('border-t-blue-500');
+            inputCard.classList.add('border-t-amber-500');
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+
+            // 화면 최상단으로 스크롤 (모바일 배려)
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 수정 취소
+        function cancelEdit() {
+            state.editId = null;
+            
+            // 폼 초기화
+            document.getElementById('input-amount').value = '';
+            document.getElementById('input-desc').value = '';
+            document.getElementById('input-ticker').value = '';
+            document.getElementById('input-qty').value = '';
+            
+            // UI 원복
+            const saveBtn = document.getElementById('btn-save');
+            const saveText = document.getElementById('save-text');
+            const inputCard = document.getElementById('input-card');
+            const inputTitle = document.getElementById('input-title');
+
+            saveBtn.classList.remove('btn-edit');
+            saveText.innerText = "데이터 저장하기";
+            inputTitle.innerText = "자산 기록";
+            inputCard.classList.add('border-t-blue-500');
+            inputCard.classList.remove('border-t-amber-500');
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
         }
 
         async function globalDeleteItem(id) {
@@ -309,18 +370,12 @@
             try {
                 const { data, error } = await sb.from('account_v3').delete().eq('id', id).select();
                 if (error) throw error;
-                if (data && data.length > 0) {
+                if (data) {
                     dataRecords = dataRecords.filter(function(r) { return String(r.id) !== String(id); });
+                    if(state.editId === id) cancelEdit();
                     renderList();
-                } else {
-                    throw new Error("서버 권한 문제로 삭제할 수 없습니다.");
                 }
-            } catch (err) {
-                alert("삭제 오류: " + err.message);
-                await loadData();
-            } finally {
-                setLoading(false);
-            }
+            } catch (err) { alert("삭제 오류: " + err.message); loadData(); } finally { setLoading(false); }
         }
 
         async function saveData() {
@@ -329,9 +384,10 @@
             if(!dateVal || !amountVal) return alert("필수 항목을 입력하세요.");
             
             const d = dateVal.split('-');
+            const isAsset = categorySet.자산.includes(document.getElementById('input-cat').value);
             const payload = {
                 user_name: state.user,
-                type: (categorySet.자산.includes(document.getElementById('input-cat').value)) ? '자산' : state.type,
+                type: isAsset ? '자산' : state.type,
                 category: document.getElementById('input-cat').value,
                 amount: Number(amountVal),
                 date: d[0] + ". " + d[1] + ". " + d[2] + ".",
@@ -345,14 +401,28 @@
             document.getElementById('save-loader').classList.remove('hidden');
             
             try {
-                const { error } = await sb.from('account_v3').insert([payload]);
+                let error;
+                if(state.editId) {
+                    // 수정 모드
+                    const res = await sb.from('account_v3').update(payload).eq('id', state.editId);
+                    error = res.error;
+                } else {
+                    // 신규 저장 모드
+                    const res = await sb.from('account_v3').insert([payload]);
+                    error = res.error;
+                }
+                
                 if (error) throw error;
-                document.getElementById('input-amount').value = '';
-                document.getElementById('input-desc').value = '';
-                document.getElementById('input-ticker').value = '';
-                document.getElementById('input-qty').value = '';
+                
+                if(state.editId) cancelEdit();
+                else {
+                    document.getElementById('input-amount').value = '';
+                    document.getElementById('input-desc').value = '';
+                    document.getElementById('input-ticker').value = '';
+                    document.getElementById('input-qty').value = '';
+                }
                 await loadData();
-            } catch (err) { alert("저장 오류: " + err.message); } finally {
+            } catch (err) { alert("처리 오류: " + err.message); } finally {
                 btn.disabled = false;
                 document.getElementById('save-loader').classList.add('hidden');
             }
@@ -397,7 +467,10 @@
             const list = (state.type === '수입') ? categorySet.수입.concat(categorySet.자산) : categorySet.지출;
             let options = "";
             list.forEach(function(item) { options += '<option value="' + item + '">' + item + '</option>'; });
-            document.getElementById('input-cat').innerHTML = options;
+            const catSelect = document.getElementById('input-cat');
+            const currentVal = catSelect.value;
+            catSelect.innerHTML = options;
+            if(list.includes(currentVal)) catSelect.value = currentVal; // 카테고리 유지
             toggleStockFields();
         }
 
@@ -413,10 +486,7 @@
                 if(f === key) { el.classList.add('tab-active'); el.classList.remove('text-slate-400'); }
                 else { el.classList.remove('tab-active'); el.classList.add('text-slate-400'); }
             });
-
-            // 날짜별 필터 박스 표시 제어
             document.getElementById('date-picker-box').classList.toggle('hidden', f !== 'date');
-            
             renderList();
         }
 
