@@ -21,7 +21,7 @@
         .btn-primary:active { transform: scale(0.98); }
         .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.1); border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .tab-active { background-color: var(--primary) !important; color: white !important; font-weight: 800; }
+        .tab-active { background-color: var(--primary) !important; color: white !important; font-weight: 800; border-color: var(--primary) !important; }
         @media (min-width: 1024px) {
             .pc-delete-btn { display: flex !important; }
             .swipe-action { display: none !important; }
@@ -91,13 +91,22 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- 날짜별 필터 섹션 추가 -->
+                <div id="date-picker-box" class="glass-card p-6 shadow-lg border-t-4 border-t-emerald-500 hidden">
+                    <h3 class="text-sm font-black mb-3 text-slate-500 uppercase tracking-wider">특정 날짜 조회</h3>
+                    <input type="date" id="filter-specific-date" onchange="setFilter('date')" class="input-premium text-xs">
+                    <p class="mt-2 text-[10px] text-slate-400 font-bold">* 선택한 날짜의 모든 내역을 불러옵니다.</p>
+                </div>
             </aside>
+
             <main class="space-y-4">
                 <div id="filter-nav" class="flex gap-2 overflow-x-auto py-1 sticky top-0 bg-[#f8fafc]/90 backdrop-blur-md z-30">
                     <button onclick="setFilter('all')" id="f-all" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm tab-active">전체보기</button>
                     <button onclick="setFilter('income')" id="f-income" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm text-slate-400">수입</button>
                     <button onclick="setFilter('expense')" id="f-expense" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm text-slate-400">지출</button>
                     <button onclick="setFilter('asset')" id="f-asset" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm text-slate-400">자산현황</button>
+                    <button onclick="setFilter('date')" id="f-date" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm text-slate-400 bg-emerald-50">날짜별</button>
                 </div>
                 <div id="main-list" class="space-y-3 pb-20"></div>
             </main>
@@ -105,7 +114,6 @@
     </div>
 
     <script>
-        // Supabase 초기화
         const DB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
         const DB_KEY = 'sb_publishable_kl5FAdM9mGEZttyFqzbNfw_TlLSgRLY';
         const sb = window.supabase.createClient(DB_URL, DB_KEY);
@@ -122,13 +130,13 @@
 
         window.onload = function() {
             document.getElementById('input-date').valueAsDate = new Date();
+            document.getElementById('filter-specific-date').valueAsDate = new Date();
             updateMonthLabel();
             updateCategoryUI();
             fetchRate();
             loadData();
         };
 
-        // 환율 정보
         async function fetchRate() {
             try {
                 const res = await fetch('https://open.er-api.com/v6/latest/USD').then(function(r) { return r.json(); });
@@ -139,10 +147,10 @@
             } catch(e) { console.error("Rate Error"); }
         }
 
-        // 데이터 로드
         async function loadData() {
             setLoading(true);
             try {
+                // date 기준 내림차순(최신순)으로 가져오기
                 const { data, error } = await sb.from('account_v3').select('*').order('date', { ascending: false });
                 if(error) throw error;
                 if(data) {
@@ -158,7 +166,6 @@
             } finally { setLoading(false); }
         }
 
-        // 주가 정보
         async function fetchPrice(ticker) {
             if (!ticker) return;
             const symbol = /^\d{6}$/.test(ticker) ? (ticker + '.KS') : ticker;
@@ -175,7 +182,6 @@
             } catch(e) {}
         }
 
-        // 가치 계산
         function calculateItemValue(r) {
             const isOverseas = r.category && r.category.indexOf("해외") !== -1;
             const ticker = r.ticker ? r.ticker.toUpperCase() : null;
@@ -186,19 +192,21 @@
             return isOverseas ? (val * exchangeRate) : val;
         }
 
-        // 리스트 렌더링 (안정성을 위해 템플릿 리터럴 대신 문자열 결합 사용)
         function renderList() {
             let total = 0, flow = 0;
             const vY = viewDate.getFullYear(), vM = viewDate.getMonth() + 1;
 
+            // 총 자산 계산 (날짜 무관 전체 합산)
             dataRecords.forEach(function(r) {
                 const val = calculateItemValue(r);
                 const isAsset = ["보증금", "주식", "저축", "적금", "연금", "청약"].some(function(c) { return r.category && r.category.indexOf(c) !== -1; });
                 if (isAsset) total += val;
                 else { if (r.type === '수입') total += val; else total -= val; }
+                
+                // 이번 달 수지 계산
                 const dPart = r.date ? r.date.match(/\d+/g) : [];
                 if(dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM) {
-                    if(r.type === '수입') flow += val; else flow -= val;
+                    if(r.type === '수입') flow += val; else if(r.type === '지출') flow -= val;
                 }
             });
 
@@ -208,14 +216,36 @@
             flowEl.className = "text-xl font-black font-mono " + (flow >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
             const filtered = dataRecords.filter(function(r) {
-                const isAsset = ["보증금", "주식", "저축", "적금", "연금", "청약"].some(function(c) { return r.category && r.category.indexOf(c) !== -1; });
-                if (currentFilter === 'asset') return isAsset;
+                // 자산 현황 탭은 날짜 필터 무시하고 모든 자산 표시
+                if (currentFilter === 'asset') {
+                    return ["보증금", "주식", "저축", "적금", "연금", "청약"].some(function(c) { return r.category && r.category.indexOf(c) !== -1; });
+                }
+
+                // 날짜별 보기 모드
+                if (currentFilter === 'date') {
+                    const selDate = document.getElementById('filter-specific-date').value; // YYYY-MM-DD
+                    if(!selDate) return false;
+                    const d = selDate.split('-');
+                    const formatD = d[0] + ". " + d[1] + ". " + d[2] + ".";
+                    return r.date === formatD;
+                }
+
+                // 월별 필터 (전체/수입/지출)
                 const dPart = r.date ? r.date.match(/\d+/g) : [];
                 const isCurrentMonth = dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM;
                 if (!isCurrentMonth) return false;
+
                 if (currentFilter === 'all') return true;
                 if (currentFilter === 'income') return r.type === '수입';
-                return r.type === '지출';
+                if (currentFilter === 'expense') return r.type === '지출';
+                return false;
+            });
+
+            // 최종 리스트 정렬 (최신 날짜순)
+            filtered.sort((a, b) => {
+                const da = a.date.replace(/[^0-9]/g, '');
+                const db = b.date.replace(/[^0-9]/g, '');
+                return db - da;
             });
 
             const container = document.getElementById('main-list');
@@ -233,7 +263,6 @@
                 const tickerStr = r.ticker ? ' • ' + r.ticker : '';
                 const qtyStr = r.qty ? ' • ' + r.qty + '주' : '';
                 
-                // HTML 문자열 생성 (SyntaxError 방지를 위한 고전적 방식)
                 let item = '<div class="swipe-item" id="item-' + r.id + '">';
                 item += '<div class="swipe-action" data-id="' + r.id + '">삭제</div>';
                 item += '<div class="swipe-content p-5 flex justify-between items-center relative">';
@@ -253,13 +282,10 @@
                 listHtml += item;
             });
             container.innerHTML = listHtml;
-
-            // 이벤트 리스너 바인딩 (인라인 onclick 대신 이 방식이 훨씬 안전함)
             bindEvents();
         }
 
         function bindEvents() {
-            // 삭제 버튼 이벤트
             document.querySelectorAll('.swipe-action, .pc-delete-btn').forEach(function(btn) {
                 btn.onclick = function(e) {
                     e.stopPropagation();
@@ -268,7 +294,6 @@
                 };
             });
 
-            // 스와이프 이벤트
             document.querySelectorAll('.swipe-item').forEach(function(item) {
                 const id = item.id.replace('item-', '');
                 item.ontouchstart = function(e) { handleStart(e, id); };
@@ -277,21 +302,18 @@
             });
         }
 
-        // 전역 삭제 함수
         async function globalDeleteItem(id) {
             if(!id) return;
             if(!confirm("이 내역을 영구적으로 삭제하시겠습니까?")) return;
-            
             setLoading(true);
             try {
                 const { data, error } = await sb.from('account_v3').delete().eq('id', id).select();
                 if (error) throw error;
-                
                 if (data && data.length > 0) {
                     dataRecords = dataRecords.filter(function(r) { return String(r.id) !== String(id); });
                     renderList();
                 } else {
-                    throw new Error("서버 권한(RLS) 문제로 삭제할 수 없습니다.");
+                    throw new Error("서버 권한 문제로 삭제할 수 없습니다.");
                 }
             } catch (err) {
                 alert("삭제 오류: " + err.message);
@@ -301,7 +323,6 @@
             }
         }
 
-        // 데이터 저장
         async function saveData() {
             const dateVal = document.getElementById('input-date').value;
             const amountVal = document.getElementById('input-amount').value;
@@ -310,7 +331,7 @@
             const d = dateVal.split('-');
             const payload = {
                 user_name: state.user,
-                type: state.type,
+                type: (categorySet.자산.includes(document.getElementById('input-cat').value)) ? '자산' : state.type,
                 category: document.getElementById('input-cat').value,
                 amount: Number(amountVal),
                 date: d[0] + ". " + d[1] + ". " + d[2] + ".",
@@ -337,7 +358,6 @@
             }
         }
 
-        // 스와이프 제어
         let startX = 0;
         function handleStart(e, id) { startX = e.touches[0].clientX; }
         function handleMove(e, id) {
@@ -360,7 +380,6 @@
             content.style.transform = (diff > 60) ? "translateX(-80px)" : "translateX(0)";
         }
 
-        // 공통 UI 함수
         function toggleUser(u) {
             state.user = u;
             document.getElementById('btn-user-h').className = (u === '남편') ? 'py-3 btn-primary text-xs tracking-tighter' : 'py-3 bg-white text-slate-300 border border-slate-100 rounded-xl font-black text-xs tracking-tighter';
@@ -389,11 +408,15 @@
 
         function setFilter(f) {
             currentFilter = f;
-            ['all', 'income', 'expense', 'asset'].forEach(function(key) {
+            ['all', 'income', 'expense', 'asset', 'date'].forEach(function(key) {
                 const el = document.getElementById('f-' + key);
                 if(f === key) { el.classList.add('tab-active'); el.classList.remove('text-slate-400'); }
                 else { el.classList.remove('tab-active'); el.classList.add('text-slate-400'); }
             });
+
+            // 날짜별 필터 박스 표시 제어
+            document.getElementById('date-picker-box').classList.toggle('hidden', f !== 'date');
+            
             renderList();
         }
 
