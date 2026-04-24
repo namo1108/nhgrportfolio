@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>남호가람 가계부</title>
+    <title>남호가람 가계부 - Cloud</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%231a1f2c'/><path d='M30 40h40v30H30z' fill='%233b82f6'/><path d='M70 45h5v20h-5z' fill='%2360a5fa'/><circle cx='50' cy='55' r='8' fill='white' opacity='0.8'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -21,7 +21,7 @@
         .btn-primary { background-color: var(--primary); color: white; border-radius: 0.75rem; font-weight: 800; transition: 0.2s; border: none; cursor: pointer; }
         .btn-primary:active { transform: scale(0.98); }
         .btn-edit { background-color: #f59e0b; color: white; }
-        .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.1); border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .tab-active { background-color: var(--primary) !important; color: white !important; font-weight: 800; border-color: var(--primary) !important; }
         @media (min-width: 1024px) {
@@ -39,7 +39,7 @@
                     <div class="flex items-center gap-2">
                         <span class="px-3 py-1 bg-blue-500/30 text-blue-300 text-[10px] font-black rounded-full border border-blue-500/30 uppercase tracking-widest">NamHo GaRam</span>
                         <div id="sync-status" class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                            <span id="status-dot" class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> <span id="status-text">LOCAL STORAGE</span>
+                            <span id="status-dot" class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> <span id="status-text">CLOUD CONNECTED</span>
                         </div>
                     </div>
                     <p class="text-xs font-bold text-slate-400 mb-[-10px] ml-1">남호가람 통합 자산 현황</p>
@@ -61,7 +61,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
             <aside class="space-y-6">
-                <div id="input-card" class="glass-card p-6 shadow-xl border-t-4 border-t-blue-500 transition-all duration-300">
+                <div id="input-card" class="glass-card p-6 shadow-xl border-t-4 border-t-blue-500">
                     <div class="flex justify-between items-center mb-6">
                         <h2 id="input-title" class="text-xl font-black tracking-tight">기록하기</h2>
                         <div class="flex items-center bg-slate-100 rounded-xl p-1 font-mono text-[11px] font-black">
@@ -93,13 +93,12 @@
                         <div class="flex flex-col gap-2">
                             <button id="btn-save" onclick="saveData()" class="w-full py-4 btn-primary shadow-lg flex justify-center items-center gap-2">
                                 <span id="save-text">데이터 저장하기</span>
-                                <div id="save-loader" class="spinner hidden" style="border-top-color: white;"></div>
+                                <div id="save-loader" class="spinner hidden"></div>
                             </button>
                             <button id="btn-cancel-edit" onclick="cancelEdit()" class="hidden w-full py-3 bg-slate-200 text-slate-600 rounded-xl font-black text-xs">수정 취소</button>
                         </div>
                     </div>
                 </div>
-
                 <div id="date-picker-box" class="glass-card p-6 shadow-lg border-t-4 border-t-emerald-500 hidden">
                     <h3 class="text-sm font-black mb-3 text-slate-500 uppercase tracking-wider">특정 날짜 조회</h3>
                     <input type="date" id="filter-specific-date" onchange="setFilter('date')" class="input-premium text-xs">
@@ -119,12 +118,22 @@
         </div>
     </div>
 
-    <script>
-        // 로컬 저장을 위해 API URL 대신 로컬 키 사용
-        const STORAGE_KEY = 'nhgr_account_data';
+    <!-- Firebase SDK (Cloud Sync 핵심) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+        // Firebase 설정 (환경 변수 자동 주입됨)
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'nhgr-family-account';
+
+        // 상태 관리 변수
         let dataRecords = [], currentFilter = 'all', viewDate = new Date();
-        let exchangeRate = 1400, livePrices = {};
+        let exchangeRate = 1400, livePrices = {}, user = null;
         const state = { user: '남호', type: '수입', editId: null };
 
         const categorySet = {
@@ -133,55 +142,69 @@
             '자산': ['보증금', '저축/예금', '적금', '주식 (해외)', '주식 (국내)', '연금/퇴직금', '청약']
         };
 
-        window.onload = function() {
+        // 초기 화면 세팅
+        window.onload = async function() {
             document.getElementById('input-date').valueAsDate = new Date();
             document.getElementById('filter-specific-date').valueAsDate = new Date();
             updateMonthLabel();
             updateCategoryUI();
             fetchRate();
-            loadData(); // 여기서 로컬 데이터를 불러옵니다.
+
+            // 클라우드 연결 시작
+            setLoading(true);
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
+            } else {
+                await signInAnonymously(auth);
+            }
         };
 
+        // 로그인 상태 감지 및 데이터 연결
+        onAuthStateChanged(auth, (u) => {
+            user = u;
+            if (user) initCloudSync();
+        });
+
+        // 환율 정보 가져오기
         async function fetchRate() {
             try {
                 const res = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
-                if(res && res.rates && res.rates.KRW) {
+                if(res?.rates?.KRW) {
                     exchangeRate = res.rates.KRW;
                     document.getElementById('rate-display').innerText = exchangeRate.toLocaleString(undefined, {maximumFractionDigits:1});
                 }
             } catch(e) {}
         }
 
-        // --- 데이터 관리 함수 수정 (localStorage 사용) ---
-        function loadData() {
-            setLoading(true);
-            try {
-                const localData = localStorage.getItem(STORAGE_KEY);
-                dataRecords = localData ? JSON.parse(localData) : [];
+        // 실시간 클라우드 동기화 로직 (핵심!)
+        function initCloudSync() {
+            const dataColl = collection(db, 'artifacts', appId, 'public', 'data', 'account_records');
+            
+            // 데이터베이스의 변화를 실시간으로 감시 (폰에서 쓰면 PC가 바로 반응함)
+            onSnapshot(dataColl, (snapshot) => {
+                dataRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
-                // 티커가 있는 경우 가격 업데이트 시도
+                // 주식 데이터가 있으면 가격 업데이트
                 const tickers = dataRecords.filter(r => r.ticker).map(r => r.ticker.toUpperCase());
-                const uniqueTickers = Array.from(new Set(tickers));
-                uniqueTickers.forEach(t => fetchPrice(t));
-                
+                Array.from(new Set(tickers)).forEach(t => {
+                    if (!livePrices[t]) fetchPrice(t);
+                });
+
+                setLoading(false);
                 renderList();
-            } catch(e) {
-                console.error("Load Error:", e);
-                document.getElementById('main-list').innerHTML = `<div class="text-center py-24 text-rose-400">데이터 로드 중 오류가 발생했습니다.</div>`;
-            } finally { setLoading(false); }
+            }, (error) => {
+                console.error("동기화 에러:", error);
+                setLoading(false);
+            });
         }
 
-        function saveToLocal() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataRecords));
-        }
-        // ---------------------------------------------
-
+        // 주식 가격 조회 (Yahoo Finance API)
         async function fetchPrice(ticker) {
             if (!ticker) return;
             const symbol = /^\d{6}$/.test(ticker) ? (ticker + '.KS') : ticker;
             try {
                 const proxy = 'https://api.allorigins.win/get?url=';
-                const url = encodeURIComponent("https://query1.finance.yahoo.com/v8/finance/chart/" + symbol + "?interval=1m&range=1d");
+                const url = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`);
                 const res = await fetch(proxy + url).then(r => r.json());
                 const result = JSON.parse(res.contents);
                 const price = result.chart.result[0].meta.regularMarketPrice;
@@ -192,6 +215,7 @@
             } catch(e) {}
         }
 
+        // 금액 계산 (주식/해외주식 환율 반영)
         function calculateItemValue(r) {
             const isOverseas = r.category && r.category.indexOf("해외") !== -1;
             const ticker = r.ticker ? r.ticker.toUpperCase() : null;
@@ -202,10 +226,9 @@
             return isOverseas ? (val * exchangeRate) : val;
         }
 
+        // 리스트 그리기
         function renderList() {
-            let totalWealth = 0; 
-            let monthlyAssetIncrease = 0; 
-            let monthlyExpense = 0;      
+            let totalWealth = 0, monthlyAssetIncrease = 0, monthlyExpense = 0;
             const vY = viewDate.getFullYear(), vM = viewDate.getMonth() + 1;
 
             dataRecords.forEach(r => {
@@ -234,7 +257,7 @@
                     const selDate = document.getElementById('filter-specific-date').value;
                     if(!selDate) return false;
                     const d = selDate.split('-');
-                    return r.date === d[0] + ". " + d[1] + ". " + d[2] + ".";
+                    return r.date === `${d[0]}. ${d[1]}. ${d[2]}.`;
                 }
                 const dPart = r.date ? r.date.match(/\d+/g) : [];
                 const isCurrentMonth = dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM;
@@ -244,7 +267,8 @@
                 return false;
             });
 
-            filtered.sort((a, b) => b.date.replace(/[^0-9]/g, '') - a.date.replace(/[^0-9]/g, ''));
+            // 날짜 기준 내림차순 정렬
+            filtered.sort((a, b) => b.date.localeCompare(a.date));
 
             const container = document.getElementById('main-list');
             if (filtered.length === 0) {
@@ -252,67 +276,131 @@
                 return;
             }
 
-            let listHtml = "";
-            filtered.forEach(r => {
+            container.innerHTML = filtered.map(r => {
                 const val = calculateItemValue(r);
-                const userColor = (r.user_name === '남호' || r.user_name === '남편') ? 'text-blue-500' : 'text-purple-500';
-                let displayName = r.user_name;
+                const userColor = (r.user_name === '남호') ? 'text-blue-500' : 'text-purple-500';
                 const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
                 let typeColor = r.type === '지출' ? 'text-rose-500' : 'text-emerald-500';
                 let sign = r.type === '지출' ? '-' : '+';
                 if(isAsset) { typeColor = "text-emerald-500"; sign = ""; }
 
-                const tickerStr = r.ticker ? ' • ' + r.ticker : '';
-                const qtyStr = r.qty ? ' • ' + r.qty + '주' : '';
-                
-                listHtml += `
+                return `
                 <div class="swipe-item" id="item-${r.id}">
-                    <div class="swipe-action" data-id="${r.id}">삭제</div>
-                    <div class="swipe-content p-5 flex justify-between items-center relative" data-id="${r.id}">
+                    <div class="swipe-action" onclick="deleteItem('${r.id}')">삭제</div>
+                    <div class="swipe-content p-5 flex justify-between items-center relative" onclick="startEdit('${r.id}')">
                         <div class="flex-1 pointer-events-none">
                             <div class="flex items-center gap-2 mb-1 text-[10px] font-black uppercase">
-                                <span class="${userColor}">${displayName}</span>
+                                <span class="${userColor}">${r.user_name}</span>
                                 <span class="text-slate-300">|</span><span class="text-slate-500">${r.category}</span>
                                 ${isAsset ? '<span class="ml-1 px-1 bg-emerald-100 text-emerald-600 rounded-sm">ASSET</span>' : ''}
                             </div>
                             <p class="font-bold text-slate-800 text-[15px]">${r.description || r.category}</p>
-                            <p class="text-[11px] font-mono font-bold text-slate-400">${r.date}${tickerStr}${qtyStr}</p>
+                            <p class="text-[11px] font-mono font-bold text-slate-400">${r.date}${r.ticker ? ' • ' + r.ticker : ''}${r.qty ? ' • ' + r.qty + '주' : ''}</p>
                         </div>
                         <div class="text-right flex items-center gap-4">
                             <p class="text-[17px] font-black font-mono ${typeColor} pointer-events-none">${sign}₩${Math.round(val).toLocaleString()}</p>
-                            <button class="pc-delete-btn hidden w-8 h-8 items-center justify-center rounded-full bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all" data-id="${r.id}">
+                            <button class="pc-delete-btn hidden w-8 h-8 items-center justify-center rounded-full bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all" onclick="event.stopPropagation(); deleteItem('${r.id}')">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                             </button>
                         </div>
                     </div>
                 </div>`;
-            });
-            container.innerHTML = listHtml;
-            bindEvents();
+            }).join('');
+            
+            bindSwipeEvents();
         }
 
-        function bindEvents() {
-            document.querySelectorAll('.swipe-content').forEach(content => {
-                content.onclick = function() { startEdit(this.getAttribute('data-id')); };
-            });
-            document.querySelectorAll('.swipe-action, .pc-delete-btn').forEach(btn => {
-                btn.onclick = function(e) { e.stopPropagation(); globalDeleteItem(this.getAttribute('data-id')); };
-            });
+        // 모바일 스와이프 기능
+        function bindSwipeEvents() {
             document.querySelectorAll('.swipe-item').forEach(item => {
                 const id = item.id.replace('item-', '');
-                item.ontouchstart = e => handleStart(e, id);
-                item.ontouchmove = e => handleMove(e, id);
-                item.ontouchend = e => handleEnd(e, id);
+                let startX = 0;
+                item.ontouchstart = e => startX = e.touches[0].clientX;
+                item.ontouchmove = e => {
+                    if(window.innerWidth >= 1024) return;
+                    const diff = startX - e.touches[0].clientX;
+                    const content = item.querySelector('.swipe-content');
+                    if (content && diff > 10 && diff < 120) {
+                        content.style.transition = 'none';
+                        content.style.transform = `translateX(-${diff}px)`;
+                    }
+                };
+                item.ontouchend = e => {
+                    if(window.innerWidth >= 1024) return;
+                    const diff = startX - e.changedTouches[0].clientX;
+                    const content = item.querySelector('.swipe-content');
+                    if(!content) return;
+                    content.style.transition = 'transform 0.3s ease';
+                    content.style.transform = (diff > 60) ? "translateX(-80px)" : "translateX(0)";
+                };
             });
         }
 
-        function startEdit(id) {
+        // 클라우드 저장 로직
+        window.saveData = async function() {
+            if (!user) return alert("연결 중입니다. 잠시만 기다려주세요.");
+            
+            const dateVal = document.getElementById('input-date').value;
+            const amountVal = document.getElementById('input-amount').value;
+            if(!dateVal || !amountVal) return alert("필수 항목을 입력하세요.");
+            
+            const d = dateVal.split('-');
+            const cat = document.getElementById('input-cat').value;
+            const isAsset = categorySet.자산.includes(cat);
+            const id = state.editId || Date.now().toString();
+            
+            const payload = {
+                user_name: state.user,
+                type: isAsset ? '자산' : state.type,
+                category: cat,
+                amount: Number(amountVal),
+                date: `${d[0]}. ${d[1]}. ${d[2]}.`,
+                description: document.getElementById('input-desc').value || "",
+                ticker: document.getElementById('input-ticker').value?.toUpperCase().trim() || null,
+                qty: document.getElementById('input-qty').value ? Number(document.getElementById('input-qty').value) : null,
+                updatedAt: new Date().toISOString()
+            };
+
+            document.getElementById('save-loader').classList.remove('hidden');
+            document.getElementById('save-text').innerText = "업로드 중...";
+
+            try {
+                // 클라우드에 업로드 (다른 기기에서도 즉시 반영됨)
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'account_records', id), payload);
+                
+                if (state.editId) cancelEdit();
+                else {
+                    document.getElementById('input-amount').value = '';
+                    document.getElementById('input-desc').value = '';
+                    document.getElementById('input-ticker').value = '';
+                    document.getElementById('input-qty').value = '';
+                }
+            } catch(e) {
+                alert("저장 실패: " + e.message);
+            } finally {
+                document.getElementById('save-loader').classList.add('hidden');
+                document.getElementById('save-text').innerText = state.editId ? "데이터 수정하기" : "데이터 저장하기";
+            }
+        };
+
+        // 클라우드 데이터 삭제
+        window.deleteItem = async function(id) {
+            if(!id || !confirm("이 내역을 삭제하시겠습니까?")) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'account_records', id));
+                if(state.editId === id) cancelEdit();
+            } catch(e) { alert("삭제 실패"); }
+        };
+
+        // 수정 모드 진입
+        window.startEdit = function(id) {
             const r = dataRecords.find(item => String(item.id) === String(id));
             if(!r) return;
             state.editId = id;
             toggleUser(r.user_name);
             const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
             toggleType(isAsset ? '수입' : r.type); 
+            
             const dPart = r.date.match(/\d+/g);
             if(dPart && dPart.length === 3) {
                 document.getElementById('input-date').value = `${dPart[0]}-${dPart[1].padStart(2, '0')}-${dPart[2].padStart(2, '0')}`;
@@ -324,105 +412,40 @@
             document.getElementById('input-qty').value = r.qty || "";
             toggleStockFields();
             
-            const saveBtn = document.getElementById('btn-save');
-            saveBtn.classList.add('btn-edit');
+            document.getElementById('btn-save').classList.add('btn-edit');
             document.getElementById('save-text').innerText = "데이터 수정하기";
             document.getElementById('input-title').innerText = "내역 수정 중";
             document.getElementById('input-card').classList.replace('border-t-blue-500', 'border-t-amber-500');
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        };
 
-        function cancelEdit() {
+        window.cancelEdit = function() {
             state.editId = null;
             document.getElementById('input-amount').value = '';
             document.getElementById('input-desc').value = '';
             document.getElementById('input-ticker').value = '';
             document.getElementById('input-qty').value = '';
-            const saveBtn = document.getElementById('btn-save');
-            saveBtn.classList.remove('btn-edit');
+            document.getElementById('btn-save').classList.remove('btn-edit');
             document.getElementById('save-text').innerText = "데이터 저장하기";
             document.getElementById('input-title').innerText = "기록하기";
             document.getElementById('input-card').classList.replace('border-t-amber-500', 'border-t-blue-500');
             document.getElementById('btn-cancel-edit').classList.add('hidden');
-        }
+        };
 
-        function globalDeleteItem(id) {
-            if(!id || !confirm("이 내역을 삭제하시겠습니까?")) return;
-            dataRecords = dataRecords.filter(r => String(r.id) !== String(id));
-            saveToLocal();
-            if(state.editId === id) cancelEdit();
-            renderList();
-        }
-
-        function saveData() {
-            const dateVal = document.getElementById('input-date').value;
-            const amountVal = document.getElementById('input-amount').value;
-            if(!dateVal || !amountVal) return alert("필수 항목을 입력하세요.");
-            const d = dateVal.split('-');
-            const cat = document.getElementById('input-cat').value;
-            const isAsset = categorySet.자산.includes(cat);
-            
-            const payload = {
-                id: state.editId || Date.now().toString(),
-                user_name: state.user,
-                type: isAsset ? '자산' : state.type,
-                category: cat,
-                amount: Number(amountVal),
-                date: `${d[0]}. ${d[1]}. ${d[2]}.`,
-                description: document.getElementById('input-desc').value || "",
-                ticker: document.getElementById('input-ticker').value?.toUpperCase().trim() || null,
-                qty: document.getElementById('input-qty').value ? Number(document.getElementById('input-qty').value) : null
-            };
-
-            if (state.editId) {
-                const index = dataRecords.findIndex(r => String(r.id) === String(state.editId));
-                if (index !== -1) dataRecords[index] = payload;
-                cancelEdit();
-            } else {
-                dataRecords.push(payload);
-                document.getElementById('input-amount').value = '';
-                document.getElementById('input-desc').value = '';
-                document.getElementById('input-ticker').value = '';
-                document.getElementById('input-qty').value = '';
-            }
-
-            saveToLocal();
-            renderList();
-        }
-
-        let startX = 0;
-        function handleStart(e, id) { startX = e.touches[0].clientX; }
-        function handleMove(e, id) {
-            if(window.innerWidth >= 1024) return;
-            const diff = startX - e.touches[0].clientX;
-            const content = document.querySelector(`#item-${id} .swipe-content`);
-            if (content && diff > 10 && diff < 120) {
-                content.style.transition = 'none';
-                content.style.transform = `translateX(-${diff}px)`;
-            }
-        }
-        function handleEnd(e, id) {
-            if(window.innerWidth >= 1024) return;
-            const diff = startX - e.changedTouches[0].clientX;
-            const content = document.querySelector(`#item-${id} .swipe-content`);
-            if(!content) return;
-            content.style.transition = 'transform 0.3s ease';
-            content.style.transform = (diff > 60) ? "translateX(-80px)" : "translateX(0)";
-        }
-
-        function toggleUser(u) {
+        // UI 이벤트 핸들러들
+        window.toggleUser = function(u) {
             state.user = u;
             document.getElementById('btn-user-h').className = (u === '남호') ? 'py-3 btn-primary text-xs tracking-tighter' : 'py-3 bg-white text-slate-300 border border-slate-100 rounded-xl font-black text-xs tracking-tighter';
             document.getElementById('btn-user-w').className = (u === '가람') ? 'py-3 btn-primary text-xs tracking-tighter' : 'py-3 bg-white text-slate-300 border border-slate-100 rounded-xl font-black text-xs tracking-tighter';
-        }
+        };
 
-        function toggleType(t) {
+        window.toggleType = function(t) {
             state.type = t;
             document.getElementById('btn-type-in').className = `flex-1 py-2 rounded-lg font-black text-[11px] ${t === '수입' ? 'bg-white text-primary shadow-sm' : 'text-slate-400'}`;
             document.getElementById('btn-type-out').className = `flex-1 py-2 rounded-lg font-black text-[11px] ${t === '지출' ? 'bg-white text-primary shadow-sm' : 'text-slate-400'}`;
             updateCategoryUI();
-        }
+        };
 
         function updateCategoryUI() {
             const list = (state.type === '수입') ? categorySet.수입.concat(categorySet.자산) : categorySet.지출;
@@ -433,12 +456,12 @@
             toggleStockFields();
         }
 
-        function toggleStockFields() {
+        window.toggleStockFields = function() {
             const isStock = document.getElementById('input-cat').value.indexOf("주식") !== -1;
             document.getElementById('stock-fields').classList.toggle('hidden', !isStock);
-        }
+        };
 
-        function setFilter(f) {
+        window.setFilter = function(f) {
             currentFilter = f;
             ['all', 'income', 'expense', 'asset', 'date'].forEach(key => {
                 const el = document.getElementById('f-' + key);
@@ -447,17 +470,19 @@
             });
             document.getElementById('date-picker-box').classList.toggle('hidden', f !== 'date');
             renderList();
-        }
+        };
 
-        function moveMonth(d) { viewDate.setMonth(viewDate.getMonth() + d); updateMonthLabel(); renderList(); }
+        window.moveMonth = function(d) { viewDate.setMonth(viewDate.getMonth() + d); updateMonthLabel(); renderList(); };
+        
         function updateMonthLabel() { 
             document.getElementById('current-month').innerText = `${viewDate.getFullYear()}. ${String(viewDate.getMonth() + 1).padStart(2, '0')}`; 
         }
+
         function setLoading(b) { 
             const dot = document.getElementById('status-dot');
             if(dot) dot.className = b ? "w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" : "w-1.5 h-1.5 bg-emerald-500 rounded-full";
             const txt = document.getElementById('status-text');
-            if(txt) txt.innerText = b ? "LOADING..." : "LOCAL STORAGE";
+            if(txt) txt.innerText = b ? "SYNCING..." : "CLOUD CONNECTED";
         }
     </script>
 </body>
