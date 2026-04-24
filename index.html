@@ -50,7 +50,7 @@
                         <p id="rate-display" class="text-xl font-black text-blue-300 font-mono">1,470.0</p>
                     </div>
                     <div class="bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase mb-1">Monthly Balance</p>
+                        <p class="text-[9px] text-slate-400 font-bold uppercase mb-1">Monthly Flow</p>
                         <p id="flow-display" class="text-xl font-black font-mono text-emerald-400">+₩0</p>
                     </div>
                 </div>
@@ -61,7 +61,7 @@
             <aside class="space-y-6">
                 <div id="input-card" class="glass-card p-6 shadow-xl border-t-4 border-t-blue-500 transition-all duration-300">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 id="input-title" class="text-xl font-black tracking-tight">자산 기록</h2>
+                        <h2 id="input-title" class="text-xl font-black tracking-tight">기록하기</h2>
                         <div class="flex items-center bg-slate-100 rounded-xl p-1 font-mono text-[11px] font-black">
                             <button onclick="moveMonth(-1)" class="p-2">◀</button>
                             <span id="current-month" class="px-2"></span>
@@ -196,27 +196,33 @@
         }
 
         function renderList() {
-            let total = 0, flow = 0;
+            let totalWealth = 0; 
+            let monthlyFlow = 0; 
             const vY = viewDate.getFullYear(), vM = viewDate.getMonth() + 1;
 
             dataRecords.forEach(function(r) {
                 const val = calculateItemValue(r);
-                const isAsset = ["보증금", "주식", "저축", "적금", "연금", "청약"].some(function(c) { return r.category && r.category.indexOf(c) !== -1; });
-                if (isAsset) total += val;
-                else { if (r.type === '수입') total += val; else total -= val; }
-                const dPart = r.date ? r.date.match(/\d+/g) : [];
-                if(dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM) {
-                    if(r.type === '수입') flow += val; else if(r.type === '지출') flow -= val;
+                const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
+                
+                if (isAsset) {
+                    totalWealth += val;
+                } else {
+                    const dPart = r.date ? r.date.match(/\d+/g) : [];
+                    if(dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM) {
+                        if(r.type === '수입') monthlyFlow += val; 
+                        else if(r.type === '지출') monthlyFlow -= val;
+                    }
                 }
             });
 
-            document.getElementById('total-wealth').innerText = '₩' + Math.round(total).toLocaleString();
+            document.getElementById('total-wealth').innerText = '₩' + Math.round(totalWealth).toLocaleString();
             const flowEl = document.getElementById('flow-display');
-            flowEl.innerText = (flow >= 0 ? '+₩' : '-₩') + Math.round(Math.abs(flow)).toLocaleString();
-            flowEl.className = "text-xl font-black font-mono " + (flow >= 0 ? 'text-emerald-400' : 'text-rose-400');
+            flowEl.innerText = (monthlyFlow >= 0 ? '+₩' : '-₩') + Math.round(Math.abs(monthlyFlow)).toLocaleString();
+            flowEl.className = "text-xl font-black font-mono " + (monthlyFlow >= 0 ? 'text-emerald-400' : 'text-rose-400');
 
             const filtered = dataRecords.filter(function(r) {
-                if (currentFilter === 'asset') return ["보증금", "주식", "저축", "적금", "연금", "청약"].some(function(c) { return r.category && r.category.indexOf(c) !== -1; });
+                const isAssetItem = r.type === '자산' || categorySet.자산.includes(r.category);
+                if (currentFilter === 'asset') return isAssetItem;
                 if (currentFilter === 'date') {
                     const selDate = document.getElementById('filter-specific-date').value;
                     if(!selDate) return false;
@@ -225,10 +231,9 @@
                 }
                 const dPart = r.date ? r.date.match(/\d+/g) : [];
                 const isCurrentMonth = dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM;
-                if (!isCurrentMonth) return false;
-                if (currentFilter === 'all') return true;
-                if (currentFilter === 'income') return r.type === '수입';
-                if (currentFilter === 'expense') return r.type === '지출';
+                if (currentFilter === 'all') return !isAssetItem && isCurrentMonth;
+                if (currentFilter === 'income') return r.type === '수입' && !isAssetItem && isCurrentMonth;
+                if (currentFilter === 'expense') return r.type === '지출' && isCurrentMonth;
                 return false;
             });
 
@@ -244,8 +249,15 @@
             filtered.forEach(function(r) {
                 const val = calculateItemValue(r);
                 const userColor = r.user_name === '남편' ? 'text-blue-500' : 'text-purple-500';
-                const typeColor = r.type === '지출' ? 'text-rose-500' : 'text-emerald-500';
-                const sign = r.type === '지출' ? '-' : '+';
+                const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
+                let typeColor = r.type === '지출' ? 'text-rose-500' : 'text-emerald-500';
+                let sign = r.type === '지출' ? '-' : '+';
+                
+                if(isAsset) {
+                    typeColor = "text-emerald-500"; // 자산 색상 초록색으로 변경
+                    sign = ""; // '보유' 문구 제거
+                }
+
                 const tickerStr = r.ticker ? ' • ' + r.ticker : '';
                 const qtyStr = r.qty ? ' • ' + r.qty + '주' : '';
                 
@@ -256,6 +268,7 @@
                 item += '<div class="flex items-center gap-2 mb-1 text-[10px] font-black uppercase">';
                 item += '<span class="' + userColor + '">' + r.user_name + '</span>';
                 item += '<span class="text-slate-300">|</span><span class="text-slate-500">' + r.category + '</span>';
+                if(isAsset) item += '<span class="ml-1 px-1 bg-emerald-100 text-emerald-600 rounded-sm">ASSET</span>';
                 item += '</div>';
                 item += '<p class="font-bold text-slate-800 text-[15px]">' + (r.description || r.category) + '</p>';
                 item += '<p class="text-[11px] font-mono font-bold text-slate-400">' + r.date + tickerStr + qtyStr + '</p>';
@@ -272,7 +285,6 @@
         }
 
         function bindEvents() {
-            // 카드 클릭 시 수정 모드 진입
             document.querySelectorAll('.swipe-content').forEach(function(content) {
                 content.onclick = function() {
                     const id = this.getAttribute('data-id');
@@ -280,7 +292,6 @@
                 };
             });
 
-            // 삭제 버튼
             document.querySelectorAll('.swipe-action, .pc-delete-btn').forEach(function(btn) {
                 btn.onclick = function(e) {
                     e.stopPropagation();
@@ -289,7 +300,6 @@
                 };
             });
 
-            // 모바일 스와이프
             document.querySelectorAll('.swipe-item').forEach(function(item) {
                 const id = item.id.replace('item-', '');
                 item.ontouchstart = function(e) { handleStart(e, id); };
@@ -298,18 +308,13 @@
             });
         }
 
-        // 수정 모드 시작
         function startEdit(id) {
             const r = dataRecords.find(function(item) { return String(item.id) === String(id); });
             if(!r) return;
-
             state.editId = id;
-            
-            // UI 상태 반영
             toggleUser(r.user_name);
-            toggleType(r.type === '자산' ? '수입' : r.type); // UI상 자산은 수입 탭에서 관리
-            
-            // 폼 채우기
+            const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
+            toggleType(isAsset ? '수입' : r.type); 
             const dPart = r.date.match(/\d+/g);
             if(dPart && dPart.length === 3) {
                 document.getElementById('input-date').value = dPart[0] + "-" + dPart[1].padStart(2, '0') + "-" + dPart[2].padStart(2, '0');
@@ -319,45 +324,33 @@
             document.getElementById('input-desc').value = r.description;
             document.getElementById('input-ticker').value = r.ticker || "";
             document.getElementById('input-qty').value = r.qty || "";
-            
             toggleStockFields();
-
-            // 저장 버튼을 수정 버튼으로 변경
             const saveBtn = document.getElementById('btn-save');
             const saveText = document.getElementById('save-text');
             const inputCard = document.getElementById('input-card');
             const inputTitle = document.getElementById('input-title');
-
             saveBtn.classList.add('btn-edit');
             saveText.innerText = "데이터 수정하기";
             inputTitle.innerText = "내역 수정 중";
             inputCard.classList.remove('border-t-blue-500');
             inputCard.classList.add('border-t-amber-500');
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
-
-            // 화면 최상단으로 스크롤 (모바일 배려)
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // 수정 취소
         function cancelEdit() {
             state.editId = null;
-            
-            // 폼 초기화
             document.getElementById('input-amount').value = '';
             document.getElementById('input-desc').value = '';
             document.getElementById('input-ticker').value = '';
             document.getElementById('input-qty').value = '';
-            
-            // UI 원복
             const saveBtn = document.getElementById('btn-save');
             const saveText = document.getElementById('save-text');
             const inputCard = document.getElementById('input-card');
             const inputTitle = document.getElementById('input-title');
-
             saveBtn.classList.remove('btn-edit');
             saveText.innerText = "데이터 저장하기";
-            inputTitle.innerText = "자산 기록";
+            inputTitle.innerText = "기록하기";
             inputCard.classList.add('border-t-blue-500');
             inputCard.classList.remove('border-t-amber-500');
             document.getElementById('btn-cancel-edit').classList.add('hidden');
@@ -382,38 +375,32 @@
             const dateVal = document.getElementById('input-date').value;
             const amountVal = document.getElementById('input-amount').value;
             if(!dateVal || !amountVal) return alert("필수 항목을 입력하세요.");
-            
             const d = dateVal.split('-');
-            const isAsset = categorySet.자산.includes(document.getElementById('input-cat').value);
+            const cat = document.getElementById('input-cat').value;
+            const isAsset = categorySet.자산.includes(cat);
             const payload = {
                 user_name: state.user,
                 type: isAsset ? '자산' : state.type,
-                category: document.getElementById('input-cat').value,
+                category: cat,
                 amount: Number(amountVal),
                 date: d[0] + ". " + d[1] + ". " + d[2] + ".",
                 description: document.getElementById('input-desc').value || "",
                 ticker: document.getElementById('input-ticker').value ? document.getElementById('input-ticker').value.toUpperCase().trim() : null,
                 qty: document.getElementById('input-qty').value ? Number(document.getElementById('input-qty').value) : null
             };
-
             const btn = document.getElementById('btn-save');
             btn.disabled = true;
             document.getElementById('save-loader').classList.remove('hidden');
-            
             try {
                 let error;
                 if(state.editId) {
-                    // 수정 모드
                     const res = await sb.from('account_v3').update(payload).eq('id', state.editId);
                     error = res.error;
                 } else {
-                    // 신규 저장 모드
                     const res = await sb.from('account_v3').insert([payload]);
                     error = res.error;
                 }
-                
                 if (error) throw error;
-                
                 if(state.editId) cancelEdit();
                 else {
                     document.getElementById('input-amount').value = '';
@@ -470,7 +457,7 @@
             const catSelect = document.getElementById('input-cat');
             const currentVal = catSelect.value;
             catSelect.innerHTML = options;
-            if(list.includes(currentVal)) catSelect.value = currentVal; // 카테고리 유지
+            if(list.includes(currentVal)) catSelect.value = currentVal;
             toggleStockFields();
         }
 
