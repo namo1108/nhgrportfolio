@@ -39,7 +39,7 @@
                     <div class="flex items-center gap-2">
                         <span class="px-3 py-1 bg-blue-500/30 text-blue-300 text-[10px] font-black rounded-full border border-blue-500/30 uppercase tracking-widest">NamHo GaRam</span>
                         <div id="sync-status" class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                            <span id="status-dot" class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> <span id="status-text">ONLINE</span>
+                            <span id="status-dot" class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> <span id="status-text">LOCAL STORAGE</span>
                         </div>
                     </div>
                     <p class="text-xs font-bold text-slate-400 mb-[-10px] ml-1">남호가람 통합 자산 현황</p>
@@ -48,7 +48,7 @@
                 <div class="flex gap-4">
                     <div class="bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
                         <p class="text-[9px] text-slate-400 font-bold uppercase mb-1">실시간 환율 (USD)</p>
-                        <p id="rate-display" class="text-xl font-black text-blue-300 font-mono">1,470.0</p>
+                        <p id="rate-display" class="text-xl font-black text-blue-300 font-mono">1,400.0</p>
                     </div>
                     <div class="bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
                         <p class="text-[9px] text-slate-400 font-bold uppercase mb-1">이번 달 현금흐름</p>
@@ -120,10 +120,11 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'https://nhgrportfolio.skagh662.workers.dev';
+        // 로컬 저장을 위해 API URL 대신 로컬 키 사용
+        const STORAGE_KEY = 'nhgr_account_data';
 
         let dataRecords = [], currentFilter = 'all', viewDate = new Date();
-        let exchangeRate = 1470, livePrices = {};
+        let exchangeRate = 1400, livePrices = {};
         const state = { user: '남호', type: '수입', editId: null };
 
         const categorySet = {
@@ -138,7 +139,7 @@
             updateMonthLabel();
             updateCategoryUI();
             fetchRate();
-            loadData();
+            loadData(); // 여기서 로컬 데이터를 불러옵니다.
         };
 
         async function fetchRate() {
@@ -151,36 +152,29 @@
             } catch(e) {}
         }
 
-        async function loadData() {
+        // --- 데이터 관리 함수 수정 (localStorage 사용) ---
+        function loadData() {
             setLoading(true);
             try {
-                const response = await fetch(API_BASE_URL + '/api/account', {
-                    method: 'GET',
-                    mode: 'cors'
-                });
+                const localData = localStorage.getItem(STORAGE_KEY);
+                dataRecords = localData ? JSON.parse(localData) : [];
                 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const data = await response.json();
+                // 티커가 있는 경우 가격 업데이트 시도
+                const tickers = dataRecords.filter(r => r.ticker).map(r => r.ticker.toUpperCase());
+                const uniqueTickers = Array.from(new Set(tickers));
+                uniqueTickers.forEach(t => fetchPrice(t));
                 
-                if(data) {
-                    dataRecords = Array.isArray(data) ? data : [];
-                    const tickers = [];
-                    dataRecords.forEach(r => { if(r.ticker) tickers.push(r.ticker.toUpperCase()); });
-                    const uniqueTickers = Array.from(new Set(tickers));
-                    uniqueTickers.forEach(t => fetchPrice(t));
-                    renderList();
-                }
+                renderList();
             } catch(e) {
                 console.error("Load Error:", e);
-                document.getElementById('main-list').innerHTML = `
-                    <div class="text-center py-24 px-6">
-                        <div class="text-rose-400 font-black text-xl mb-2">서버 연결에 실패했습니다</div>
-                        <p class="text-slate-400 text-xs leading-relaxed">네트워크 상태를 확인해주세요.</p>
-                        <button onclick="loadData()" class="mt-6 px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-[11px] font-black">다시 시도</button>
-                    </div>
-                `;
+                document.getElementById('main-list').innerHTML = `<div class="text-center py-24 text-rose-400">데이터 로드 중 오류가 발생했습니다.</div>`;
             } finally { setLoading(false); }
         }
+
+        function saveToLocal() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataRecords));
+        }
+        // ---------------------------------------------
 
         async function fetchPrice(ticker) {
             if (!ticker) return;
@@ -262,11 +256,7 @@
             filtered.forEach(r => {
                 const val = calculateItemValue(r);
                 const userColor = (r.user_name === '남호' || r.user_name === '남편') ? 'text-blue-500' : 'text-purple-500';
-                
                 let displayName = r.user_name;
-                if (r.user_name === '남편') displayName = '남호';
-                else if (r.user_name === '아내') displayName = '가람';
-                
                 const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
                 let typeColor = r.type === '지출' ? 'text-rose-500' : 'text-emerald-500';
                 let sign = r.type === '지출' ? '-' : '+';
@@ -320,12 +310,7 @@
             const r = dataRecords.find(item => String(item.id) === String(id));
             if(!r) return;
             state.editId = id;
-            
-            let editingUser = r.user_name;
-            if (r.user_name === '남편') editingUser = '남호';
-            else if (r.user_name === '아내') editingUser = '가람';
-            toggleUser(editingUser);
-            
+            toggleUser(r.user_name);
             const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
             toggleType(isAsset ? '수입' : r.type); 
             const dPart = r.date.match(/\d+/g);
@@ -362,26 +347,24 @@
             document.getElementById('btn-cancel-edit').classList.add('hidden');
         }
 
-        async function globalDeleteItem(id) {
-            if(!id || !confirm("이 내역을 영구적으로 삭제하시겠습니까?")) return;
-            setLoading(true);
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/account/${id}`, { method: 'DELETE', mode: 'cors' });
-                if (!response.ok) throw new Error('Delete failed');
-                dataRecords = dataRecords.filter(r => String(r.id) !== String(id));
-                if(state.editId === id) cancelEdit();
-                renderList();
-            } catch (err) { alert("삭제 오류: " + err.message); loadData(); } finally { setLoading(false); }
+        function globalDeleteItem(id) {
+            if(!id || !confirm("이 내역을 삭제하시겠습니까?")) return;
+            dataRecords = dataRecords.filter(r => String(r.id) !== String(id));
+            saveToLocal();
+            if(state.editId === id) cancelEdit();
+            renderList();
         }
 
-        async function saveData() {
+        function saveData() {
             const dateVal = document.getElementById('input-date').value;
             const amountVal = document.getElementById('input-amount').value;
             if(!dateVal || !amountVal) return alert("필수 항목을 입력하세요.");
             const d = dateVal.split('-');
             const cat = document.getElementById('input-cat').value;
             const isAsset = categorySet.자산.includes(cat);
+            
             const payload = {
+                id: state.editId || Date.now().toString(),
                 user_name: state.user,
                 type: isAsset ? '자산' : state.type,
                 category: cat,
@@ -391,30 +374,21 @@
                 ticker: document.getElementById('input-ticker').value?.toUpperCase().trim() || null,
                 qty: document.getElementById('input-qty').value ? Number(document.getElementById('input-qty').value) : null
             };
-            const btn = document.getElementById('btn-save');
-            btn.disabled = true;
-            document.getElementById('save-loader').classList.remove('hidden');
-            try {
-                const url = state.editId ? `${API_BASE_URL}/api/account/${state.editId}` : `${API_BASE_URL}/api/account`;
-                const method = state.editId ? 'PUT' : 'POST';
-                const response = await fetch(url, {
-                    method, mode: 'cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!response.ok) throw new Error('Save failed');
-                if(state.editId) cancelEdit();
-                else {
-                    document.getElementById('input-amount').value = '';
-                    document.getElementById('input-desc').value = '';
-                    document.getElementById('input-ticker').value = '';
-                    document.getElementById('input-qty').value = '';
-                }
-                await loadData();
-            } catch (err) { alert("처리 오류: " + err.message); } finally {
-                btn.disabled = false;
-                document.getElementById('save-loader').classList.add('hidden');
+
+            if (state.editId) {
+                const index = dataRecords.findIndex(r => String(r.id) === String(state.editId));
+                if (index !== -1) dataRecords[index] = payload;
+                cancelEdit();
+            } else {
+                dataRecords.push(payload);
+                document.getElementById('input-amount').value = '';
+                document.getElementById('input-desc').value = '';
+                document.getElementById('input-ticker').value = '';
+                document.getElementById('input-qty').value = '';
             }
+
+            saveToLocal();
+            renderList();
         }
 
         let startX = 0;
@@ -483,7 +457,7 @@
             const dot = document.getElementById('status-dot');
             if(dot) dot.className = b ? "w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" : "w-1.5 h-1.5 bg-emerald-500 rounded-full";
             const txt = document.getElementById('status-text');
-            if(txt) txt.innerText = b ? "SYNCING..." : "ONLINE";
+            if(txt) txt.innerText = b ? "LOADING..." : "LOCAL STORAGE";
         }
     </script>
 </body>
