@@ -70,29 +70,33 @@
             border-color: rgba(99, 102, 241, 0.4);
             transform: translateX(4px);
         }
+        /* 삭제 버튼 스타일 개선 */
         .delete-btn {
             position: absolute;
-            right: -10px;
-            top: -10px;
-            background: #f43f5e;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(244, 63, 94, 0.9);
             color: white;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 18px;
+            font-weight: bold;
             opacity: 0;
             transition: all 0.2s;
-            box-shadow: 0 4px 10px rgba(244, 63, 94, 0.4);
-            z-index: 10;
+            z-index: 20;
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
         }
         .list-item:hover .delete-btn {
             opacity: 1;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
+        }
+        /* 모바일 대응: 터치 디바이스에서는 버튼을 항상 노출하거나 명확하게 표시 */
+        @media (max-width: 768px) {
+            .delete-btn { opacity: 0.8; right: 8px; width: 32px; height: 32px; }
         }
         input, select {
             background: #f8fafc;
@@ -145,6 +149,7 @@
             </div>
         </header>
 
+        <!-- 그래프 영역 -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <div class="glass-card p-5">
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">ASSET ALLOCATION</p>
@@ -235,7 +240,7 @@
                     <button onclick="setFilter('income')" id="f-income" class="filter-btn">수입내역</button>
                     <button onclick="setFilter('expense')" id="f-expense" class="filter-btn">지출내역</button>
                 </div>
-                <div id="main-list" class="space-y-3"></div>
+                <div id="main-list" class="space-y-3 pb-20"></div>
             </section>
         </div>
     </div>
@@ -266,7 +271,9 @@
 
         window.setWriter = (w) => {
             curWriter = w;
-            document.querySelectorAll('.btn-writer').forEach(b => b.classList.toggle('active', b.innerText === w));
+            document.querySelectorAll('.btn-writer').forEach(b => {
+                b.classList.toggle('active', b.innerText === w);
+            });
         };
 
         window.setType = (t) => {
@@ -327,6 +334,12 @@
             const isStock = cat.includes('주식');
             const editId = document.getElementById('edit-id').value;
             let finalAmount = isStock ? parseInt(document.getElementById('i-amount-val').value) : parseInt(document.getElementById('i-amount').value);
+            
+            if (!finalAmount && finalAmount !== 0) {
+                alert("금액을 입력해주세요.");
+                return;
+            }
+
             const data = {
                 user: curWriter,
                 type: curType,
@@ -335,30 +348,37 @@
                 ticker: isStock ? document.getElementById('i-ticker').value.toUpperCase() : '',
                 quantity: isStock ? parseFloat(document.getElementById('i-quantity').value) : 0,
                 price: isStock ? parseFloat(document.getElementById('i-price').value) : 0,
-                amount: finalAmount || 0,
+                amount: finalAmount,
                 date: document.getElementById('i-date').value
             };
+
             if (editId) {
                 records = records.map(r => r.id === editId ? { ...data, id: editId } : r);
             } else {
                 records.push({ ...data, id: 'ID-' + Date.now() });
             }
+            
             saveToStorage();
             render();
             resetForm();
         };
 
+        // 삭제 기능 핵심 로직
         window.deleteItem = (e, id) => {
-            e.stopPropagation(); // 수정 모드 발동 방지
-            if (confirm('정말 이 내역을 삭제하시겠습니까?')) {
-                records = records.filter(r => r.id !== id);
+            if (e) {
+                e.stopPropagation(); // 부모 div의 onclick(수정모드) 방지
+                e.preventDefault();
+            }
+            
+            if (confirm('정말로 이 내역을 삭제하시겠습니까?')) {
+                records = records.filter(r => r.id !== id.toString());
                 saveToStorage();
                 render();
             }
         };
 
         window.editItem = (id) => {
-            const r = records.find(x => x.id === id);
+            const r = records.find(x => x.id === id.toString());
             if (!r) return;
             document.getElementById('edit-id').value = r.id;
             setWriter(r.user);
@@ -413,7 +433,13 @@
             let assetDist = {};
             let expenseTimeline = {};
 
-            listEl.innerHTML = filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).map(r => {
+            listEl.innerHTML = '';
+            
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<div class="text-center py-10 text-slate-500 font-bold">내역이 없습니다.</div>';
+            }
+
+            filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
                 if (r.type === 'asset') {
                     totalAsset += r.amount;
                     assetDist[r.category] = (assetDist[r.category] || 0) + r.amount;
@@ -427,9 +453,11 @@
                 const colorClass = r.type === 'asset' ? 'text-indigo-400' : (r.type === 'income' ? 'text-emerald-400' : 'text-rose-400');
                 const badgeClass = r.type === 'asset' ? 'bg-indigo-600' : (r.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500');
 
-                return `
-                <div class="list-item flex justify-between items-center group mb-2" onclick="editItem('${r.id}')">
-                    <button class="delete-btn" onclick="deleteItem(event, '${r.id}')">×</button>
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "list-item flex justify-between items-center group mb-2";
+                itemDiv.onclick = () => editItem(r.id);
+                
+                itemDiv.innerHTML = `
                     <div class="flex gap-4 items-center">
                         <div class="w-10 h-10 rounded-xl ${badgeClass} flex items-center justify-center font-bold text-[10px] shadow-lg">${r.user}</div>
                         <div>
@@ -442,14 +470,18 @@
                             </h4>
                         </div>
                     </div>
-                    <div class="text-right mr-4">
-                        <p class="text-lg font-black ${colorClass}">
-                            ${r.type==='expense'?'-':'+'}₩${r.amount.toLocaleString()}
-                        </p>
-                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-tight">${r.date}</p>
-                    </div>
-                </div>`;
-            }).join('');
+                    <div class="flex items-center gap-4">
+                        <div class="text-right mr-2">
+                            <p class="text-lg font-black ${colorClass}">
+                                ${r.type==='expense'?'-':'+'}₩${r.amount.toLocaleString()}
+                            </p>
+                            <p class="text-[9px] text-slate-500 font-bold uppercase tracking-tight">${r.date}</p>
+                        </div>
+                        <button class="delete-btn" onclick="deleteItem(event, '${r.id}')">×</button>
+                    </div>`;
+                
+                listEl.appendChild(itemDiv);
+            });
 
             document.getElementById('total-wealth').innerText = '₩' + (totalAsset + totalIncome - totalExpense).toLocaleString();
             document.getElementById('stat-asset').innerText = '₩' + totalAsset.toLocaleString();
@@ -462,57 +494,63 @@
         function updateCharts(dist, timeline) {
             const aCtx = document.getElementById('assetChart').getContext('2d');
             if(assetChart) assetChart.destroy();
-            assetChart = new Chart(aCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(dist),
-                    datasets: [{ 
-                        data: Object.values(dist), 
-                        backgroundColor: ['#6366f1', '#10b981', '#fbbf24', '#f43f5e', '#ec4899', '#38bdf8'], 
-                        borderWidth: 0,
-                        hoverOffset: 12
-                    }]
-                },
-                options: { 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' } } } },
-                    animation: { animateScale: true }
-                }
-            });
+            
+            if (Object.keys(dist).length > 0) {
+                assetChart = new Chart(aCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(dist),
+                        datasets: [{ 
+                            data: Object.values(dist), 
+                            backgroundColor: ['#6366f1', '#10b981', '#fbbf24', '#f43f5e', '#ec4899', '#38bdf8'], 
+                            borderWidth: 0,
+                            hoverOffset: 12
+                        }]
+                    },
+                    options: { 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' } } } },
+                        animation: { animateScale: true }
+                    }
+                });
+            }
 
             const eCtx = document.getElementById('expenseChart').getContext('2d');
             if(expenseChart) expenseChart.destroy();
+            
             const sortedDates = Object.keys(timeline).sort();
-            const dataValues = sortedDates.map(d => timeline[d]);
-
-            expenseChart = new Chart(eCtx, {
-                type: 'line',
-                data: {
-                    labels: sortedDates,
-                    datasets: [{ 
-                        label: '지출액', 
-                        data: dataValues, 
-                        borderColor: '#f43f5e', 
-                        backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 4,
-                        pointBackgroundColor: '#f43f5e',
-                        pointBorderColor: '#fff',
-                        pointRadius: 4
-                    }]
-                },
-                options: { 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        y: { display: false }, 
-                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } } 
+            if (sortedDates.length > 0) {
+                const dataValues = sortedDates.map(d => timeline[d]);
+                expenseChart = new Chart(eCtx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedDates,
+                        datasets: [{ 
+                            label: '지출액', 
+                            data: dataValues, 
+                            borderColor: '#f43f5e', 
+                            backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 4,
+                            pointBackgroundColor: '#f43f5e',
+                            pointBorderColor: '#fff',
+                            pointRadius: 4
+                        }]
                     },
-                    plugins: { legend: { display: false } }
-                }
-            });
+                    options: { 
+                        maintainAspectRatio: false, 
+                        scales: { 
+                            y: { display: false }, 
+                            x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } } 
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
         }
 
+        // 초기화 실행
         const saved = localStorage.getItem('nh_gr_v5_final');
         records = saved ? JSON.parse(saved) : initialData;
         setType('asset');
