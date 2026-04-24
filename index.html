@@ -2,103 +2,166 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>남호가람 자산관리</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background-color: #f8fafc; 
+            overflow-x: hidden; 
+            -webkit-tap-highlight-color: transparent;
+        }
         .tab-active { background-color: #0f172a !important; color: white !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .glass-card { background: white; border: 1px solid #f1f5f9; border-radius: 1.5rem; }
+        
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .login-hidden { transform: translateY(-100%); pointer-events: none; }
+        .login-btn { 
+            width: 90%; max-width: 320px; padding: 1.25rem; border-radius: 1.25rem; 
+            font-weight: 800; display: flex; align-items: center; justify-content: center; 
+            gap: 12px; transition: 0.2s; cursor: pointer; border: 1px solid #e2e8f0;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
+    <!-- 로그인 화면 -->
+    <div id="login-screen">
+        <div class="text-center mb-10 px-6">
+            <div class="w-20 h-20 bg-slate-900 rounded-[2.5rem] mx-auto mb-6 flex items-center justify-center shadow-xl shadow-slate-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <h1 class="text-3xl font-black text-slate-900 mb-2">남호가람 자산관리</h1>
+            <p class="text-slate-400 font-medium px-4">우리 가족의 자산을<br class="block sm:hidden"> 한눈에 관리하세요</p>
+        </div>
+        <div onclick="login()" class="login-btn">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="G">
+            로그인 및 시작하기
+        </div>
+    </div>
+
+    <!-- 메인 대시보드 -->
     <div class="max-w-5xl mx-auto">
-        <!-- 상단 자산 요약 카드 -->
-        <header class="bg-slate-900 text-white p-8 rounded-[2.5rem] mb-8 shadow-2xl">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
-                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Total Asset Wealth</p>
-                    <h1 id="total-wealth-display" class="text-4xl md:text-5xl font-black tracking-tighter">₩0</h1>
-                    <div class="flex items-center gap-2 mt-4 text-slate-400 text-sm">
-                        <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">U</div>
-                        <span>가족 통합 자산 관리 시스템</span>
+        <header class="bg-slate-900 text-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] mb-6 md:mb-10 shadow-2xl overflow-hidden relative">
+            <div class="relative z-10">
+                <p class="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-2">Total Asset Wealth</p>
+                <h1 id="total-wealth-display" class="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter truncate">₩0</h1>
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mt-8 gap-6">
+                    <div class="flex items-center gap-3 text-slate-400 text-sm">
+                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">U</div>
+                        <div>
+                            <span id="display-user-name" class="font-bold text-white">사용자</span>
+                            <button onclick="logout()" class="ml-2 text-slate-500 text-xs hover:text-white underline">로그아웃</button>
+                        </div>
                     </div>
-                </div>
-                <div class="flex gap-3">
-                    <div class="bg-white/5 border border-white/10 p-4 rounded-2xl min-w-[120px]">
-                        <p class="text-[10px] text-slate-500 font-bold mb-1 uppercase">이번달 수지</p>
-                        <p id="balance-display" class="text-lg font-black font-mono text-emerald-400">+₩0</p>
-                    </div>
-                    <div class="bg-white/5 border border-white/10 p-4 rounded-2xl min-w-[100px]">
-                        <p class="text-[10px] text-slate-500 font-bold mb-1 uppercase">환율 (USD)</p>
-                        <p class="text-lg font-black font-mono text-blue-400">1,400.0</p>
+                    
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <div class="flex-1 sm:flex-none bg-white/5 border border-white/10 p-3 md:p-4 rounded-2xl min-w-[100px]">
+                            <p class="text-[9px] text-slate-500 font-bold mb-1 uppercase">이번달 수지</p>
+                            <p id="balance-display" class="text-sm md:text-lg font-black font-mono text-emerald-400">+₩0</p>
+                        </div>
+                        <div class="flex-1 sm:flex-none bg-white/5 border border-white/10 p-3 md:p-4 rounded-2xl min-w-[100px]">
+                            <p class="text-[9px] text-slate-500 font-bold mb-1 uppercase">환율 (USD)</p>
+                            <p class="text-sm md:text-lg font-black font-mono text-blue-400">1,400.0</p>
+                        </div>
                     </div>
                 </div>
             </div>
+            <!-- 배경 데코레이션 -->
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
             <!-- 왼쪽: 기록 영역 -->
-            <aside class="lg:col-span-4">
-                <div class="glass-card p-6 sticky top-8">
-                    <h2 class="text-lg font-black mb-6 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <aside class="lg:col-span-4 order-2 lg:order-1">
+                <div class="glass-card p-5 md:p-6 sticky top-4 shadow-sm border border-slate-200/60">
+                    <h2 id="form-title" class="text-base md:text-lg font-black mb-5 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         기록하기
                     </h2>
                     
                     <div class="space-y-4">
                         <div class="flex p-1 bg-slate-100 rounded-xl">
-                            <button onclick="setUser('남호')" id="user-namho" class="flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white">남호</button>
-                            <button onclick="setUser('가람')" id="user-garam" class="flex-1 py-2 text-xs font-bold text-slate-400">가람</button>
+                            <button onclick="setUser('남호')" id="user-namho" class="flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white transition-all">남호</button>
+                            <button onclick="setUser('가람')" id="user-garam" class="flex-1 py-2 text-xs font-bold text-slate-400 transition-all">가람</button>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2">
-                            <button onclick="setType('asset')" id="type-asset" class="py-2.5 text-xs font-black rounded-lg border-2 border-blue-100 bg-blue-50 text-blue-600">수입/자산</button>
-                            <button onclick="setType('expense')" id="type-expense" class="py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50">지출</button>
+                            <button onclick="setType('asset')" id="type-asset" class="py-2.5 text-xs font-black rounded-lg border-2 border-blue-100 bg-blue-50 text-blue-600 transition-all">수입/자산</button>
+                            <button onclick="setType('expense')" id="type-expense" class="py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50 transition-all">지출</button>
                         </div>
 
-                        <div class="space-y-2">
-                            <input type="date" id="input-date" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
-                            <input type="number" id="input-amount" placeholder="금액" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
-                            <select id="input-category" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
-                                <option>주식(국내)</option>
-                                <option>저축/예금</option>
-                                <option>보증금</option>
-                                <option>연금/퇴직금</option>
-                                <option>청약</option>
-                                <option>주거(지출)</option>
-                                <option>기타</option>
-                            </select>
-                            <input type="text" id="input-name" placeholder="항목명 (예: 삼성전자)" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">Date</label>
+                                <input type="date" id="input-date" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">Amount</label>
+                                <input type="number" id="input-amount" placeholder="금액 입력" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20 font-mono font-bold">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">Category</label>
+                                <select id="input-category" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
+                                    <option>주식(국내)</option>
+                                    <option>주식(해외)</option>
+                                    <option>저축/예금</option>
+                                    <option>보증금</option>
+                                    <option>연금/퇴직금</option>
+                                    <option>청약</option>
+                                    <option>식비</option>
+                                    <option>주거(지출)</option>
+                                    <option>기타</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">Description</label>
+                                <input type="text" id="input-name" placeholder="항목 이름" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
+                            </div>
                         </div>
 
-                        <button onclick="addRecord()" class="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
-                            데이터 저장하기
-                        </button>
+                        <div class="pt-2 space-y-2">
+                            <button id="save-btn" onclick="saveRecord()" class="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all shadow-lg active:scale-95">
+                                데이터 저장하기
+                            </button>
+                            <button id="cancel-edit-btn" onclick="resetForm()" class="hidden w-full py-2 text-rose-500 font-bold text-xs">
+                                수정 취소
+                            </button>
+                        </div>
                     </div>
                 </div>
             </aside>
 
             <!-- 오른쪽: 리스트 영역 -->
-            <main class="lg:col-span-8">
-                <div class="flex gap-2 overflow-x-auto pb-4 no-scrollbar mb-2">
-                    <button onclick="setFilter('all')" id="filter-all" class="px-6 py-2.5 rounded-full text-xs font-black bg-white border border-slate-200 shadow-sm tab-active">전체보기</button>
-                    <button onclick="setFilter('asset')" id="filter-asset" class="px-6 py-2.5 rounded-full text-xs font-black bg-white border border-slate-200 shadow-sm">자산현황</button>
-                    <button onclick="setFilter('expense')" id="filter-expense" class="px-6 py-2.5 rounded-full text-xs font-black bg-white border border-slate-200 shadow-sm">지출내역</button>
+            <main class="lg:col-span-8 order-1 lg:order-2">
+                <div class="flex gap-2 overflow-x-auto pb-4 no-scrollbar mb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <button onclick="setFilter('all')" id="filter-all" class="flex-none px-6 py-2.5 rounded-full text-[11px] font-black bg-white border border-slate-200 shadow-sm tab-active whitespace-nowrap">전체보기</button>
+                    <button onclick="setFilter('asset')" id="filter-asset" class="flex-none px-6 py-2.5 rounded-full text-[11px] font-black bg-white border border-slate-200 shadow-sm whitespace-nowrap">자산현황</button>
+                    <button onclick="setFilter('expense')" id="filter-expense" class="flex-none px-6 py-2.5 rounded-full text-[11px] font-black bg-white border border-slate-200 shadow-sm whitespace-nowrap">지출내역</button>
                 </div>
 
                 <div id="list-container" class="space-y-3">
-                    <!-- 리스트 아이템이 자바스크립트로 주입됩니다 -->
+                    <!-- 리스트 아이템 -->
                 </div>
             </main>
         </div>
     </div>
 
     <script>
-        // 초기 데이터 (이미지 기반 자산 정보)
         let records = [
             { id: 1, user: '남호', type: 'asset', category: '주식(국내)', name: 'KODEX200', amount: 2646000, date: '2026-04-24' },
             { id: 2, user: '남호', type: 'asset', category: '주식(국내)', name: '삼성전자', amount: 6161591, date: '2026-04-24' },
@@ -118,6 +181,18 @@
         let currentUser = '남호';
         let currentType = 'asset';
         let currentFilter = 'all';
+        let editingId = null;
+
+        function login() {
+            document.getElementById('login-screen').classList.add('login-hidden');
+            document.getElementById('display-user-name').innerText = "패밀리 매니저";
+        }
+
+        function logout() {
+            if(confirm("로그아웃 하시겠습니까?")) {
+                document.getElementById('login-screen').classList.remove('login-hidden');
+            }
+        }
 
         function setUser(user) {
             currentUser = user;
@@ -127,8 +202,8 @@
 
         function setType(type) {
             currentType = type;
-            document.getElementById('type-asset').className = type === 'asset' ? 'py-2.5 text-xs font-black rounded-lg border-2 border-blue-100 bg-blue-50 text-blue-600' : 'py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50';
-            document.getElementById('type-expense').className = type === 'expense' ? 'py-2.5 text-xs font-black rounded-lg border-2 border-rose-100 bg-rose-50 text-rose-600' : 'py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50';
+            document.getElementById('type-asset').className = type === 'asset' ? 'py-2.5 text-xs font-black rounded-lg border-2 border-blue-100 bg-blue-50 text-blue-600 transition-all' : 'py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50 transition-all';
+            document.getElementById('type-expense').className = type === 'expense' ? 'py-2.5 text-xs font-black rounded-lg border-2 border-rose-100 bg-rose-50 text-rose-600 transition-all' : 'py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50 transition-all';
         }
 
         function setFilter(f) {
@@ -138,35 +213,59 @@
             render();
         }
 
-        function addRecord() {
+        function saveRecord() {
             const amount = document.getElementById('input-amount').value;
             const name = document.getElementById('input-name').value;
             const date = document.getElementById('input-date').value;
             const category = document.getElementById('input-category').value;
 
-            if(!amount || !name || !date) return alert("내용을 모두 입력해주세요.");
+            if(!amount || !name || !date) return;
 
-            const newRecord = {
-                id: Date.now(),
-                user: currentUser,
-                type: currentType,
-                category: category,
-                name: name,
-                amount: parseInt(amount),
-                date: date
-            };
+            if (editingId) {
+                const idx = records.findIndex(r => r.id === editingId);
+                records[idx] = { ...records[idx], user: currentUser, type: currentType, category, name, amount: parseInt(amount), date };
+                editingId = null;
+            } else {
+                records.push({ id: Date.now(), user: currentUser, type: currentType, category, name, amount: parseInt(amount), date });
+            }
 
-            records.push(newRecord);
+            resetForm();
             render();
-            
-            // 입력창 초기화
-            document.getElementById('input-amount').value = '';
-            document.getElementById('input-name').value = '';
         }
 
-        function deleteRecord(id) {
-            records = records.filter(r => r.id !== id);
-            render();
+        function resetForm() {
+            editingId = null;
+            document.getElementById('form-title').innerText = "기록하기";
+            document.getElementById('save-btn').innerText = "데이터 저장하기";
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+            document.getElementById('input-amount').value = '';
+            document.getElementById('input-name').value = '';
+            document.getElementById('input-date').valueAsDate = new Date();
+        }
+
+        function editRecord(id) {
+            const r = records.find(x => x.id === id);
+            if (!r) return;
+            editingId = id;
+            document.getElementById('form-title').innerText = "수정 중";
+            document.getElementById('save-btn').innerText = "수정 완료";
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+            setUser(r.user);
+            setType(r.type);
+            document.getElementById('input-amount').value = r.amount;
+            document.getElementById('input-name').value = r.name;
+            document.getElementById('input-date').value = r.date;
+            document.getElementById('input-category').value = r.category;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteRecord(id, event) {
+            event.stopPropagation();
+            if(confirm("삭제하시겠습니까?")) {
+                records = records.filter(r => r.id !== id);
+                if (editingId === id) resetForm();
+                render();
+            }
         }
 
         function render() {
@@ -174,21 +273,13 @@
             const totalDisplay = document.getElementById('total-wealth-display');
             const balanceDisplay = document.getElementById('balance-display');
 
-            // 1. 자산 총계 계산 (오직 type === 'asset'인 것만!)
-            const totalAssets = records
-                .filter(r => r.type === 'asset')
-                .reduce((sum, r) => sum + r.amount, 0);
-            
+            const totalAssets = records.filter(r => r.type === 'asset').reduce((sum, r) => sum + r.amount, 0);
             totalDisplay.innerText = '₩' + totalAssets.toLocaleString();
 
-            // 2. 이번달 지출 합계 (간단히 계산)
-            const totalExpenses = records
-                .filter(r => r.type === 'expense')
-                .reduce((sum, r) => sum + r.amount, 0);
+            const totalExpenses = records.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
             balanceDisplay.innerText = '-₩' + totalExpenses.toLocaleString();
-            balanceDisplay.className = "text-lg font-black font-mono text-rose-400";
+            balanceDisplay.className = totalExpenses > 0 ? "text-sm md:text-lg font-black font-mono text-rose-400" : "text-sm md:text-lg font-black font-mono text-emerald-400";
 
-            // 3. 필터링 및 렌더링
             const filtered = records.filter(r => {
                 if (currentFilter === 'asset') return r.type === 'asset';
                 if (currentFilter === 'expense') return r.type === 'expense';
@@ -196,39 +287,41 @@
             }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
             container.innerHTML = filtered.map(r => `
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center group transition-all hover:border-blue-200">
-                    <div class="flex items-center gap-4">
-                        <div class="p-2.5 rounded-xl ${r.type === 'asset' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600'}">
+                <div onclick="editRecord(${r.id})" class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 transition-all active:bg-slate-50 cursor-pointer">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2.5 rounded-xl shrink-0 ${r.type === 'asset' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600'}">
                             ${r.type === 'asset' ? 
-                                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a2 2 0 0 0 0 4h15a1 1 0 0 0 1-1v-4"/><path d="M12 11h.01"/></svg>' : 
-                                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a2 2 0 0 0 0 4h15a1 1 0 0 0 1-1v-4"/><path d="M12 11h.01"/></svg>' : 
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
                             }
                         </div>
-                        <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-[10px] font-black px-2 py-0.5 rounded ${r.user === '남호' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}">${r.user}</span>
-                                <span class="text-[10px] font-bold text-slate-400">${r.category}</span>
-                                ${r.type === 'asset' ? '<span class="bg-emerald-500 text-white text-[8px] font-black px-1.5 rounded">ASSET</span>' : ''}
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center flex-wrap gap-1.5 mb-0.5">
+                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded ${r.user === '남호' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}">${r.user}</span>
+                                <span class="text-[9px] font-bold text-slate-400">${r.category}</span>
                             </div>
-                            <h3 class="text-sm font-bold text-slate-800">${r.name}</h3>
-                            <p class="text-[10px] font-mono text-slate-400 mt-0.5">${r.date}</p>
+                            <h3 class="text-[13px] md:text-sm font-bold text-slate-800 truncate">${r.name}</h3>
+                            <p class="text-[9px] font-mono text-slate-300">${r.date}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <p class="text-lg font-black font-mono ${r.type === 'expense' ? 'text-rose-500' : 'text-slate-900'}">
-                            ${r.type === 'expense' ? '-' : ''}₩${r.amount.toLocaleString()}
-                        </p>
-                        <button onclick="deleteRecord(${r.id})" class="p-2 text-slate-200 hover:text-rose-500 transition-colors">
+                    <div class="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-none border-slate-50">
+                        <div class="text-left sm:text-right">
+                            <p class="text-base md:text-lg font-black font-mono ${r.type === 'expense' ? 'text-rose-500' : 'text-slate-900'}">
+                                ${r.type === 'expense' ? '-' : ''}₩${r.amount.toLocaleString()}
+                            </p>
+                        </div>
+                        <button onclick="deleteRecord(${r.id}, event)" class="p-2 text-slate-200 hover:text-rose-500">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `).join('') || '<div class="py-20 text-center text-slate-300 font-bold">내역이 없습니다</div>';
         }
 
-        // 초기 실행
-        document.getElementById('input-date').valueAsDate = new Date();
-        render();
+        window.onload = () => {
+            document.getElementById('input-date').valueAsDate = new Date();
+            render();
+        };
     </script>
 </body>
 </html>
