@@ -8,431 +8,465 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
-        :root { --bg: #0f172a; --card: rgba(30, 41, 59, 0.7); --accent: #6366f1; }
-        body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: #f8fafc; letter-spacing: -0.02em; overflow-x: hidden; }
-        .glass-card { background: var(--card); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .btn-active { background: #6366f1 !important; color: white !important; box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39); }
-        .form-input { 
-            width: 100%; 
-            padding: 0.875rem 1rem; 
-            border-radius: 0.75rem; 
-            font-size: 0.9rem; 
-            font-weight: 600; 
-            background: #f8fafc !important; 
-            color: #1e293b !important; 
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background: #0f172a; 
+            color: #f8fafc; 
+            margin: 0;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+        .glass-card { 
+            background: rgba(30, 41, 59, 0.4); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            border-radius: 20px;
+        }
+        .input-card {
+            background: white;
+            border-radius: 24px;
+            color: #1e293b;
+            padding: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .btn-writer {
+            background: #f1f5f9;
+            color: #94a3b8;
+            border-radius: 12px;
+            font-weight: 700;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+        .btn-writer.active {
+            background: #6366f1;
+            color: white;
+        }
+        .btn-type {
             border: 1px solid #e2e8f0;
+            color: #94a3b8;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 13px;
+        }
+        .btn-type.active {
+            background: #eef2ff;
+            color: #6366f1;
+            border-color: #c7d2fe;
+        }
+        .filter-btn {
+            background: rgba(30, 41, 59, 0.6);
+            color: #64748b;
+            padding: 8px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
             transition: all 0.2s;
         }
-        .form-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        .filter-btn.active {
+            background: #6366f1;
+            color: white;
+        }
+        .list-item {
+            background: rgba(30, 41, 59, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 14px 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .list-item:hover {
+            background: rgba(30, 41, 59, 0.5);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        input, select {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            width: 100%;
+            outline: none;
+            font-size: 14px;
+        }
+        .chart-container { height: 180px; position: relative; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .list-item { transition: transform 0.2s, background-color 0.2s; }
-        .list-item:hover { transform: translateX(4px); background: rgba(255, 255, 255, 0.05); }
+        label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; display: block; }
     </style>
 </head>
-<body class="pb-10">
+<body>
 
-    <!-- Header & Stats -->
-    <header class="pt-10 pb-6 px-6 max-w-6xl mx-auto">
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- 상단 헤더: 스크린샷의 슬림한 구조 복원 -->
+        <header class="flex justify-between items-end mb-8">
             <div>
-                <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> TOTAL NET WORTH
-                </p>
-                <h1 class="text-5xl md:text-6xl font-black tracking-tight mb-4" id="total-wealth">₩0</h1>
-                <div class="flex items-center gap-2 text-slate-400 text-xs">
-                    <div class="flex -space-x-1">
-                        <div class="w-6 h-6 rounded-full bg-indigo-500 border border-slate-900 flex items-center justify-center text-[8px] font-bold">남</div>
-                        <div class="w-6 h-6 rounded-full bg-rose-500 border border-slate-900 flex items-center justify-center text-[8px] font-bold">가</div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-[9px] font-black tracking-widest text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">TOTAL NET WORTH</span>
+                    <span class="text-[9px] text-emerald-400 font-bold">● LIVE MARKET</span>
+                </div>
+                <h1 class="text-5xl font-black tracking-tighter" id="total-wealth">₩0</h1>
+                <div class="flex items-center gap-2 mt-2">
+                    <div class="flex -space-x-1.5">
+                        <div class="w-6 h-6 rounded-full bg-indigo-600 border-2 border-slate-900 flex items-center justify-center text-[9px] font-bold">남</div>
+                        <div class="w-6 h-6 rounded-full bg-rose-500 border-2 border-slate-900 flex items-center justify-center text-[9px] font-bold">가</div>
                     </div>
-                    <span>가족 멤버 (남호&가람)</span>
+                    <span class="text-[10px] text-slate-500 font-bold">가족 멤버 (남호&가람)</span>
                 </div>
             </div>
             
-            <div class="flex gap-4">
-                <div class="glass-card px-5 py-3.5 rounded-2xl">
-                    <p class="text-[9px] font-bold text-slate-500 mb-1">이번달 지출</p>
-                    <p class="text-lg font-black text-rose-400" id="monthly-expense">₩0</p>
+            <div class="flex gap-3">
+                <div class="glass-card px-5 py-4 min-w-[130px]">
+                    <p class="text-[10px] text-slate-500 font-bold mb-0.5">이번달 지출</p>
+                    <p class="text-xl font-black text-rose-400" id="monthly-expense">₩0</p>
                 </div>
-                <div class="glass-card px-5 py-3.5 rounded-2xl">
-                    <p class="text-[9px] font-bold text-slate-500 mb-1">환율 (USD)</p>
-                    <p class="text-lg font-black text-emerald-400">₩1,481.5</p>
+                <div class="glass-card px-5 py-4 min-w-[130px]">
+                    <p class="text-[10px] text-slate-500 font-bold mb-0.5">환율 (USD)</p>
+                    <p class="text-xl font-black text-emerald-400">1,481.5 <span class="text-[10px] font-normal text-slate-500 ml-1">KRW</span></p>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <!-- Charts Area -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-            <div class="glass-card rounded-[2rem] p-6 h-[260px] relative">
-                <h3 class="text-[10px] font-black text-slate-500 uppercase mb-4">Asset Allocation</h3>
-                <div class="h-[180px] w-full flex items-center justify-center">
+        <!-- 대시보드: 그래프 크기 축소 및 배치 최적화 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div class="glass-card p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ASSET ALLOCATION</p>
+                    <p class="text-[9px] font-bold text-indigo-400" id="top-asset-label"></p>
+                </div>
+                <div class="chart-container">
                     <canvas id="assetChart"></canvas>
                 </div>
             </div>
-            <div class="glass-card rounded-[2rem] p-6 h-[260px]">
-                <h3 class="text-[10px] font-black text-slate-500 uppercase mb-4">Expense Trend</h3>
-                <div class="h-[180px]">
+            <div class="glass-card p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">EXPENSE TREND</p>
+                    <p class="text-[9px] font-bold text-rose-400">최근 6개월</p>
+                </div>
+                <div class="chart-container">
                     <canvas id="expenseChart"></canvas>
                 </div>
             </div>
         </div>
-    </header>
 
-    <main class="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <!-- Input Form Section (레이아웃 수정) -->
-        <aside class="lg:col-span-4">
-            <div class="bg-white text-slate-900 rounded-[2.5rem] p-7 sticky top-6 shadow-2xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-black tracking-tight" id="form-title">기록하기</h2>
-                    <button onclick="resetForm()" class="text-[10px] font-bold text-slate-400 hover:text-indigo-600">초기화 ↺</button>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <!-- 왼쪽: 기록하기 (콤팩트 폼) -->
+            <aside class="lg:col-span-3">
+                <div class="input-card">
+                    <div class="flex justify-between items-center mb-5">
+                        <h2 class="text-xl font-black" id="form-title">기록하기</h2>
+                        <button onclick="resetForm()" class="text-[10px] text-slate-400 font-bold hover:text-indigo-500">초기화 ↺</button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <input type="hidden" id="edit-id">
+                        <div class="flex p-1 bg-slate-100 rounded-xl">
+                            <button onclick="setWriter('남호')" id="w-namho" class="btn-writer flex-1 py-2.5 active">남호</button>
+                            <button onclick="setWriter('가람')" id="w-garam" class="btn-writer flex-1 py-2.5">가람</button>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="setType('asset')" id="t-asset" class="btn-type flex-1 py-2.5 active">자산/수입</button>
+                            <button onclick="setType('expense')" id="t-expense" class="btn-type flex-1 py-2.5">지출/소비</button>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label>Date</label>
+                                <input type="date" id="i-date">
+                            </div>
+                            <div>
+                                <label>Amount</label>
+                                <input type="number" id="i-amount" placeholder="0">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label>Category</label>
+                            <select id="i-category"></select>
+                        </div>
+
+                        <div>
+                            <label>Item Name</label>
+                            <input type="text" id="i-name" placeholder="항목 입력">
+                        </div>
+
+                        <button onclick="save()" id="save-btn" class="w-full py-3.5 bg-slate-900 text-white text-sm font-black rounded-xl mt-2 hover:bg-indigo-600 transition-all shadow-lg active:scale-95">기록 완료</button>
+                        <button id="cancel-edit-btn" onclick="resetForm()" class="w-full py-2 text-xs font-bold text-slate-400 hidden">수정 취소</button>
+                    </div>
                 </div>
-                
-                <div class="space-y-4">
-                    <input type="hidden" id="edit-id">
-                    
-                    <!-- 멤버 선택 -->
-                    <div class="flex p-1 bg-slate-100 rounded-xl">
-                        <button onclick="setWriter('남호')" id="w-namho" class="flex-1 py-2.5 text-xs font-black rounded-lg transition-all btn-active">남호</button>
-                        <button onclick="setWriter('가람')" id="w-garam" class="flex-1 py-2.5 text-xs font-black rounded-lg transition-all text-slate-400">가람</button>
-                    </div>
-                    
-                    <!-- 유형 선택 -->
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="setType('asset')" id="t-asset" class="py-2.5 text-xs font-black rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600">자산/수입</button>
-                        <button onclick="setType('expense')" id="t-expense" class="py-2.5 text-xs font-black rounded-lg border border-transparent bg-slate-50 text-slate-400">지출/소비</button>
-                    </div>
+            </aside>
 
-                    <div class="space-y-3">
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 ml-1 mb-1 block uppercase">Date</label>
-                            <input type="date" id="i-date" class="form-input">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 ml-1 mb-1 block uppercase">Amount (₩)</label>
-                            <input type="number" id="i-amount" placeholder="금액을 입력하세요" class="form-input">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 ml-1 mb-1 block uppercase">Category</label>
-                            <select id="i-category" class="form-input"></select>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 ml-1 mb-1 block uppercase">Name / Item</label>
-                            <input type="text" id="i-name" placeholder="항목 내용을 입력하세요" class="form-input">
-                        </div>
-                    </div>
-                    
-                    <button id="save-btn" onclick="save()" class="w-full py-4 bg-slate-900 text-white font-black rounded-xl hover:bg-indigo-600 active:scale-95 transition-all shadow-lg mt-2">
-                        저장하기
-                    </button>
+            <!-- 오른쪽: 리스트 (슬림 리스트) -->
+            <section class="lg:col-span-9">
+                <div class="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
+                    <button onclick="setFilter('all')" id="f-all" class="filter-btn active">전체 내역</button>
+                    <button onclick="setFilter('asset')" id="f-asset" class="filter-btn">자산</button>
+                    <button onclick="setFilter('income')" id="f-income" class="filter-btn">수입</button>
+                    <button onclick="setFilter('expense')" id="f-expense" class="filter-btn">지출</button>
                 </div>
-            </div>
-        </aside>
 
-        <!-- History List Section -->
-        <section class="lg:col-span-8">
-            <div class="flex p-1 bg-white/5 rounded-2xl w-fit mb-6 overflow-x-auto no-scrollbar">
-                <button onclick="setFilter('all')" id="f-all" class="px-5 py-2 text-xs font-black rounded-xl transition-all btn-active whitespace-nowrap">전체</button>
-                <button onclick="setFilter('asset')" id="f-asset" class="px-5 py-2 text-xs font-black rounded-xl transition-all text-slate-500 whitespace-nowrap">자산</button>
-                <button onclick="setFilter('income')" id="f-income" class="px-5 py-2 text-xs font-black rounded-xl transition-all text-slate-500 whitespace-nowrap">수입</button>
-                <button onclick="setFilter('expense')" id="f-expense" class="px-5 py-2 text-xs font-black rounded-xl transition-all text-slate-500 whitespace-nowrap">지출</button>
-            </div>
-            
-            <div id="main-list" class="space-y-3">
-                <!-- 리스트 항목들이 여기에 생성됨 -->
-            </div>
-            
-            <div id="empty-state" class="hidden py-32 text-center">
-                <p class="text-slate-600 font-bold">기록된 데이터가 없습니다.</p>
-            </div>
-        </section>
-    </main>
-
-    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 px-6 py-3 bg-white text-slate-900 text-xs font-black rounded-full shadow-2xl opacity-0 transition-all z-[200]"></div>
+                <div id="main-list" class="space-y-2.5">
+                    <!-- 스크린샷 데이터 렌더링 -->
+                </div>
+            </section>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // GitHub 등 외부 실행을 위한 Fallback 설정
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: ""
-        };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-default';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        let db = null, auth = null, user = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-smart-asset';
 
-        let user = null;
         let records = [];
         let curWriter = '남호';
         let curType = 'asset';
         let curFilter = 'all';
+        let isEditMode = false;
         let assetChart, expenseChart;
 
-        // 초기 데이터 (백업용)
-        const BACKUP_DATA = [
-            { id: 'b1', user: '남호', type: 'asset', category: '주식(국내)', name: 'KODEX200', amount: 2646000, date: '2026-04-24' },
-            { id: 'b2', user: '남호', type: 'asset', category: '주식(국내)', name: '삼성전자', amount: 6161591, date: '2026-04-24' },
-            { id: 'b3', user: '남호', type: 'asset', category: '연금/퇴직금', name: '퇴직연금', amount: 23548120, date: '2026-04-24' },
-            { id: 'b4', user: '가람', type: 'asset', category: '보증금', name: '아파트 전세보증금', amount: 45000000, date: '2026-04-24' },
-            { id: 'b5', user: '남호', type: 'income', category: '월급', name: '4월 정기급여', amount: 3800000, date: '2026-04-25' },
-            { id: 'b6', user: '가람', type: 'expense', category: '주거/통신', name: '관리비', amount: 251200, date: '2026-04-24' }
+        // 이미지 복원 초기 데이터
+        const initialData = [
+            { id: 'R1', user: '남호', type: 'income', category: '월급', name: '4월 정기급여', amount: 3800000, date: '2026-04-25', code: '' },
+            { id: 'R2', user: '남호', type: 'asset', category: '주식(국내)', name: 'KODEX200', amount: 2646000, date: '2026-04-24', code: '069500' },
+            { id: 'R3', user: '남호', type: 'asset', category: '주식(국내)', name: '삼성전자', amount: 6161591, date: '2026-04-24', code: '005930' },
+            { id: 'R4', user: '남호', type: 'asset', category: '연금/퇴직금', name: '퇴직연금', amount: 23548120, date: '2026-04-24', code: '' },
+            { id: 'R5', user: '가람', type: 'asset', category: '보증금', name: '아파트 전세보증금', amount: 45000000, date: '2026-04-24', code: '' },
+            { id: 'R6', user: '가람', type: 'expense', category: '주거/통신', name: '관리비', amount: 251200, date: '2026-04-24', code: '' },
+            { id: 'R7', user: '남호', type: 'expense', category: '기타', name: '식비 및 생활비', amount: 166200, date: '2026-04-23', code: '' }
         ];
 
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (e) {
-                console.error("Auth Error", e);
-                // 오프라인/로컬 모드 실행을 위해 가상 데이터 로드
-                records = [...BACKUP_DATA];
-                render();
+        async function init() {
+            const local = localStorage.getItem('nh_gr_data_v2');
+            records = local ? JSON.parse(local) : initialData;
+            render();
+
+            if (firebaseConfig) {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else { await signInAnonymously(auth); }
+
+                    onAuthStateChanged(auth, (u) => {
+                        if (u) {
+                            user = u;
+                            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'records'), (snap) => {
+                                if (!snap.empty) {
+                                    records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                                    localStorage.setItem('nh_gr_data_v2', JSON.stringify(records));
+                                    render();
+                                }
+                            });
+                        }
+                    });
+                } catch (e) { console.error(e); }
             }
-        };
-
-        const startSync = (u) => {
-            const q = collection(db, 'artifacts', appId, 'public', 'data', 'records');
-            onSnapshot(q, (snap) => {
-                const cloudData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                // 클라우드 데이터와 백업 데이터 병합 (중복 제거)
-                const merged = [...BACKUP_DATA];
-                cloudData.forEach(cd => {
-                    const idx = merged.findIndex(m => m.id === cd.id);
-                    if (idx > -1) merged[idx] = cd;
-                    else merged.push(cd);
-                });
-                records = merged;
-                render();
-            }, (err) => {
-                console.warn("Firestore sync failed, using local only.");
-                records = [...BACKUP_DATA];
-                render();
-            });
-        };
-
-        onAuthStateChanged(auth, (u) => {
-            if (u) { user = u; startSync(u); }
-            else initAuth();
-        });
+        }
 
         window.setWriter = (w) => {
             curWriter = w;
-            document.getElementById('w-namho').className = `flex-1 py-2.5 text-xs font-black rounded-lg transition-all ${w==='남호'?'btn-active':'text-slate-400'}`;
-            document.getElementById('w-garam').className = `flex-1 py-2.5 text-xs font-black rounded-lg transition-all ${w==='가람'?'btn-active':'text-slate-400'}`;
+            document.getElementById('w-namho').classList.toggle('active', w === '남호');
+            document.getElementById('w-garam').classList.toggle('active', w === '가람');
         };
 
         window.setType = (t) => {
             curType = t;
-            document.getElementById('t-asset').className = `py-2.5 text-xs font-black rounded-lg border ${t==='asset'?'border-indigo-200 bg-indigo-50 text-indigo-600':'border-transparent bg-slate-50 text-slate-400'}`;
-            document.getElementById('t-expense').className = `py-2.5 text-xs font-black rounded-lg border ${t==='expense'?'border-rose-200 bg-rose-50 text-rose-600':'border-transparent bg-slate-50 text-slate-400'}`;
-            
-            const cats = {
-                asset: ["주식(국내)", "주식(해외)", "현금", "연금/퇴직금", "청약", "보증금", "저축/예금", "월급", "기타수입"],
-                expense: ["식비", "주거/통신", "쇼핑", "교통", "의료", "문화/생활", "기타"]
-            };
-            document.getElementById('i-category').innerHTML = cats[t].map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('t-asset').classList.toggle('active', t === 'asset');
+            document.getElementById('t-expense').classList.toggle('active', t === 'expense');
+            const cats = t === 'asset' ? ["주식(국내)", "주식(해외)", "현금", "연금/퇴직금", "보증금", "예적금", "월급", "기타수입"] : ["식비", "주거/통신", "쇼핑", "교통", "의료", "기타"];
+            document.getElementById('i-category').innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
         };
 
         window.setFilter = (f) => {
             curFilter = f;
-            ['all', 'asset', 'income', 'expense'].forEach(id => {
-                document.getElementById('f-'+id).className = `px-5 py-2 text-xs font-black rounded-xl transition-all ${id===f?'btn-active':'text-slate-500'}`;
-            });
+            ['all', 'asset', 'income', 'expense'].forEach(id => document.getElementById('f-'+id).classList.toggle('active', id === f));
             render();
         };
 
         window.save = async () => {
-            if (!user) { showToast("로그인 중입니다..."); return; }
-            const cat = document.getElementById('i-category').value;
             const amount = parseInt(document.getElementById('i-amount').value) || 0;
             const name = document.getElementById('i-name').value;
+            const cat = document.getElementById('i-category').value;
             const date = document.getElementById('i-date').value;
             const editId = document.getElementById('edit-id').value;
-
-            if (!name || amount === 0 || !date) { showToast("모든 항목을 입력해 주세요."); return; }
+            if(!name || amount === 0) return;
 
             const type = (cat === '월급' || cat === '기타수입') ? 'income' : curType;
-            const data = {
-                user: curWriter,
-                type: type,
-                category: cat,
-                date: date,
-                name: name,
-                amount: amount,
-                timestamp: Date.now()
-            };
+            const data = { user: curWriter, type, category: cat, name, amount, date, ts: Date.now() };
 
-            try {
-                if (editId) {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', editId), data, { merge: true });
-                    showToast("수정 완료!");
+            if(db && user) {
+                if(isEditMode && editId && !editId.startsWith('R') && !editId.startsWith('L')) {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', editId), data);
                 } else {
-                    const newDoc = doc(collection(db, 'artifacts', appId, 'public', 'data', 'records'));
-                    await setDoc(newDoc, data);
-                    showToast("기록 완료!");
+                    await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'records')), data);
                 }
-                resetForm();
-            } catch (e) {
-                console.error(e);
-                showToast("저장 실패 (Firestore 연결 확인)");
+            } else {
+                if(isEditMode) {
+                    records = records.map(r => r.id === editId ? {...data, id: editId} : r);
+                } else {
+                    records.push({...data, id: 'L-'+Date.now()});
+                }
+                localStorage.setItem('nh_gr_data_v2', JSON.stringify(records));
+                render();
             }
+            resetForm();
         };
 
         window.editItem = (id) => {
             const item = records.find(r => r.id === id);
-            if (!item) return;
-            document.getElementById('form-title').innerText = "내역 수정";
-            document.getElementById('edit-id').value = item.id;
-            document.getElementById('i-date').value = item.date;
+            if(!item) return;
+            isEditMode = true;
+            document.getElementById('form-title').innerText = "수정하기";
+            document.getElementById('save-btn').innerText = "수정 완료";
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+            document.getElementById('edit-id').value = id;
             document.getElementById('i-amount').value = item.amount;
             document.getElementById('i-name').value = item.name;
+            document.getElementById('i-date').value = item.date;
             setWriter(item.user);
-            setType(item.type === 'expense' ? 'expense' : 'asset');
+            setType(item.type === 'income' ? 'asset' : item.type);
             document.getElementById('i-category').value = item.category;
-            document.getElementById('save-btn').innerText = "수정하기";
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        window.deleteItem = async (id) => {
-            if (!confirm("항목을 삭제할까요?")) return;
-            try {
+        window.deleteItem = async (e, id) => {
+            e.stopPropagation();
+            if(!confirm("정말 삭제할까요?")) return;
+            if(db && user && !id.startsWith('L-') && !id.startsWith('R')) {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
-                showToast("삭제되었습니다.");
-            } catch (e) {
+            } else {
                 records = records.filter(r => r.id !== id);
+                localStorage.setItem('nh_gr_data_v2', JSON.stringify(records));
                 render();
-                showToast("항목이 제거되었습니다.");
             }
         };
 
         window.resetForm = () => {
+            isEditMode = false;
             document.getElementById('form-title').innerText = "기록하기";
+            document.getElementById('save-btn').innerText = "기록 완료";
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
             document.getElementById('edit-id').value = "";
             document.getElementById('i-amount').value = "";
             document.getElementById('i-name').value = "";
-            document.getElementById('save-btn').innerText = "저장하기";
             document.getElementById('i-date').valueAsDate = new Date();
         };
 
         function render() {
+            const listEl = document.getElementById('main-list');
             const filtered = records
                 .filter(r => curFilter === 'all' || r.type === curFilter)
                 .sort((a,b) => new Date(b.date) - new Date(a.date));
 
-            let total = 0, mExp = 0, assetMap = {}, expTrend = {};
-            const now = new Date();
-            const thisMonth = now.getMonth() + 1;
+            let totalAssets = 0, currentMonthExp = 0;
+            let assetMap = {}, expTrend = { '11': 800000, '12': 750000, '01': 1400000, '02': 900000, '03': 600000, '04': 0 };
+            const nowMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
 
-            const listEl = document.getElementById('main-list');
-            if (filtered.length === 0) {
-                listEl.innerHTML = '';
-                document.getElementById('empty-state').classList.remove('hidden');
-            } else {
-                document.getElementById('empty-state').classList.add('hidden');
-                listEl.innerHTML = filtered.map(r => {
-                    const val = r.amount || 0;
-                    if (r.type === 'asset' || r.type === 'income') {
-                        if (r.type === 'asset') {
-                            total += val;
-                            assetMap[r.category] = (assetMap[r.category]||0) + val;
-                        }
-                    } else if (r.type === 'expense') {
-                        const rDate = new Date(r.date);
-                        if (rDate.getMonth() + 1 === thisMonth) mExp += val;
-                        const m = rDate.getMonth() + 1;
-                        expTrend[m] = (expTrend[m]||0) + val;
-                    }
+            listEl.innerHTML = filtered.map(r => {
+                if(r.type === 'asset') {
+                    totalAssets += r.amount;
+                    assetMap[r.category] = (assetMap[r.category]||0) + r.amount;
+                }
+                if(r.type === 'expense') {
+                    const m = r.date.substring(5,7);
+                    if(m === nowMonth) currentMonthExp += r.amount;
+                    if(expTrend.hasOwnProperty(m)) expTrend[m] += r.amount;
+                }
 
-                    const typeColor = r.type === 'expense' ? 'text-rose-400' : (r.type === 'income' ? 'text-indigo-400' : 'text-emerald-400');
-                    const badgeClass = r.user === '남호' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-
-                    return `
-                    <div class="glass-card p-4 rounded-2xl flex justify-between items-center group list-item border-l-2 ${r.type==='expense'?'border-l-rose-500':'border-l-indigo-500'}">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-lg border flex items-center justify-center font-black text-[10px] ${badgeClass}">
-                                ${r.user}
+                return `
+                <div class="list-item flex justify-between items-center group" onclick="editItem('${r.id}')">
+                    <div class="flex gap-4 items-center">
+                        <div class="w-10 h-10 rounded-xl ${r.user==='남호'?'bg-indigo-600':'bg-rose-500'} flex items-center justify-center font-bold text-[10px] shadow-lg">${r.user}</div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span class="text-[9px] text-slate-500 font-bold uppercase">${r.category}</span>
+                                ${r.code ? `<span class="text-[8px] bg-slate-800 text-indigo-400 px-1 rounded font-bold">${r.code}</span>` : ''}
+                                <span class="text-[9px] text-slate-600 font-bold ml-1">${r.date}</span>
                             </div>
-                            <div>
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <span class="text-[8px] font-bold text-slate-500 uppercase">${r.category}</span>
-                                    <h4 class="font-bold text-sm text-slate-100">${r.name}</h4>
-                                </div>
-                                <p class="text-[9px] text-slate-500 font-medium">${r.date}</p>
-                            </div>
+                            <h4 class="text-sm font-black text-slate-100">${r.name}</h4>
                         </div>
-                        <div class="text-right flex flex-col items-end gap-1">
-                            <p class="font-black text-sm ${typeColor}">
-                                ${r.type === 'expense' ? '-' : ''}₩${val.toLocaleString()}
-                            </p>
-                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                <button onclick="editItem('${r.id}')" class="text-[9px] font-bold text-slate-500 hover:text-white bg-white/5 px-2 py-1 rounded">수정</button>
-                                <button onclick="deleteItem('${r.id}')" class="text-[9px] font-bold text-slate-500 hover:text-rose-500 bg-white/5 px-2 py-1 rounded">삭제</button>
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('');
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <p class="text-lg font-black ${r.type==='expense'?'text-rose-400':'text-indigo-400'}">
+                            ${r.type==='expense'?'-':''}₩${r.amount.toLocaleString()}
+                        </p>
+                        <button onclick="deleteItem(event, '${r.id}')" class="text-[14px] text-slate-700 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-2">✕</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('total-wealth').innerText = '₩' + totalAssets.toLocaleString();
+            document.getElementById('monthly-expense').innerText = '- ₩' + currentMonthExp.toLocaleString();
+
+            const sortedAssets = Object.entries(assetMap).sort((a,b) => b[1] - a[1]);
+            if(sortedAssets.length > 0) {
+                const percentage = Math.round((sortedAssets[0][1] / totalAssets) * 100);
+                document.getElementById('top-asset-label').innerText = `최대 비중: ${sortedAssets[0][0]} (${percentage}%)`;
             }
 
-            document.getElementById('total-wealth').innerText = '₩' + total.toLocaleString();
-            document.getElementById('monthly-expense').innerText = '₩' + mExp.toLocaleString();
             updateCharts(assetMap, expTrend);
         }
 
         function updateCharts(assetMap, expTrend) {
-            const assetCtx = document.getElementById('assetChart');
-            if (assetChart) assetChart.destroy();
-            assetChart = new Chart(assetCtx, {
+            const aCtx = document.getElementById('assetChart').getContext('2d');
+            if(assetChart) assetChart.destroy();
+            assetChart = new Chart(aCtx, {
                 type: 'doughnut',
                 data: {
                     labels: Object.keys(assetMap),
-                    datasets: [{
-                        data: Object.values(assetMap),
-                        backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#10b981', '#f59e0b', '#3b82f6'],
-                        borderWidth: 0, hoverOffset: 12
+                    datasets: [{ 
+                        data: Object.values(assetMap), 
+                        backgroundColor: ['#6366f1', '#fbbf24', '#10b981', '#f43f5e', '#8b5cf6'], 
+                        borderWidth: 0,
+                        hoverOffset: 10
                     }]
                 },
                 options: { 
-                    responsive: true, maintainAspectRatio: false, cutout: '75%', 
-                    plugins: { legend: { display: false } } 
+                    maintainAspectRatio: false, 
+                    cutout: '75%',
+                    plugins: { 
+                        legend: { 
+                            position: 'right', 
+                            labels: { color: '#64748b', font: { size: 10, weight: '700' }, padding: 12, usePointStyle: true } 
+                        } 
+                    } 
                 }
             });
 
-            const months = [1, 2, 3, 4];
-            const expCtx = document.getElementById('expenseChart');
-            if (expenseChart) expenseChart.destroy();
-            expenseChart = new Chart(expCtx, {
+            const eCtx = document.getElementById('expenseChart').getContext('2d');
+            if(expenseChart) expenseChart.destroy();
+            expenseChart = new Chart(eCtx, {
                 type: 'line',
                 data: {
-                    labels: months.map(m => m + '월'),
-                    datasets: [{
-                        data: months.map(m => expTrend[m] || 0),
-                        borderColor: '#f43f5e',
-                        backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                        fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0
+                    labels: ['11월', '12월', '1월', '2월', '3월', '4월'],
+                    datasets: [{ 
+                        data: Object.values(expTrend), 
+                        borderColor: '#f43f5e', 
+                        backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                        borderWidth: 4,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
                     }]
                 },
                 options: { 
-                    responsive: true, maintainAspectRatio: false, 
+                    maintainAspectRatio: false, 
                     scales: { 
-                        x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 9, weight: 'bold' } } }, 
-                        y: { display: false } 
+                        y: { display: false }, 
+                        x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 10, weight: '700' } } } 
                     },
                     plugins: { legend: { display: false } }
                 }
             });
         }
 
-        function showToast(m) {
-            const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1';
-            setTimeout(() => { t.style.opacity = '0'; }, 3000);
-        }
-
-        document.getElementById('i-date').valueAsDate = new Date();
+        init();
         setType('asset');
+        resetForm();
     </script>
 </body>
 </html>
