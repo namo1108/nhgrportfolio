@@ -26,14 +26,30 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: opacity 0.5s ease, visibility 0.5s;
         }
-        .login-hidden { transform: translateY(-100%); pointer-events: none; }
+        .login-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        
         .login-btn { 
             width: 90%; max-width: 320px; padding: 1.25rem; border-radius: 1.25rem; 
             font-weight: 800; display: flex; align-items: center; justify-content: center; 
             gap: 12px; transition: 0.2s; cursor: pointer; border: 1px solid #e2e8f0;
+            background: white;
         }
+        .login-btn:hover { background: #f8fafc; transform: translateY(-2px); }
+        .login-btn:active { transform: translateY(0); }
+
+        /* 로딩 애니메이션 */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -45,34 +61,39 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
             <h1 class="text-3xl font-black text-slate-900 mb-2">남호가람 자산관리</h1>
-            <p class="text-slate-400 font-medium px-4">우리 가족의 자산을<br class="block sm:hidden"> 한눈에 관리하세요</p>
+            <p class="text-slate-400 font-medium px-4">우리 가족의 자산을<br class="block sm:hidden"> 안전하게 관리하세요</p>
         </div>
-        <div onclick="login()" class="login-btn">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="G">
-            로그인 및 시작하기
-        </div>
+        
+        <button id="google-login-btn" onclick="handleLogin()" class="login-btn shadow-sm">
+            <img id="google-icon" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="G">
+            <div id="loader" class="loader"></div>
+            <span id="login-text">구글 계정으로 시작하기</span>
+        </button>
+        
+        <p class="mt-6 text-[11px] text-slate-300 font-medium">로그인 시 이용약관에 동의하게 됩니다.</p>
     </div>
 
     <!-- 메인 대시보드 -->
-    <div class="max-w-5xl mx-auto">
+    <div id="main-dashboard" class="max-w-5xl mx-auto opacity-0 transition-opacity duration-700">
         <header class="bg-slate-900 text-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] mb-6 md:mb-10 shadow-2xl overflow-hidden relative">
             <div class="relative z-10">
-                <p class="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-2">Total Asset Wealth</p>
+                <p class="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-2">Total Family Wealth</p>
                 <h1 id="total-wealth-display" class="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter truncate">₩0</h1>
                 
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between mt-8 gap-6">
                     <div class="flex items-center gap-3 text-slate-400 text-sm">
-                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">U</div>
+                        <img id="user-photo" src="" class="w-8 h-8 rounded-full border-2 border-white/20 hidden">
+                        <div id="user-avatar-fallback" class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">?</div>
                         <div>
-                            <span id="display-user-name" class="font-bold text-white">사용자</span>
-                            <button onclick="logout()" class="ml-2 text-slate-500 text-xs hover:text-white underline">로그아웃</button>
+                            <span id="display-user-name" class="font-bold text-white italic">Loading...</span>
+                            <button onclick="handleLogout()" class="ml-2 text-slate-500 text-xs hover:text-white underline">로그아웃</button>
                         </div>
                     </div>
                     
                     <div class="flex gap-2 w-full sm:w-auto">
                         <div class="flex-1 sm:flex-none bg-white/5 border border-white/10 p-3 md:p-4 rounded-2xl min-w-[100px]">
-                            <p class="text-[9px] text-slate-500 font-bold mb-1 uppercase">이번달 수지</p>
-                            <p id="balance-display" class="text-sm md:text-lg font-black font-mono text-emerald-400">+₩0</p>
+                            <p class="text-[9px] text-slate-500 font-bold mb-1 uppercase">지출 총계</p>
+                            <p id="balance-display" class="text-sm md:text-lg font-black font-mono text-rose-400">₩0</p>
                         </div>
                         <div class="flex-1 sm:flex-none bg-white/5 border border-white/10 p-3 md:p-4 rounded-2xl min-w-[100px]">
                             <p class="text-[9px] text-slate-500 font-bold mb-1 uppercase">환율 (USD)</p>
@@ -81,7 +102,6 @@
                     </div>
                 </div>
             </div>
-            <!-- 배경 데코레이션 -->
             <div class="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
         </header>
 
@@ -161,20 +181,26 @@
         </div>
     </div>
 
-    <script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase 설정 (환경 변수에서 자동 주입됨)
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // 전역 변수 및 초기 데이터
         let records = [
             { id: 1, user: '남호', type: 'asset', category: '주식(국내)', name: 'KODEX200', amount: 2646000, date: '2026-04-24' },
             { id: 2, user: '남호', type: 'asset', category: '주식(국내)', name: '삼성전자', amount: 6161591, date: '2026-04-24' },
-            { id: 3, user: '남호', type: 'asset', category: '주식(국내)', name: '우리금융지주', amount: 8590, date: '2026-04-24' },
-            { id: 4, user: '남호', type: 'asset', category: '주식(국내)', name: '이스트에이드', amount: 382796, date: '2026-04-24' },
             { id: 5, user: '남호', type: 'asset', category: '연금/퇴직금', name: '퇴직연금', amount: 18898783, date: '2026-04-24' },
-            { id: 6, user: '남호', type: 'asset', category: '청약', name: '주택청약', amount: 5760000, date: '2026-04-24' },
             { id: 7, user: '남호', type: 'asset', category: '보증금', name: '아파트보증금', amount: 15800000, date: '2026-04-24' },
-            { id: 8, user: '남호', type: 'asset', category: '저축/예금', name: '청년도약적금', amount: 7000000, date: '2026-04-24' },
-            { id: 9, user: '남호', type: 'asset', category: '저축/예금', name: '연지곤지', amount: 3510000, date: '2026-04-24' },
             { id: 10, user: '가람', type: 'asset', category: '주식(국내)', name: '주식 합산', amount: 9165000, date: '2026-04-24' },
-            { id: 11, user: '가람', type: 'asset', category: '연금/퇴직금', name: '퇴직금', amount: 5000000, date: '2026-04-24' },
-            { id: 12, user: '가람', type: 'asset', category: '청약', name: '주택청약', amount: 6200000, date: '2026-04-24' },
             { id: 13, user: '가람', type: 'expense', category: '주거(지출)', name: '관리비', amount: 251200, date: '2026-04-24' }
         ];
 
@@ -183,37 +209,91 @@
         let currentFilter = 'all';
         let editingId = null;
 
-        function login() {
-            document.getElementById('login-screen').classList.add('login-hidden');
-            document.getElementById('display-user-name').innerText = "패밀리 매니저";
-        }
+        // --- 로그인 관련 함수 ---
 
-        function logout() {
-            if(confirm("로그아웃 하시겠습니까?")) {
-                document.getElementById('login-screen').classList.remove('login-hidden');
+        window.handleLogin = async () => {
+            const btn = document.getElementById('google-login-btn');
+            const loader = document.getElementById('loader');
+            const icon = document.getElementById('google-icon');
+            const text = document.getElementById('login-text');
+
+            try {
+                btn.disabled = true;
+                loader.style.display = 'block';
+                icon.style.display = 'none';
+                text.innerText = '로그인 중...';
+
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Login Error:", error);
+                alert("로그인에 실패했습니다. 다시 시도해주세요.");
+                btn.disabled = false;
+                loader.style.display = 'none';
+                icon.style.display = 'block';
+                text.innerText = '구글 계정으로 시작하기';
             }
-        }
+        };
 
-        function setUser(user) {
+        window.handleLogout = async () => {
+            if(confirm("로그아웃 하시겠습니까?")) {
+                await signOut(auth);
+            }
+        };
+
+        // 인증 상태 감시
+        onAuthStateChanged(auth, (user) => {
+            const loginScreen = document.getElementById('login-screen');
+            const dashboard = document.getElementById('main-dashboard');
+            
+            if (user) {
+                // 로그인 성공
+                loginScreen.classList.add('login-hidden');
+                dashboard.classList.remove('opacity-0');
+                
+                document.getElementById('display-user-name').innerText = user.displayName || "사용자";
+                if (user.photoURL) {
+                    const img = document.getElementById('user-photo');
+                    img.src = user.photoURL;
+                    img.classList.remove('hidden');
+                    document.getElementById('user-avatar-fallback').classList.add('hidden');
+                }
+                render();
+            } else {
+                // 로그아웃 상태
+                loginScreen.classList.remove('login-hidden');
+                dashboard.classList.add('opacity-0');
+                
+                // 버튼 상태 복구
+                const btn = document.getElementById('google-login-btn');
+                btn.disabled = false;
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('google-icon').style.display = 'block';
+                document.getElementById('login-text').innerText = '구글 계정으로 시작하기';
+            }
+        });
+
+        // --- 비즈니스 로직 함수 ---
+
+        window.setUser = (user) => {
             currentUser = user;
             document.getElementById('user-namho').className = user === '남호' ? 'flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white' : 'flex-1 py-2 text-xs font-bold text-slate-400';
             document.getElementById('user-garam').className = user === '가람' ? 'flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white' : 'flex-1 py-2 text-xs font-bold text-slate-400';
-        }
+        };
 
-        function setType(type) {
+        window.setType = (type) => {
             currentType = type;
             document.getElementById('type-asset').className = type === 'asset' ? 'py-2.5 text-xs font-black rounded-lg border-2 border-blue-100 bg-blue-50 text-blue-600 transition-all' : 'py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50 transition-all';
             document.getElementById('type-expense').className = type === 'expense' ? 'py-2.5 text-xs font-black rounded-lg border-2 border-rose-100 bg-rose-50 text-rose-600 transition-all' : 'py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50 transition-all';
-        }
+        };
 
-        function setFilter(f) {
+        window.setFilter = (f) => {
             currentFilter = f;
             document.querySelectorAll('[id^="filter-"]').forEach(btn => btn.classList.remove('tab-active'));
             document.getElementById('filter-' + f).classList.add('tab-active');
             render();
-        }
+        };
 
-        function saveRecord() {
+        window.saveRecord = () => {
             const amount = document.getElementById('input-amount').value;
             const name = document.getElementById('input-name').value;
             const date = document.getElementById('input-date').value;
@@ -231,9 +311,9 @@
 
             resetForm();
             render();
-        }
+        };
 
-        function resetForm() {
+        window.resetForm = () => {
             editingId = null;
             document.getElementById('form-title').innerText = "기록하기";
             document.getElementById('save-btn').innerText = "데이터 저장하기";
@@ -241,9 +321,9 @@
             document.getElementById('input-amount').value = '';
             document.getElementById('input-name').value = '';
             document.getElementById('input-date').valueAsDate = new Date();
-        }
+        };
 
-        function editRecord(id) {
+        window.editRecord = (id) => {
             const r = records.find(x => x.id === id);
             if (!r) return;
             editingId = id;
@@ -257,16 +337,16 @@
             document.getElementById('input-date').value = r.date;
             document.getElementById('input-category').value = r.category;
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        };
 
-        function deleteRecord(id, event) {
+        window.deleteRecord = (id, event) => {
             event.stopPropagation();
             if(confirm("삭제하시겠습니까?")) {
                 records = records.filter(r => r.id !== id);
                 if (editingId === id) resetForm();
                 render();
             }
-        }
+        };
 
         function render() {
             const container = document.getElementById('list-container');
@@ -277,8 +357,7 @@
             totalDisplay.innerText = '₩' + totalAssets.toLocaleString();
 
             const totalExpenses = records.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
-            balanceDisplay.innerText = '-₩' + totalExpenses.toLocaleString();
-            balanceDisplay.className = totalExpenses > 0 ? "text-sm md:text-lg font-black font-mono text-rose-400" : "text-sm md:text-lg font-black font-mono text-emerald-400";
+            balanceDisplay.innerText = '₩' + totalExpenses.toLocaleString();
 
             const filtered = records.filter(r => {
                 if (currentFilter === 'asset') return r.type === 'asset';
@@ -318,10 +397,8 @@
             `).join('') || '<div class="py-20 text-center text-slate-300 font-bold">내역이 없습니다</div>';
         }
 
-        window.onload = () => {
-            document.getElementById('input-date').valueAsDate = new Date();
-            render();
-        };
+        // 페이지 로드 시 날짜 초기화
+        document.getElementById('input-date').valueAsDate = new Date();
     </script>
 </body>
 </html>
