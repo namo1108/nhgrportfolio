@@ -9,396 +9,346 @@
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
         body { 
             font-family: 'Pretendard', sans-serif; 
-            background-color: #f8fafc; 
+            background-color: #f1f5f9; 
             overflow-x: hidden; 
             -webkit-tap-highlight-color: transparent;
         }
-        .tab-active { background-color: #0f172a !important; color: white !important; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; }
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .input-field:focus { border-color: #0f172a; background: white; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .glass-card { background: white; border: 1px solid #f1f5f9; border-radius: 1.5rem; }
         
         #login-screen {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.5s ease, visibility 0.5s;
+            position: fixed; inset: 0; z-index: 100; background: #f1f5f9;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .login-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-        
-        .login-btn { 
-            width: 90%; max-width: 320px; padding: 1.25rem; border-radius: 1.25rem; 
-            font-weight: 800; display: flex; align-items: center; justify-content: center; 
-            gap: 12px; transition: 0.2s; cursor: pointer; border: 1px solid #e2e8f0;
-            background: white;
-        }
-        .login-btn:hover { background: #f8fafc; transform: translateY(-2px); }
-        .login-btn:active { transform: translateY(0); }
-
-        /* 로딩 애니메이션 */
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: none;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .login-hidden { opacity: 0; visibility: hidden; pointer-events: none; transition: 0.5s; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4">
 
     <!-- 로그인 화면 -->
     <div id="login-screen">
-        <div class="text-center mb-10 px-6">
-            <div class="w-20 h-20 bg-slate-900 rounded-[2.5rem] mx-auto mb-6 flex items-center justify-center shadow-xl shadow-slate-200">
-                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <div class="w-full max-w-sm px-6 text-center">
+            <div class="w-20 h-20 bg-slate-900 rounded-[2.5rem] mx-auto mb-6 flex items-center justify-center shadow-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
-            <h1 class="text-3xl font-black text-slate-900 mb-2">남호가람 자산관리</h1>
-            <p class="text-slate-400 font-medium px-4">우리 가족의 자산을<br class="block sm:hidden"> 안전하게 관리하세요</p>
+            <h1 class="text-2xl font-black mb-8">남호가람 자산관리</h1>
+            <div class="space-y-3">
+                <input type="text" id="login-id" placeholder="ID" class="input-field">
+                <input type="password" id="login-pw" placeholder="PW" class="input-field">
+                <button onclick="handleLogin()" class="w-full p-4 bg-slate-900 text-white font-black rounded-2xl">로그인</button>
+            </div>
         </div>
-        
-        <button id="google-login-btn" onclick="handleLogin()" class="login-btn shadow-sm">
-            <img id="google-icon" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="G">
-            <div id="loader" class="loader"></div>
-            <span id="login-text">구글 계정으로 시작하기</span>
-        </button>
-        
-        <p class="mt-6 text-[11px] text-slate-300 font-medium">로그인 시 이용약관에 동의하게 됩니다.</p>
     </div>
 
-    <!-- 메인 대시보드 -->
-    <div id="main-dashboard" class="max-w-5xl mx-auto opacity-0 transition-opacity duration-700">
-        <header class="bg-slate-900 text-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] mb-6 md:mb-10 shadow-2xl overflow-hidden relative">
-            <div class="relative z-10">
-                <p class="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-2">Total Family Wealth</p>
-                <h1 id="total-wealth-display" class="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter truncate">₩0</h1>
-                
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between mt-8 gap-6">
-                    <div class="flex items-center gap-3 text-slate-400 text-sm">
-                        <img id="user-photo" src="" class="w-8 h-8 rounded-full border-2 border-white/20 hidden">
-                        <div id="user-avatar-fallback" class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">?</div>
-                        <div>
-                            <span id="display-user-name" class="font-bold text-white italic">Loading...</span>
-                            <button onclick="handleLogout()" class="ml-2 text-slate-500 text-xs hover:text-white underline">로그아웃</button>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-2 w-full sm:w-auto">
-                        <div class="flex-1 sm:flex-none bg-white/5 border border-white/10 p-3 md:p-4 rounded-2xl min-w-[100px]">
-                            <p class="text-[9px] text-slate-500 font-bold mb-1 uppercase">지출 총계</p>
-                            <p id="balance-display" class="text-sm md:text-lg font-black font-mono text-rose-400">₩0</p>
-                        </div>
-                        <div class="flex-1 sm:flex-none bg-white/5 border border-white/10 p-3 md:p-4 rounded-2xl min-w-[100px]">
-                            <p class="text-[9px] text-slate-500 font-bold mb-1 uppercase">환율 (USD)</p>
-                            <p class="text-sm md:text-lg font-black font-mono text-blue-400">1,400.0</p>
-                        </div>
-                    </div>
+    <!-- 대시보드 -->
+    <div id="main-dashboard" class="max-w-7xl mx-auto hidden opacity-0 transition-opacity duration-500">
+        <!-- 상단 요약 -->
+        <header class="bg-slate-900 text-white p-6 rounded-[2rem] mb-6 shadow-xl">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Net Worth</p>
+                    <h1 id="total-wealth" class="text-4xl font-black font-mono">₩0</h1>
+                </div>
+                <button onclick="updateMarketData()" class="p-3 bg-white/10 rounded-full">
+                    <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8m0-5v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16m5 0H3v5"/></svg>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                    <p class="text-[10px] text-slate-500 font-bold mb-1">삼성전자</p>
+                    <p id="ss-price" class="text-sm font-black text-blue-400">₩0</p>
+                </div>
+                <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                    <p class="text-[10px] text-slate-500 font-bold mb-1">환율(USD/KRW)</p>
+                    <p id="ex-rate" class="text-sm font-black text-emerald-400">0.00</p>
+                </div>
+                <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                    <p class="text-[10px] text-slate-500 font-bold mb-1">총 자산</p>
+                    <p id="sum-asset" class="text-sm font-black">₩0</p>
+                </div>
+                <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                    <p class="text-[10px] text-slate-500 font-bold mb-1">총 지출</p>
+                    <p id="sum-expense" class="text-sm font-black text-rose-400">₩0</p>
                 </div>
             </div>
-            <div class="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-            <!-- 왼쪽: 기록 영역 -->
-            <aside class="lg:col-span-4 order-2 lg:order-1">
-                <div class="glass-card p-5 md:p-6 sticky top-4 shadow-sm border border-slate-200/60">
-                    <h2 id="form-title" class="text-base md:text-lg font-black mb-5 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        기록하기
-                    </h2>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- 입력 폼 (좌측) -->
+            <aside class="lg:col-span-4">
+                <div class="glass-card p-6 sticky top-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 id="form-title" class="font-black text-lg">데이터 입력</h2>
+                        <button id="cancel-btn" onclick="resetForm()" class="hidden text-xs text-slate-400 underline">취소</button>
+                    </div>
                     
                     <div class="space-y-4">
+                        <input type="hidden" id="edit-id">
+                        <!-- 작성자 선택 -->
                         <div class="flex p-1 bg-slate-100 rounded-xl">
-                            <button onclick="setUser('남호')" id="user-namho" class="flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white transition-all">남호</button>
-                            <button onclick="setUser('가람')" id="user-garam" class="flex-1 py-2 text-xs font-bold text-slate-400 transition-all">가람</button>
+                            <button onclick="setWriter('남호')" id="w-namho" class="flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white">남호</button>
+                            <button onclick="setWriter('가람')" id="w-garam" class="flex-1 py-2 text-xs font-bold text-slate-400">가람</button>
                         </div>
 
+                        <!-- 자산/지출 구분 -->
                         <div class="grid grid-cols-2 gap-2">
-                            <button onclick="setType('asset')" id="type-asset" class="py-2.5 text-xs font-black rounded-lg border-2 border-blue-100 bg-blue-50 text-blue-600 transition-all">수입/자산</button>
-                            <button onclick="setType('expense')" id="type-expense" class="py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50 transition-all">지출</button>
+                            <button onclick="setType('asset')" id="t-asset" class="py-2 text-xs font-black rounded-lg border border-blue-500 bg-blue-50 text-blue-600">자산</button>
+                            <button onclick="setType('expense')" id="t-expense" class="py-2 text-xs font-bold rounded-lg border border-slate-200 text-slate-400">지출</button>
                         </div>
 
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">Date</label>
-                                <input type="date" id="input-date" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">Amount</label>
-                                <input type="number" id="input-amount" placeholder="금액 입력" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20 font-mono font-bold">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">Category</label>
-                                <select id="input-category" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
-                                    <option>주식(국내)</option>
-                                    <option>주식(해외)</option>
-                                    <option>저축/예금</option>
-                                    <option>보증금</option>
-                                    <option>연금/퇴직금</option>
-                                    <option>청약</option>
-                                    <option>식비</option>
-                                    <option>주거(지출)</option>
-                                    <option>기타</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 ml-1 uppercase">Description</label>
-                                <input type="text" id="input-name" placeholder="항목 이름" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/20">
-                            </div>
+                        <!-- 기본 필드 -->
+                        <div class="space-y-2">
+                            <input type="date" id="i-date" class="input-field text-xs">
+                            <select id="i-category" onchange="toggleStockUI()" class="input-field text-xs">
+                                <!-- JS에서 동적 생성됨 -->
+                            </select>
+                            <input type="text" id="i-name" placeholder="항목 이름" class="input-field font-bold">
                         </div>
 
-                        <div class="pt-2 space-y-2">
-                            <button id="save-btn" onclick="saveRecord()" class="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all shadow-lg active:scale-95">
-                                데이터 저장하기
-                            </button>
-                            <button id="cancel-edit-btn" onclick="resetForm()" class="hidden w-full py-2 text-rose-500 font-bold text-xs">
-                                수정 취소
-                            </button>
+                        <!-- 주식 상세 필드 (조건부) -->
+                        <div id="stock-ui" class="hidden grid grid-cols-3 gap-2">
+                            <input type="text" id="i-ticker" placeholder="티커" class="input-field text-xs uppercase">
+                            <input type="number" id="i-qty" placeholder="수량" class="input-field text-xs">
+                            <input type="number" id="i-avg" placeholder="평단" class="input-field text-xs">
                         </div>
+
+                        <!-- 금액 -->
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₩</span>
+                            <input type="number" id="i-amount" placeholder="금액" class="input-field pl-8 font-mono font-bold">
+                        </div>
+
+                        <button id="save-btn" onclick="save()" class="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-lg transition active:scale-95">저장하기</button>
                     </div>
                 </div>
             </aside>
 
-            <!-- 오른쪽: 리스트 영역 -->
-            <main class="lg:col-span-8 order-1 lg:order-2">
-                <div class="flex gap-2 overflow-x-auto pb-4 no-scrollbar mb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <button onclick="setFilter('all')" id="filter-all" class="flex-none px-6 py-2.5 rounded-full text-[11px] font-black bg-white border border-slate-200 shadow-sm tab-active whitespace-nowrap">전체보기</button>
-                    <button onclick="setFilter('asset')" id="filter-asset" class="flex-none px-6 py-2.5 rounded-full text-[11px] font-black bg-white border border-slate-200 shadow-sm whitespace-nowrap">자산현황</button>
-                    <button onclick="setFilter('expense')" id="filter-expense" class="flex-none px-6 py-2.5 rounded-full text-[11px] font-black bg-white border border-slate-200 shadow-sm whitespace-nowrap">지출내역</button>
+            <!-- 리스트 (우측) -->
+            <main class="lg:col-span-8 space-y-6">
+                <!-- 자산 목록 -->
+                <div>
+                    <h3 class="flex items-center gap-2 font-black text-slate-800 mb-3 px-2">
+                        <span class="w-2 h-5 bg-blue-500 rounded-full"></span> 자산 현황
+                    </h3>
+                    <div id="list-asset" class="space-y-2"></div>
                 </div>
 
-                <div id="list-container" class="space-y-3">
-                    <!-- 리스트 아이템 -->
+                <!-- 지출 목록 -->
+                <div>
+                    <h3 class="flex items-center gap-2 font-black text-slate-800 mb-3 px-2">
+                        <span class="w-2 h-5 bg-rose-500 rounded-full"></span> 지출 내역
+                    </h3>
+                    <div id="list-expense" class="space-y-2"></div>
                 </div>
             </main>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        const apiKey = "";
+        
+        // 세분화된 카테고리 설정
+        const categories = {
+            asset: ["주식", "예적금", "현금", "보증금", "청약", "퇴직연금", "기타자산"],
+            expense: ["관리비", "식비", "통신비", "보험", "세금", "경조사", "교육", "교통", "기타지출"]
+        };
 
-        // Firebase 설정 (환경 변수에서 자동 주입됨)
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
-
-        // 전역 변수 및 초기 데이터
         let records = [
-            { id: 1, user: '남호', type: 'asset', category: '주식(국내)', name: 'KODEX200', amount: 2646000, date: '2026-04-24' },
-            { id: 2, user: '남호', type: 'asset', category: '주식(국내)', name: '삼성전자', amount: 6161591, date: '2026-04-24' },
-            { id: 5, user: '남호', type: 'asset', category: '연금/퇴직금', name: '퇴직연금', amount: 18898783, date: '2026-04-24' },
-            { id: 7, user: '남호', type: 'asset', category: '보증금', name: '아파트보증금', amount: 15800000, date: '2026-04-24' },
-            { id: 10, user: '가람', type: 'asset', category: '주식(국내)', name: '주식 합산', amount: 9165000, date: '2026-04-24' },
-            { id: 13, user: '가람', type: 'expense', category: '주거(지출)', name: '관리비', amount: 251200, date: '2026-04-24' }
+            { id: 1, user: '남호', type: 'asset', category: '주식', name: '삼성전자', ticker: '005930', qty: 81, avg: 76000, amount: 6161591, date: '2026-04-24' },
+            { id: 2, user: '남호', type: 'asset', category: '보증금', name: '아파트 전세 보증금', amount: 15800000, date: '2026-04-24' },
+            { id: 3, user: '가람', type: 'expense', category: '관리비', name: '아파트 관리비', amount: 251200, date: '2026-04-20' }
         ];
 
-        let currentUser = '남호';
-        let currentType = 'asset';
-        let currentFilter = 'all';
-        let editingId = null;
+        let curWriter = '남호';
+        let curType = 'asset';
 
-        // --- 로그인 관련 함수 ---
+        // 초기화 및 로그인
+        window.handleLogin = () => {
+            const id = document.getElementById('login-id').value;
+            const pw = document.getElementById('login-pw').value;
+            if((id === 'bongmars1' && pw === 'rnjs9596@@') || (id === 'jin0ri' && pw === 'rkfka1993^^')) {
+                document.getElementById('login-screen').classList.add('login-hidden');
+                document.getElementById('main-dashboard').classList.remove('hidden');
+                setTimeout(() => document.getElementById('main-dashboard').classList.remove('opacity-0'), 100);
+                updateMarketData();
+                updateCategorySelect();
+                render();
+            } else { alert("로그인 실패"); }
+        };
 
-        window.handleLogin = async () => {
-            const btn = document.getElementById('google-login-btn');
-            const loader = document.getElementById('loader');
-            const icon = document.getElementById('google-icon');
-            const text = document.getElementById('login-text');
+        // UI 제어 함수들
+        window.setWriter = (u) => {
+            curWriter = u;
+            document.getElementById('w-namho').className = u === '남호' ? 'flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white' : 'flex-1 py-2 text-xs font-bold text-slate-400';
+            document.getElementById('w-garam').className = u === '가람' ? 'flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white' : 'flex-1 py-2 text-xs font-bold text-slate-400';
+        };
 
+        window.setType = (t) => {
+            curType = t;
+            const isAsset = t === 'asset';
+            document.getElementById('t-asset').className = isAsset ? 'py-2 text-xs font-black rounded-lg border border-blue-500 bg-blue-50 text-blue-600' : 'py-2 text-xs font-bold rounded-lg border border-slate-200 text-slate-400';
+            document.getElementById('t-expense').className = !isAsset ? 'py-2 text-xs font-black rounded-lg border border-rose-500 bg-rose-50 text-rose-600' : 'py-2 text-xs font-bold rounded-lg border border-slate-200 text-slate-400';
+            updateCategorySelect();
+            toggleStockUI();
+        };
+
+        function updateCategorySelect() {
+            const select = document.getElementById('i-category');
+            select.innerHTML = categories[curType].map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        window.toggleStockUI = () => {
+            const isStock = document.getElementById('i-category').value === '주식' && curType === 'asset';
+            document.getElementById('stock-ui').classList.toggle('hidden', !isStock);
+        };
+
+        async function updateMarketData() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('animate-spin');
             try {
-                btn.disabled = true;
-                loader.style.display = 'block';
-                icon.style.display = 'none';
-                text.innerText = '로그인 중...';
-
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error("Login Error:", error);
-                alert("로그인에 실패했습니다. 다시 시도해주세요.");
-                btn.disabled = false;
-                loader.style.display = 'none';
-                icon.style.display = 'block';
-                text.innerText = '구글 계정으로 시작하기';
-            }
-        };
-
-        window.handleLogout = async () => {
-            if(confirm("로그아웃 하시겠습니까?")) {
-                await signOut(auth);
-            }
-        };
-
-        // 인증 상태 감시
-        onAuthStateChanged(auth, (user) => {
-            const loginScreen = document.getElementById('login-screen');
-            const dashboard = document.getElementById('main-dashboard');
-            
-            if (user) {
-                // 로그인 성공
-                loginScreen.classList.add('login-hidden');
-                dashboard.classList.remove('opacity-0');
+                const prompt = "Current USD/KRW exchange rate and Samsung Electronics(005930) KRW price as JSON: {rate: number, samsung: number}";
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } })
+                });
+                const data = await response.json();
+                const res = JSON.parse(data.candidates[0].content.parts[0].text);
                 
-                document.getElementById('display-user-name').innerText = user.displayName || "사용자";
-                if (user.photoURL) {
-                    const img = document.getElementById('user-photo');
-                    img.src = user.photoURL;
-                    img.classList.remove('hidden');
-                    document.getElementById('user-avatar-fallback').classList.add('hidden');
+                document.getElementById('ex-rate').innerText = res.rate.toFixed(2);
+                document.getElementById('ss-price').innerText = '₩' + res.samsung.toLocaleString();
+                
+                const ssIdx = records.findIndex(r => r.name === '삼성전자' || r.ticker === '005930');
+                if(ssIdx !== -1 && records[ssIdx].qty > 0) {
+                    records[ssIdx].amount = res.samsung * records[ssIdx].qty;
                 }
                 render();
+            } catch (e) { console.error(e); } finally { icon.classList.remove('animate-spin'); }
+        }
+
+        // 저장 및 수정
+        window.save = () => {
+            const id = document.getElementById('edit-id').value;
+            const category = document.getElementById('i-category').value;
+            const name = document.getElementById('i-name').value;
+            const date = document.getElementById('i-date').value;
+            let amount = parseInt(document.getElementById('i-amount').value) || 0;
+            
+            const ticker = document.getElementById('i-ticker').value;
+            const qty = parseFloat(document.getElementById('i-qty').value) || 0;
+            const avg = parseFloat(document.getElementById('i-avg').value) || 0;
+
+            if(!name) return;
+            if(category === '주식' && qty > 0 && amount === 0) amount = qty * avg;
+
+            const data = { id: id ? parseInt(id) : Date.now(), user: curWriter, type: curType, category, name, date, amount, ticker, qty, avg };
+
+            if(id) {
+                const idx = records.findIndex(r => r.id == id);
+                records[idx] = data;
             } else {
-                // 로그아웃 상태
-                loginScreen.classList.remove('login-hidden');
-                dashboard.classList.add('opacity-0');
-                
-                // 버튼 상태 복구
-                const btn = document.getElementById('google-login-btn');
-                btn.disabled = false;
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('google-icon').style.display = 'block';
-                document.getElementById('login-text').innerText = '구글 계정으로 시작하기';
-            }
-        });
-
-        // --- 비즈니스 로직 함수 ---
-
-        window.setUser = (user) => {
-            currentUser = user;
-            document.getElementById('user-namho').className = user === '남호' ? 'flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white' : 'flex-1 py-2 text-xs font-bold text-slate-400';
-            document.getElementById('user-garam').className = user === '가람' ? 'flex-1 py-2 text-xs font-black rounded-lg bg-slate-900 text-white' : 'flex-1 py-2 text-xs font-bold text-slate-400';
-        };
-
-        window.setType = (type) => {
-            currentType = type;
-            document.getElementById('type-asset').className = type === 'asset' ? 'py-2.5 text-xs font-black rounded-lg border-2 border-blue-100 bg-blue-50 text-blue-600 transition-all' : 'py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50 transition-all';
-            document.getElementById('type-expense').className = type === 'expense' ? 'py-2.5 text-xs font-black rounded-lg border-2 border-rose-100 bg-rose-50 text-rose-600 transition-all' : 'py-2.5 text-xs font-bold rounded-lg border-2 border-transparent text-slate-400 bg-slate-50 transition-all';
-        };
-
-        window.setFilter = (f) => {
-            currentFilter = f;
-            document.querySelectorAll('[id^="filter-"]').forEach(btn => btn.classList.remove('tab-active'));
-            document.getElementById('filter-' + f).classList.add('tab-active');
-            render();
-        };
-
-        window.saveRecord = () => {
-            const amount = document.getElementById('input-amount').value;
-            const name = document.getElementById('input-name').value;
-            const date = document.getElementById('input-date').value;
-            const category = document.getElementById('input-category').value;
-
-            if(!amount || !name || !date) return;
-
-            if (editingId) {
-                const idx = records.findIndex(r => r.id === editingId);
-                records[idx] = { ...records[idx], user: currentUser, type: currentType, category, name, amount: parseInt(amount), date };
-                editingId = null;
-            } else {
-                records.push({ id: Date.now(), user: currentUser, type: currentType, category, name, amount: parseInt(amount), date });
+                records.push(data);
             }
 
             resetForm();
             render();
         };
 
-        window.resetForm = () => {
-            editingId = null;
-            document.getElementById('form-title').innerText = "기록하기";
-            document.getElementById('save-btn').innerText = "데이터 저장하기";
-            document.getElementById('cancel-edit-btn').classList.add('hidden');
-            document.getElementById('input-amount').value = '';
-            document.getElementById('input-name').value = '';
-            document.getElementById('input-date').valueAsDate = new Date();
-        };
+        window.edit = (id) => {
+            const item = records.find(r => r.id === id);
+            if(!item) return;
 
-        window.editRecord = (id) => {
-            const r = records.find(x => x.id === id);
-            if (!r) return;
-            editingId = id;
-            document.getElementById('form-title').innerText = "수정 중";
+            document.getElementById('edit-id').value = item.id;
+            setWriter(item.user);
+            setType(item.type);
+            document.getElementById('i-category').value = item.category;
+            document.getElementById('i-name').value = item.name;
+            document.getElementById('i-date').value = item.date;
+            document.getElementById('i-amount').value = item.amount;
+            document.getElementById('i-ticker').value = item.ticker || "";
+            document.getElementById('i-qty').value = item.qty || "";
+            document.getElementById('i-avg').value = item.avg || "";
+
+            toggleStockUI();
+            document.getElementById('form-title').innerText = "데이터 수정";
             document.getElementById('save-btn').innerText = "수정 완료";
-            document.getElementById('cancel-edit-btn').classList.remove('hidden');
-            setUser(r.user);
-            setType(r.type);
-            document.getElementById('input-amount').value = r.amount;
-            document.getElementById('input-name').value = r.name;
-            document.getElementById('input-date').value = r.date;
-            document.getElementById('input-category').value = r.category;
+            document.getElementById('cancel-btn').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        window.deleteRecord = (id, event) => {
-            event.stopPropagation();
+        window.resetForm = () => {
+            document.getElementById('edit-id').value = "";
+            document.getElementById('i-name').value = "";
+            document.getElementById('i-amount').value = "";
+            document.getElementById('i-ticker').value = "";
+            document.getElementById('i-qty').value = "";
+            document.getElementById('i-avg').value = "";
+            document.getElementById('i-date').valueAsDate = new Date();
+            document.getElementById('form-title').innerText = "데이터 입력";
+            document.getElementById('save-btn').innerText = "저장하기";
+            document.getElementById('cancel-btn').classList.add('hidden');
+            toggleStockUI();
+        };
+
+        window.del = (id, e) => {
+            e.stopPropagation();
             if(confirm("삭제하시겠습니까?")) {
                 records = records.filter(r => r.id !== id);
-                if (editingId === id) resetForm();
                 render();
             }
         };
 
         function render() {
-            const container = document.getElementById('list-container');
-            const totalDisplay = document.getElementById('total-wealth-display');
-            const balanceDisplay = document.getElementById('balance-display');
+            const assetBox = document.getElementById('list-asset');
+            const expenseBox = document.getElementById('list-expense');
+            
+            const totalAsset = records.filter(r => r.type === 'asset').reduce((s, r) => s + r.amount, 0);
+            const totalExp = records.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
 
-            const totalAssets = records.filter(r => r.type === 'asset').reduce((sum, r) => sum + r.amount, 0);
-            totalDisplay.innerText = '₩' + totalAssets.toLocaleString();
+            document.getElementById('total-wealth').innerText = '₩' + (totalAsset - totalExp).toLocaleString();
+            document.getElementById('sum-asset').innerText = '₩' + totalAsset.toLocaleString();
+            document.getElementById('sum-expense').innerText = '₩' + totalExp.toLocaleString();
 
-            const totalExpenses = records.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
-            balanceDisplay.innerText = '₩' + totalExpenses.toLocaleString();
-
-            const filtered = records.filter(r => {
-                if (currentFilter === 'asset') return r.type === 'asset';
-                if (currentFilter === 'expense') return r.type === 'expense';
-                return true;
-            }).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            container.innerHTML = filtered.map(r => `
-                <div onclick="editRecord(${r.id})" class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 transition-all active:bg-slate-50 cursor-pointer">
+            const createItem = (r) => `
+                <div onclick="edit(${r.id})" class="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm cursor-pointer hover:border-slate-300 transition">
                     <div class="flex items-center gap-3">
-                        <div class="p-2.5 rounded-xl shrink-0 ${r.type === 'asset' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600'}">
-                            ${r.type === 'asset' ? 
-                                '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a2 2 0 0 0 0 4h15a1 1 0 0 0 1-1v-4"/><path d="M12 11h.01"/></svg>' : 
-                                '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
-                            }
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] ${r.user === '남호' ? 'bg-indigo-50 text-indigo-600' : 'bg-orange-50 text-orange-600'}">
+                            ${r.user[0]}
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center flex-wrap gap-1.5 mb-0.5">
-                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded ${r.user === '남호' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}">${r.user}</span>
-                                <span class="text-[9px] font-bold text-slate-400">${r.category}</span>
+                        <div>
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase">${r.category}</span>
+                                <span class="text-[9px] text-slate-300 font-mono">${r.date}</span>
                             </div>
-                            <h3 class="text-[13px] md:text-sm font-bold text-slate-800 truncate">${r.name}</h3>
-                            <p class="text-[9px] font-mono text-slate-300">${r.date}</p>
+                            <h4 class="text-sm font-bold text-slate-800">${r.name} ${r.ticker ? `<span class="text-[10px] text-slate-400 font-mono font-medium ml-1">${r.ticker}</span>` : ''}</h4>
+                            ${r.qty ? `<p class="text-[10px] text-slate-400 font-medium">${r.qty}주 · ₩${r.avg.toLocaleString()}</p>` : ''}
                         </div>
                     </div>
-                    <div class="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-none border-slate-50">
-                        <div class="text-left sm:text-right">
-                            <p class="text-base md:text-lg font-black font-mono ${r.type === 'expense' ? 'text-rose-500' : 'text-slate-900'}">
-                                ${r.type === 'expense' ? '-' : ''}₩${r.amount.toLocaleString()}
-                            </p>
-                        </div>
-                        <button onclick="deleteRecord(${r.id}, event)" class="p-2 text-slate-200 hover:text-rose-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                        </button>
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm font-black font-mono ${r.type === 'expense' ? 'text-rose-500' : 'text-slate-900'}">
+                            ${r.type === 'expense' ? '-' : ''}₩${r.amount.toLocaleString()}
+                        </span>
+                        <button onclick="del(${r.id}, event)" class="p-2 text-slate-200 hover:text-rose-500"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
                     </div>
                 </div>
-            `).join('') || '<div class="py-20 text-center text-slate-300 font-bold">내역이 없습니다</div>';
+            `;
+
+            assetBox.innerHTML = records.filter(r => r.type === 'asset').sort((a,b)=>new Date(b.date)-new Date(a.date)).map(createItem).join('') || `<p class="text-center py-4 text-xs text-slate-300 italic">자산 내역이 없습니다.</p>`;
+            expenseBox.innerHTML = records.filter(r => r.type === 'expense').sort((a,b)=>new Date(b.date)-new Date(a.date)).map(createItem).join('') || `<p class="text-center py-4 text-xs text-slate-300 italic">지출 내역이 없습니다.</p>`;
         }
 
-        // 페이지 로드 시 날짜 초기화
-        document.getElementById('input-date').valueAsDate = new Date();
+        document.getElementById('i-date').valueAsDate = new Date();
     </script>
 </body>
 </html>
