@@ -104,9 +104,6 @@
         label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; display: block; }
         
         .neon-text-blue { color: #38bdf8; text-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
-        .neon-shadow-indigo { filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5)); }
-        .neon-shadow-rose { filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.5)); }
-        
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -117,7 +114,7 @@
             <div>
                 <div class="flex items-center gap-2 mb-1">
                     <span class="text-[9px] font-black tracking-widest text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded uppercase">Total Net Worth</span>
-                    <span class="text-[9px] text-emerald-400 font-bold animate-pulse">● LIVE SYNC ENABLED</span>
+                    <span class="text-[9px] text-emerald-400 font-bold animate-pulse">● LIVE SYNC READY</span>
                 </div>
                 <h1 class="text-5xl font-black tracking-tighter" id="total-wealth">₩0</h1>
             </div>
@@ -135,22 +132,17 @@
                     <p class="text-[9px] text-slate-500 font-bold mb-0.5 uppercase">이번달 지출</p>
                     <p class="text-sm font-black text-rose-400" id="stat-expense">₩0</p>
                 </div>
-                <div class="glass-card px-4 py-3 flex-1 md:flex-none min-w-[100px] border-l-4 border-l-sky-500 bg-sky-500/5">
-                    <p class="text-[9px] text-slate-500 font-bold mb-0.5 uppercase">환율 (USD)</p>
-                    <p class="text-sm font-black neon-text-blue" id="exchange-rate">₩1,481.50</p>
-                </div>
             </div>
         </header>
 
-        <!-- 그래프 영역 -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <div class="glass-card p-5">
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">ASSET ALLOCATION</p>
-                <div class="chart-container neon-shadow-indigo"><canvas id="assetChart"></canvas></div>
+                <div class="chart-container"><canvas id="assetChart"></canvas></div>
             </div>
             <div class="glass-card p-5">
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">EXPENSE TREND</p>
-                <div class="chart-container neon-shadow-rose"><canvas id="expenseChart"></canvas></div>
+                <div class="chart-container"><canvas id="expenseChart"></canvas></div>
             </div>
         </div>
 
@@ -222,7 +214,6 @@
                         </div>
 
                         <button onclick="save()" id="save-btn" class="w-full py-4 bg-slate-900 text-white font-black rounded-xl shadow-lg hover:bg-indigo-600 transition-all">데이터 저장</button>
-                        <button id="cancel-btn" onclick="resetForm()" class="w-full py-2 text-xs font-bold text-slate-400 hidden uppercase tracking-widest mt-2">수정 취소</button>
                     </div>
                 </div>
             </aside>
@@ -240,42 +231,56 @@
     </div>
 
     <script>
-        // API 키는 비워둡니다 (GitHub 노출 방지용). 
-        // 실제 사용 시 직접 입력하거나 환경 변수 처리가 필요합니다.
         const apiKey = ""; 
         const USD_RATE = 1481.5;
         let records = [];
         let curWriter = '남호';
         let curType = 'asset';
         let curFilter = 'all';
-        let assetChart, expenseChart;
+        let assetChart = null;
+        let expenseChart = null;
 
-        const categories = {
+      const categories = {
             asset: ['주식(국내)', '주식(해외)', '현금/예적금', '보증금', '연금/퇴직금', '청약', '현금'],
             income: ['급여', '보너스', '부수입', '이자/배당'],
             expense: ['생활비', '문화/여가, '금융/대출', '주거/통신', '교통/차량', '기기구입', '경조사','보험', '기타지출']
         };
 
-        // 초기 날짜 설정
-        document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
+        // 초기화 함수
+        function initApp() {
+            try {
+                const saved = localStorage.getItem('nhgr_asset_v1');
+                records = saved ? JSON.parse(saved) : [];
+                if (!Array.isArray(records)) records = [];
+            } catch (e) {
+                console.error("데이터 로딩 실패:", e);
+                records = [];
+            }
+
+            document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
+            setType('asset'); // 초기 타입 설정 및 렌더링 호출
+        }
 
         window.setWriter = (w) => {
             curWriter = w;
-            document.querySelectorAll('.btn-writer').forEach(b => {
-                b.classList.toggle('active', b.innerText === w);
-            });
+            document.querySelectorAll('.btn-writer').forEach(b => b.classList.toggle('active', b.innerText === w));
         };
 
         window.setType = (t) => {
             curType = t;
             document.querySelectorAll('.btn-type').forEach(b => b.classList.toggle('active', b.id === 't-' + t));
             const select = document.getElementById('i-category');
-            select.innerHTML = categories[t].map(cat => `<option value="${cat}">${cat}</option>`).join('');
-            handleCategoryChange();
+            if (select) {
+                select.innerHTML = categories[t].map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                handleCategoryChange();
+            }
+            render();
         };
 
         window.handleCategoryChange = () => {
-            const cat = document.getElementById('i-category').value;
+            const catEl = document.getElementById('i-category');
+            if (!catEl) return;
+            const cat = catEl.value;
             const isStock = cat.includes('주식');
             document.getElementById('stock-group').classList.toggle('hidden', !isStock);
             document.getElementById('normal-group').classList.toggle('hidden', isStock);
@@ -302,9 +307,8 @@
             if (!apiKey) return;
             const ticker = document.getElementById('i-ticker').value.trim().toUpperCase();
             if (!ticker) return;
-            const cat = document.getElementById('i-category').value;
             try {
-                const prompt = `${cat} 시장 티커 '${ticker}'의 한글 종목명과 현재가를 JSON으로. {"name": "...", "price": 0}`;
+                const prompt = `티커 '${ticker}'의 종목명과 현재가를 JSON으로: {"name": "...", "price": 0}`;
                 const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -326,12 +330,13 @@
             const editId = document.getElementById('edit-id').value;
             let finalAmount = isStock ? parseInt(document.getElementById('i-amount-val').value) : parseInt(document.getElementById('i-amount').value);
             
-            if (!finalAmount && finalAmount !== 0) {
-                alert("금액을 입력해주세요.");
+            if (isNaN(finalAmount)) {
+                alert("금액을 정확히 입력해주세요.");
                 return;
             }
 
             const data = {
+                id: editId || 'ID-' + Date.now(),
                 user: curWriter,
                 type: curType,
                 category: cat,
@@ -344,27 +349,27 @@
             };
 
             if (editId) {
-                records = records.map(r => r.id === editId ? { ...data, id: editId } : r);
+                records = records.map(r => r.id === editId ? data : r);
             } else {
-                records.push({ ...data, id: 'ID-' + Date.now() });
+                records.push(data);
             }
             
-            saveToStorage();
+            localStorage.setItem('nhgr_asset_v1', JSON.stringify(records));
             render();
             resetForm();
         };
 
         window.deleteItem = (e, id) => {
             e.stopPropagation();
-            if (confirm('정말로 이 내역을 삭제하시겠습니까?')) {
-                records = records.filter(r => r.id !== id.toString());
-                saveToStorage();
+            if (confirm('삭제하시겠습니까?')) {
+                records = records.filter(r => r.id.toString() !== id.toString());
+                localStorage.setItem('nhgr_asset_v1', JSON.stringify(records));
                 render();
             }
         };
 
         window.editItem = (id) => {
-            const r = records.find(x => x.id === id.toString());
+            const r = records.find(x => x.id.toString() === id.toString());
             if (!r) return;
             document.getElementById('edit-id').value = r.id;
             setWriter(r.user);
@@ -381,8 +386,7 @@
             } else {
                 document.getElementById('i-amount').value = r.amount;
             }
-            document.getElementById('form-title').innerText = "내역 수정";
-            document.getElementById('cancel-btn').classList.remove('hidden');
+            document.getElementById('form-title').innerText = "수정 중...";
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
@@ -394,9 +398,7 @@
             document.getElementById('i-price').value = "";
             document.getElementById('i-amount').value = "";
             document.getElementById('i-display-amount').value = "";
-            document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
             document.getElementById('form-title').innerText = "기록하기";
-            document.getElementById('cancel-btn').classList.add('hidden');
         };
 
         window.setFilter = (f) => {
@@ -405,72 +407,45 @@
             render();
         };
 
-        function saveToStorage() {
-            localStorage.setItem('nhgr_asset_v1', JSON.stringify(records));
-        }
-
         function render() {
             const listEl = document.getElementById('main-list');
+            if (!listEl) return;
+
             const filtered = records.filter(r => curFilter === 'all' || r.type === curFilter);
             
-            let totalAsset = 0;
-            let totalIncome = 0;
-            let totalExpense = 0;
-            let assetDist = {};
-            let expenseTimeline = {};
+            let totalAsset = 0, totalIncome = 0, totalExpense = 0;
+            let assetDist = {}, expenseTimeline = {};
 
-            listEl.innerHTML = '';
+            listEl.innerHTML = filtered.length ? '' : '<div class="text-center py-10 opacity-30">데이터가 없습니다.</div>';
             
-            if (filtered.length === 0) {
-                listEl.innerHTML = '<div class="text-center py-12 text-slate-500 font-bold opacity-50">데이터가 없습니다. 새로운 기록을 추가해보세요!</div>';
-            }
-
             filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
-                if (r.type === 'asset') {
-                    totalAsset += r.amount;
-                    assetDist[r.category] = (assetDist[r.category] || 0) + r.amount;
-                } else if (r.type === 'income') {
-                    totalIncome += r.amount;
-                } else {
-                    totalExpense += r.amount;
-                    expenseTimeline[r.date] = (expenseTimeline[r.date] || 0) + r.amount;
-                }
+                if (r.type === 'asset') { totalAsset += r.amount; assetDist[r.category] = (assetDist[r.category] || 0) + r.amount; }
+                else if (r.type === 'income') totalIncome += r.amount;
+                else { totalExpense += r.amount; expenseTimeline[r.date] = (expenseTimeline[r.date] || 0) + r.amount; }
 
-                const colorClass = r.type === 'asset' ? 'text-indigo-400' : (r.type === 'income' ? 'text-emerald-400' : 'text-rose-400');
-                const badgeClass = r.type === 'asset' ? 'bg-indigo-600' : (r.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500');
+                const color = r.type === 'asset' ? 'text-indigo-400' : (r.type === 'income' ? 'text-emerald-400' : 'text-rose-400');
+                const bg = r.type === 'asset' ? 'bg-indigo-600' : (r.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500');
 
-                const itemDiv = document.createElement('div');
-                itemDiv.className = "list-item flex justify-between items-center group";
-                itemDiv.onclick = () => editItem(r.id);
-                
-                itemDiv.innerHTML = `
-                    <div class="flex gap-4 items-center">
-                        <div class="w-10 h-10 rounded-xl ${badgeClass} flex items-center justify-center font-bold text-[10px] shadow-lg">${r.user}</div>
-                        <div>
-                            <div class="flex items-center gap-2 mb-0.5">
-                                <span class="text-[9px] ${colorClass} font-bold uppercase tracking-tighter">${r.category}</span>
-                                ${r.ticker ? `<span class="text-[8px] bg-slate-800 text-indigo-400 px-1 rounded font-bold">${r.ticker}</span>` : ''}
+                listEl.innerHTML += `
+                    <div class="list-item flex justify-between items-center" onclick="editItem('${r.id}')">
+                        <div class="flex gap-4 items-center">
+                            <div class="w-10 h-10 rounded-xl ${bg} flex items-center justify-center font-bold text-[10px] shadow-lg">${r.user}</div>
+                            <div>
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <span class="text-[9px] ${color} font-bold uppercase tracking-tighter">${r.category}</span>
+                                </div>
+                                <h4 class="text-sm font-black text-slate-100">${r.name}</h4>
+                                <p class="text-[10px] text-slate-500 font-bold">${r.date}</p>
                             </div>
-                            <h4 class="text-sm font-black text-slate-100">${r.name}</h4>
-                            <p class="text-[10px] text-slate-500 font-bold uppercase">${r.date}</p>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <div class="text-right">
-                            <p class="text-lg font-black ${colorClass}">
-                                ${r.type==='expense'?'-':'+'}₩${r.amount.toLocaleString()}
-                            </p>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right"><p class="text-lg font-black ${color}">${r.type==='expense'?'-':'+'}₩${r.amount.toLocaleString()}</p></div>
+                            <button class="delete-btn" onclick="deleteItem(event, '${r.id}')">×</button>
                         </div>
-                        <button class="delete-btn" onclick="deleteItem(event, '${r.id}')">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                        </button>
                     </div>`;
-                
-                listEl.appendChild(itemDiv);
             });
 
-            const netWorth = totalAsset + totalIncome - totalExpense;
-            document.getElementById('total-wealth').innerText = '₩' + netWorth.toLocaleString();
+            document.getElementById('total-wealth').innerText = '₩' + (totalAsset + totalIncome - totalExpense).toLocaleString();
             document.getElementById('stat-asset').innerText = '₩' + totalAsset.toLocaleString();
             document.getElementById('stat-income').innerText = '₩' + totalIncome.toLocaleString();
             document.getElementById('stat-expense').innerText = '₩' + totalExpense.toLocaleString();
@@ -479,69 +454,36 @@
         }
 
         function updateCharts(dist, timeline) {
-            const aCtx = document.getElementById('assetChart').getContext('2d');
-            if(assetChart) assetChart.destroy();
-            
-            if (Object.keys(dist).length > 0) {
+            const aCtx = document.getElementById('assetChart');
+            if (aCtx) {
+                if(assetChart) assetChart.destroy();
                 assetChart = new Chart(aCtx, {
                     type: 'doughnut',
                     data: {
                         labels: Object.keys(dist),
-                        datasets: [{ 
-                            data: Object.values(dist), 
-                            backgroundColor: ['#6366f1', '#10b981', '#fbbf24', '#f43f5e', '#ec4899', '#38bdf8'], 
-                            borderWidth: 0,
-                            hoverOffset: 12
-                        }]
+                        datasets: [{ data: Object.values(dist), backgroundColor: ['#6366f1', '#10b981', '#fbbf24', '#f43f5e', '#38bdf8'], borderWidth: 0 }]
                     },
-                    options: { 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' } } } },
-                        cutout: '70%'
-                    }
+                    options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
                 });
             }
 
-            const eCtx = document.getElementById('expenseChart').getContext('2d');
-            if(expenseChart) expenseChart.destroy();
-            
-            const sortedDates = Object.keys(timeline).sort();
-            if (sortedDates.length > 0) {
-                const dataValues = sortedDates.map(d => timeline[d]);
+            const eCtx = document.getElementById('expenseChart');
+            if (eCtx) {
+                if(expenseChart) expenseChart.destroy();
+                const dates = Object.keys(timeline).sort();
                 expenseChart = new Chart(eCtx, {
                     type: 'line',
                     data: {
-                        labels: sortedDates,
-                        datasets: [{ 
-                            data: dataValues, 
-                            borderColor: '#f43f5e', 
-                            backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            borderWidth: 4,
-                            pointRadius: 0
-                        }]
+                        labels: dates,
+                        datasets: [{ data: dates.map(d => timeline[d]), borderColor: '#f43f5e', tension: 0.4, fill: true, backgroundColor: 'rgba(244, 63, 94, 0.1)' }]
                     },
-                    options: { 
-                        maintainAspectRatio: false, 
-                        scales: { 
-                            y: { display: false }, 
-                            x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } } 
-                        },
-                        plugins: { legend: { display: false } }
-                    }
+                    options: { maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } }
                 });
             }
         }
 
-        // 초기 데이터 로드 및 실행
-        window.onload = () => {
-            const saved = localStorage.getItem('nhgr_asset_v1');
-            records = saved ? JSON.parse(saved) : [];
-            setType('asset');
-            render();
-        };
-
+        // 페이지 로드 즉시 실행
+        window.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
