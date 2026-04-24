@@ -9,21 +9,39 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
         :root { --primary: #1a1f2c; --accent: #3b82f6; --bg: #f8fafc; }
-        body { font-family: 'Pretendard', sans-serif; background-color: var(--bg); color: #0f172a; word-break: keep-all; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background-color: var(--bg); 
+            color: #0f172a; 
+            word-break: keep-all; 
+            -webkit-tap-highlight-color: transparent; 
+            overflow-x: hidden; 
+        }
         .main-gradient { background: linear-gradient(135deg, #1a1f2c 0%, #2d364d 100%); border-radius: 2rem; }
         .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 1.25rem; }
+        
+        /* Swipe Interaction for Mobile */
         .swipe-item { position: relative; overflow: hidden; border-radius: 1.25rem; transition: transform 0.3s ease; touch-action: pan-y; margin-bottom: 0.75rem; }
         .swipe-content { position: relative; z-index: 10; background: white; transition: transform 0.3s ease; border: 1px solid #e2e8f0; border-radius: 1.25rem; cursor: pointer; }
         .swipe-content:active { background: #f1f5f9; }
         .swipe-action { position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; z-index: 5; border-radius: 0 1.25rem 1.25rem 0; cursor: pointer; }
-        .input-premium { width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1.5px solid #e2e8f0; font-size: 15px; font-weight: 600; outline: none; transition: 0.2s; }
+        
+        .input-premium { width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1.5px solid #e2e8f0; font-size: 15px; font-weight: 600; outline: none; transition: 0.2s; background: white; }
         .input-premium:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        
         .btn-primary { background-color: var(--primary); color: white; border-radius: 0.75rem; font-weight: 800; transition: 0.2s; border: none; cursor: pointer; }
         .btn-primary:active { transform: scale(0.98); }
         .btn-edit { background-color: #f59e0b; color: white; }
+        
         .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.1); border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
         .tab-active { background-color: var(--primary) !important; color: white !important; font-weight: 800; border-color: var(--primary) !important; }
+        
+        /* Utility */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
         @media (min-width: 1024px) {
             .pc-delete-btn { display: flex !important; }
             .swipe-action { display: none !important; }
@@ -33,6 +51,7 @@
 </head>
 <body class="antialiased">
     <div class="max-w-6xl mx-auto p-4 md:p-8 min-h-screen">
+        <!-- 상단 헤더 -->
         <header class="main-gradient p-6 md:p-10 text-white shadow-2xl mb-8">
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div class="space-y-4">
@@ -60,37 +79,44 @@
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
+            <!-- 입력 섹션 -->
             <aside class="space-y-6">
-                <div id="input-card" class="glass-card p-6 shadow-xl border-t-4 border-t-blue-500 transition-all duration-300">
+                <div id="input-card" class="glass-card p-6 shadow-xl border-t-4 border-t-blue-500 transition-all duration-300 sticky top-8">
                     <div class="flex justify-between items-center mb-6">
                         <h2 id="input-title" class="text-xl font-black tracking-tight">기록하기</h2>
                         <div class="flex items-center bg-slate-100 rounded-xl p-1 font-mono text-[11px] font-black">
-                            <button onclick="moveMonth(-1)" class="p-2">◀</button>
-                            <span id="current-month" class="px-2"></span>
-                            <button onclick="moveMonth(1)" class="p-2">▶</button>
+                            <button onclick="moveMonth(-1)" class="p-2 hover:bg-white rounded-lg transition-colors">◀</button>
+                            <span id="current-month" class="px-2">2024. 01</span>
+                            <button onclick="moveMonth(1)" class="p-2 hover:bg-white rounded-lg transition-colors">▶</button>
                         </div>
                     </div>
+                    
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-2">
                             <button id="btn-user-h" onclick="toggleUser('남호')" class="py-3 btn-primary text-xs tracking-tighter">남호</button>
-                            <button id="btn-user-w" onclick="toggleUser('가람')" class="py-3 bg-white text-slate-300 border border-slate-100 rounded-xl font-black text-xs tracking-tighter">가람</button>
+                            <button id="btn-user-w" onclick="toggleUser('가람')" class="py-3 bg-white text-slate-300 border border-slate-100 rounded-xl font-black text-xs tracking-tighter transition-all">가람</button>
                         </div>
+                        
                         <div class="flex p-1 bg-slate-100 rounded-xl">
-                            <button id="btn-type-in" onclick="toggleType('수입')" class="flex-1 py-2 rounded-lg font-black text-[11px] bg-white text-primary shadow-sm">수입/자산</button>
-                            <button id="btn-type-out" onclick="toggleType('지출')" class="flex-1 py-2 rounded-lg font-black text-[11px] text-slate-400">지출</button>
+                            <button id="btn-type-in" onclick="toggleType('수입')" class="flex-1 py-2 rounded-lg font-black text-[11px] bg-white text-primary shadow-sm transition-all">수입/자산</button>
+                            <button id="btn-type-out" onclick="toggleType('지출')" class="flex-1 py-2 rounded-lg font-black text-[11px] text-slate-400 transition-all">지출</button>
                         </div>
+                        
                         <div class="grid grid-cols-2 gap-2">
                             <input type="date" id="input-date" class="input-premium text-xs">
                             <input type="number" id="input-amount" placeholder="금액" class="input-premium text-xs font-mono">
                         </div>
+                        
                         <select id="input-cat" onchange="toggleStockFields()" class="input-premium text-xs"></select>
+                        
                         <div id="stock-fields" class="hidden p-4 bg-blue-50/50 border border-blue-100 rounded-xl space-y-2">
                             <input type="text" id="input-ticker" placeholder="티커 (예: AAPL, 005930)" class="input-premium text-xs font-mono uppercase">
                             <input type="number" id="input-qty" placeholder="수량" step="any" class="input-premium text-xs font-mono">
                         </div>
-                        <input type="text" id="input-desc" placeholder="메모" class="input-premium text-xs">
                         
-                        <div class="flex flex-col gap-2">
+                        <input type="text" id="input-desc" placeholder="메모 (선택사항)" class="input-premium text-xs">
+                        
+                        <div class="flex flex-col gap-2 pt-2">
                             <button id="btn-save" onclick="saveData()" class="w-full py-4 btn-primary shadow-lg flex justify-center items-center gap-2">
                                 <span id="save-text">데이터 저장하기</span>
                                 <div id="save-loader" class="spinner hidden" style="border-top-color: white;"></div>
@@ -106,23 +132,25 @@
                 </div>
             </aside>
 
+            <!-- 리스트 섹션 -->
             <main class="space-y-4">
-                <div id="filter-nav" class="flex gap-2 overflow-x-auto py-1 sticky top-0 bg-[#f8fafc]/90 backdrop-blur-md z-30">
+                <div id="filter-nav" class="flex gap-2 overflow-x-auto py-1 hide-scrollbar sticky top-0 bg-[#f8fafc]/90 backdrop-blur-md z-30">
                     <button onclick="setFilter('all')" id="f-all" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm tab-active">전체보기</button>
                     <button onclick="setFilter('income')" id="f-income" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm text-slate-400">수입</button>
                     <button onclick="setFilter('expense')" id="f-expense" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm text-slate-400">지출</button>
                     <button onclick="setFilter('asset')" id="f-asset" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm text-slate-400">자산현황</button>
-                    <button onclick="setFilter('date')" id="f-date" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm text-slate-400 bg-emerald-50">날짜별</button>
+                    <button onclick="setFilter('date')" id="f-date" class="flex-none px-6 py-3 rounded-2xl text-[11px] font-black border border-slate-200 bg-white shadow-sm text-slate-400">날짜별</button>
                 </div>
-                <div id="main-list" class="space-y-3 pb-20"></div>
+                
+                <div id="main-list" class="space-y-3 pb-20">
+                    <!-- 리스트 아이템 동적 삽입 -->
+                </div>
             </main>
         </div>
     </div>
 
     <script>
-        // 로컬 저장을 위해 API URL 대신 로컬 키 사용
-        const STORAGE_KEY = 'nhgr_account_data';
-
+        const STORAGE_KEY = 'nhgr_account_data_v2';
         let dataRecords = [], currentFilter = 'all', viewDate = new Date();
         let exchangeRate = 1400, livePrices = {};
         const state = { user: '남호', type: '수입', editId: null };
@@ -139,7 +167,7 @@
             updateMonthLabel();
             updateCategoryUI();
             fetchRate();
-            loadData(); // 여기서 로컬 데이터를 불러옵니다.
+            loadData();
         };
 
         async function fetchRate() {
@@ -148,33 +176,31 @@
                 if(res && res.rates && res.rates.KRW) {
                     exchangeRate = res.rates.KRW;
                     document.getElementById('rate-display').innerText = exchangeRate.toLocaleString(undefined, {maximumFractionDigits:1});
+                    renderList();
                 }
-            } catch(e) {}
+            } catch(e) { console.error("Rate Fetch Error:", e); }
         }
 
-        // --- 데이터 관리 함수 수정 (localStorage 사용) ---
         function loadData() {
             setLoading(true);
             try {
                 const localData = localStorage.getItem(STORAGE_KEY);
                 dataRecords = localData ? JSON.parse(localData) : [];
                 
-                // 티커가 있는 경우 가격 업데이트 시도
-                const tickers = dataRecords.filter(r => r.ticker).map(r => r.ticker.toUpperCase());
-                const uniqueTickers = Array.from(new Set(tickers));
+                // 티커 가격 업데이트
+                const uniqueTickers = [...new Set(dataRecords.filter(r => r.ticker).map(r => r.ticker.toUpperCase()))];
                 uniqueTickers.forEach(t => fetchPrice(t));
                 
                 renderList();
             } catch(e) {
                 console.error("Load Error:", e);
-                document.getElementById('main-list').innerHTML = `<div class="text-center py-24 text-rose-400">데이터 로드 중 오류가 발생했습니다.</div>`;
+                document.getElementById('main-list').innerHTML = `<div class="text-center py-24 text-rose-400">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
             } finally { setLoading(false); }
         }
 
         function saveToLocal() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(dataRecords));
         }
-        // ---------------------------------------------
 
         async function fetchPrice(ticker) {
             if (!ticker) return;
@@ -189,7 +215,7 @@
                     livePrices[ticker.toUpperCase()] = price;
                     renderList();
                 }
-            } catch(e) {}
+            } catch(e) { console.warn(`Price fetch failed for ${ticker}`); }
         }
 
         function calculateItemValue(r) {
@@ -197,8 +223,12 @@
             const ticker = r.ticker ? r.ticker.toUpperCase() : null;
             const qty = Number(r.qty) || 0;
             const unitPrice = Number(r.amount) || 0;
+            
             let val = qty > 0 ? (unitPrice * qty) : unitPrice;
-            if (ticker && qty > 0 && livePrices[ticker]) val = livePrices[ticker] * qty;
+            if (ticker && qty > 0 && livePrices[ticker]) {
+                val = livePrices[ticker] * qty;
+            }
+            
             return isOverseas ? (val * exchangeRate) : val;
         }
 
@@ -215,6 +245,7 @@
 
                 const dPart = r.date ? r.date.match(/\d+/g) : [];
                 const isTargetMonth = dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM;
+                
                 if (isTargetMonth) {
                     if (isAsset) monthlyAssetIncrease += val;
                     else if (r.type === '지출') monthlyExpense += val;
@@ -234,75 +265,83 @@
                     const selDate = document.getElementById('filter-specific-date').value;
                     if(!selDate) return false;
                     const d = selDate.split('-');
-                    return r.date === d[0] + ". " + d[1] + ". " + d[2] + ".";
+                    return r.date === `${d[0]}. ${d[1]}. ${d[2]}.`;
                 }
                 const dPart = r.date ? r.date.match(/\d+/g) : [];
                 const isCurrentMonth = dPart && dPart.length >= 2 && parseInt(dPart[0]) === vY && parseInt(dPart[1]) === vM;
+                
                 if (currentFilter === 'all') return !isAssetItem && isCurrentMonth;
                 if (currentFilter === 'income') return r.type === '수입' && !isAssetItem && isCurrentMonth;
                 if (currentFilter === 'expense') return r.type === '지출' && isCurrentMonth;
                 return false;
             });
 
-            filtered.sort((a, b) => b.date.replace(/[^0-9]/g, '') - a.date.replace(/[^0-9]/g, ''));
+            filtered.sort((a, b) => b.date.localeCompare(a.date));
 
             const container = document.getElementById('main-list');
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="text-center py-24 text-slate-300 font-bold">내역이 존재하지 않습니다</div>';
+                container.innerHTML = '<div class="text-center py-24 text-slate-300 font-bold">내역이 없습니다</div>';
                 return;
             }
 
-            let listHtml = "";
-            filtered.forEach(r => {
+            container.innerHTML = filtered.map(r => {
                 const val = calculateItemValue(r);
-                const userColor = (r.user_name === '남호' || r.user_name === '남편') ? 'text-blue-500' : 'text-purple-500';
-                let displayName = r.user_name;
+                const isHusband = (r.user_name === '남호' || r.user_name === '남편');
+                const userColor = isHusband ? 'text-blue-500' : 'text-purple-500';
                 const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
                 let typeColor = r.type === '지출' ? 'text-rose-500' : 'text-emerald-500';
                 let sign = r.type === '지출' ? '-' : '+';
                 if(isAsset) { typeColor = "text-emerald-500"; sign = ""; }
 
-                const tickerStr = r.ticker ? ' • ' + r.ticker : '';
-                const qtyStr = r.qty ? ' • ' + r.qty + '주' : '';
-                
-                listHtml += `
+                return `
                 <div class="swipe-item" id="item-${r.id}">
-                    <div class="swipe-action" data-id="${r.id}">삭제</div>
-                    <div class="swipe-content p-5 flex justify-between items-center relative" data-id="${r.id}">
-                        <div class="flex-1 pointer-events-none">
+                    <div class="swipe-action" onclick="globalDeleteItem('${r.id}')">삭제</div>
+                    <div class="swipe-content p-5 flex justify-between items-center relative" onclick="startEdit('${r.id}')">
+                        <div class="flex-1">
                             <div class="flex items-center gap-2 mb-1 text-[10px] font-black uppercase">
-                                <span class="${userColor}">${displayName}</span>
+                                <span class="${userColor}">${r.user_name}</span>
                                 <span class="text-slate-300">|</span><span class="text-slate-500">${r.category}</span>
                                 ${isAsset ? '<span class="ml-1 px-1 bg-emerald-100 text-emerald-600 rounded-sm">ASSET</span>' : ''}
                             </div>
                             <p class="font-bold text-slate-800 text-[15px]">${r.description || r.category}</p>
-                            <p class="text-[11px] font-mono font-bold text-slate-400">${r.date}${tickerStr}${qtyStr}</p>
+                            <p class="text-[11px] font-mono font-bold text-slate-400">
+                                ${r.date}${r.ticker ? ' • ' + r.ticker : ''}${r.qty ? ' • ' + r.qty + '주' : ''}
+                            </p>
                         </div>
                         <div class="text-right flex items-center gap-4">
-                            <p class="text-[17px] font-black font-mono ${typeColor} pointer-events-none">${sign}₩${Math.round(val).toLocaleString()}</p>
-                            <button class="pc-delete-btn hidden w-8 h-8 items-center justify-center rounded-full bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all" data-id="${r.id}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            <p class="text-[17px] font-black font-mono ${typeColor}">${sign}₩${Math.round(val).toLocaleString()}</p>
+                            <button class="pc-delete-btn hidden w-8 h-8 items-center justify-center rounded-full bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all" onclick="event.stopPropagation(); globalDeleteItem('${r.id}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                             </button>
                         </div>
                     </div>
                 </div>`;
-            });
-            container.innerHTML = listHtml;
-            bindEvents();
+            }).join('');
+            
+            bindSwipeEvents();
         }
 
-        function bindEvents() {
-            document.querySelectorAll('.swipe-content').forEach(content => {
-                content.onclick = function() { startEdit(this.getAttribute('data-id')); };
-            });
-            document.querySelectorAll('.swipe-action, .pc-delete-btn').forEach(btn => {
-                btn.onclick = function(e) { e.stopPropagation(); globalDeleteItem(this.getAttribute('data-id')); };
-            });
+        function bindSwipeEvents() {
             document.querySelectorAll('.swipe-item').forEach(item => {
+                let startX = 0;
                 const id = item.id.replace('item-', '');
-                item.ontouchstart = e => handleStart(e, id);
-                item.ontouchmove = e => handleMove(e, id);
-                item.ontouchend = e => handleEnd(e, id);
+                const content = item.querySelector('.swipe-content');
+
+                item.ontouchstart = e => { startX = e.touches[0].clientX; };
+                item.ontouchmove = e => {
+                    if(window.innerWidth >= 1024) return;
+                    const diff = startX - e.touches[0].clientX;
+                    if (diff > 10 && diff < 120) {
+                        content.style.transition = 'none';
+                        content.style.transform = `translateX(-${diff}px)`;
+                    }
+                };
+                item.ontouchend = e => {
+                    if(window.innerWidth >= 1024) return;
+                    const diff = startX - e.changedTouches[0].clientX;
+                    content.style.transition = 'transform 0.3s ease';
+                    content.style.transform = (diff > 60) ? "translateX(-80px)" : "translateX(0)";
+                };
             });
         }
 
@@ -313,6 +352,7 @@
             toggleUser(r.user_name);
             const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
             toggleType(isAsset ? '수입' : r.type); 
+            
             const dPart = r.date.match(/\d+/g);
             if(dPart && dPart.length === 3) {
                 document.getElementById('input-date').value = `${dPart[0]}-${dPart[1].padStart(2, '0')}-${dPart[2].padStart(2, '0')}`;
@@ -358,7 +398,8 @@
         function saveData() {
             const dateVal = document.getElementById('input-date').value;
             const amountVal = document.getElementById('input-amount').value;
-            if(!dateVal || !amountVal) return alert("필수 항목을 입력하세요.");
+            if(!dateVal || !amountVal) return alert("날짜와 금액은 필수입니다.");
+            
             const d = dateVal.split('-');
             const cat = document.getElementById('input-cat').value;
             const isAsset = categorySet.자산.includes(cat);
@@ -376,8 +417,8 @@
             };
 
             if (state.editId) {
-                const index = dataRecords.findIndex(r => String(r.id) === String(state.editId));
-                if (index !== -1) dataRecords[index] = payload;
+                const idx = dataRecords.findIndex(r => String(r.id) === String(state.editId));
+                if (idx !== -1) dataRecords[idx] = payload;
                 cancelEdit();
             } else {
                 dataRecords.push(payload);
@@ -388,27 +429,8 @@
             }
 
             saveToLocal();
+            if(payload.ticker) fetchPrice(payload.ticker);
             renderList();
-        }
-
-        let startX = 0;
-        function handleStart(e, id) { startX = e.touches[0].clientX; }
-        function handleMove(e, id) {
-            if(window.innerWidth >= 1024) return;
-            const diff = startX - e.touches[0].clientX;
-            const content = document.querySelector(`#item-${id} .swipe-content`);
-            if (content && diff > 10 && diff < 120) {
-                content.style.transition = 'none';
-                content.style.transform = `translateX(-${diff}px)`;
-            }
-        }
-        function handleEnd(e, id) {
-            if(window.innerWidth >= 1024) return;
-            const diff = startX - e.changedTouches[0].clientX;
-            const content = document.querySelector(`#item-${id} .swipe-content`);
-            if(!content) return;
-            content.style.transition = 'transform 0.3s ease';
-            content.style.transform = (diff > 60) ? "translateX(-80px)" : "translateX(0)";
         }
 
         function toggleUser(u) {
@@ -419,8 +441,8 @@
 
         function toggleType(t) {
             state.type = t;
-            document.getElementById('btn-type-in').className = `flex-1 py-2 rounded-lg font-black text-[11px] ${t === '수입' ? 'bg-white text-primary shadow-sm' : 'text-slate-400'}`;
-            document.getElementById('btn-type-out').className = `flex-1 py-2 rounded-lg font-black text-[11px] ${t === '지출' ? 'bg-white text-primary shadow-sm' : 'text-slate-400'}`;
+            document.getElementById('btn-type-in').className = `flex-1 py-2 rounded-lg font-black text-[11px] transition-all ${t === '수입' ? 'bg-white text-primary shadow-sm' : 'text-slate-400'}`;
+            document.getElementById('btn-type-out').className = `flex-1 py-2 rounded-lg font-black text-[11px] transition-all ${t === '지출' ? 'bg-white text-primary shadow-sm' : 'text-slate-400'}`;
             updateCategoryUI();
         }
 
@@ -434,7 +456,7 @@
         }
 
         function toggleStockFields() {
-            const isStock = document.getElementById('input-cat').value.indexOf("주식") !== -1;
+            const isStock = document.getElementById('input-cat').value.includes("주식");
             document.getElementById('stock-fields').classList.toggle('hidden', !isStock);
         }
 
@@ -442,22 +464,24 @@
             currentFilter = f;
             ['all', 'income', 'expense', 'asset', 'date'].forEach(key => {
                 const el = document.getElementById('f-' + key);
-                if(f === key) { el.classList.add('tab-active'); el.classList.remove('text-slate-400'); }
-                else { el.classList.remove('tab-active'); el.classList.add('text-slate-400'); }
+                if(f === key) el.classList.add('tab-active');
+                else el.classList.remove('tab-active');
             });
             document.getElementById('date-picker-box').classList.toggle('hidden', f !== 'date');
             renderList();
         }
 
         function moveMonth(d) { viewDate.setMonth(viewDate.getMonth() + d); updateMonthLabel(); renderList(); }
+        
         function updateMonthLabel() { 
             document.getElementById('current-month').innerText = `${viewDate.getFullYear()}. ${String(viewDate.getMonth() + 1).padStart(2, '0')}`; 
         }
+
         function setLoading(b) { 
             const dot = document.getElementById('status-dot');
             if(dot) dot.className = b ? "w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" : "w-1.5 h-1.5 bg-emerald-500 rounded-full";
             const txt = document.getElementById('status-text');
-            if(txt) txt.innerText = b ? "LOADING..." : "LOCAL STORAGE";
+            if(txt) txt.innerText = b ? "SYNCING..." : "LOCAL STORAGE";
         }
     </script>
 </body>
