@@ -28,7 +28,7 @@
             border-radius: 1.5rem;
             border: 1px solid #e2e8f0;
             position: relative;
-            z-index: 10;
+            z-index: 20; /* 버튼 클릭 보장을 위해 우선순위 상향 */
         }
 
         .btn-active { background-color: var(--primary) !important; color: white !important; font-weight: 800; }
@@ -43,6 +43,8 @@
         .swipe-content { 
             background: white; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1.25rem;
             cursor: pointer;
+            position: relative;
+            z-index: 5;
         }
 
         .spinner { 
@@ -54,14 +56,14 @@
         #filter-nav {
             position: sticky;
             top: 0;
-            z-index: 50;
+            z-index: 100; /* 필터가 리스트보다 위에 오도록 */
             background: var(--bg);
             padding: 0.5rem 0;
         }
         
         button, select, input {
             cursor: pointer;
-            touch-action: manipulation; /* 모바일 터치 반응성 향상 */
+            touch-action: manipulation;
         }
     </style>
 </head>
@@ -71,8 +73,8 @@
             <div class="flex items-center gap-2">
                 <span class="px-2 py-0.5 bg-blue-500/30 text-blue-300 text-[10px] font-black rounded border border-blue-500/30">CLOUD</span>
                 <div id="sync-status" class="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                    <span id="status-dot" class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                    <span id="status-text">연결됨</span>
+                    <span id="status-dot" class="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                    <span id="status-text">연결 중...</span>
                 </div>
             </div>
             <h1 id="total-wealth" class="text-4xl font-black font-mono">₩0</h1>
@@ -94,7 +96,7 @@
                     <h2 id="input-title" class="text-lg font-black">기록하기</h2>
                     <div class="flex items-center bg-slate-100 rounded-lg p-1 text-[11px] font-bold">
                         <button onclick="window.moveMonth(-1)" class="p-1.5">◀</button>
-                        <span id="current-month" class="px-2">2024. 01</span>
+                        <span id="current-month" class="px-2 text-slate-700">2024. 01</span>
                         <button onclick="window.moveMonth(1)" class="p-1.5">▶</button>
                     </div>
                 </div>
@@ -149,8 +151,17 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
+        // [주의] GitHub에 배포할 때는 아래 객체에 실제 Firebase 프로젝트 설정값을 입력해야 합니다.
+        // 현재는 Canvas 환경 변수가 있으면 사용하고 없으면 빈 객체를 참조합니다.
+        let config = {};
+        try {
+            config = JSON.parse(__firebase_config);
+        } catch(e) {
+            console.error("Firebase Config 미검출. 실제 설정값을 하드코딩하세요.");
+            // config = { apiKey: "...", authDomain: "...", ... }; // <--- 여기에 입력
+        }
+
+        const app = initializeApp(config);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'nhgr-portfolio';
@@ -165,22 +176,22 @@
             '자산': ['저축/예금', '주식 (해외)', '주식 (국내)', '보증금', '연금/퇴직금', '청약']
         };
 
-        // 초기화 및 이벤트 바인딩
+        // 초기화
         window.addEventListener('load', async () => {
             document.getElementById('input-date').valueAsDate = new Date();
             window.updateMonthLabel();
             window.updateCategoryUI();
             fetchRate();
             
-            // 인증 시작
             try {
+                // Canvas 환경 대응 (토큰 우선)
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
             } catch (err) {
-                console.error("인증 실패:", err);
+                console.error("인증 에러:", err);
             }
         });
 
@@ -188,6 +199,7 @@
             if (u) { 
                 user = u; 
                 document.getElementById('status-text').innerText = "연결됨";
+                document.getElementById('status-dot').className = "w-1.5 h-1.5 bg-emerald-500 rounded-full";
                 initSync(); 
             }
         });
@@ -209,7 +221,7 @@
                 dataRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 render();
             }, (err) => {
-                console.error("데이터 동기화 에러:", err);
+                console.error("동기화 실패:", err);
             });
         }
 
@@ -230,7 +242,7 @@
             });
 
             document.getElementById('total-wealth').innerText = '₩' + Math.round(total).toLocaleString();
-            document.getElementById('flow-display').innerText = '+₩' + Math.round(flowAsset - flowExp).toLocaleString();
+            document.getElementById('flow-display').innerText = (flowAsset - flowExp >= 0 ? '+' : '-') + '₩' + Math.abs(Math.round(flowAsset - flowExp)).toLocaleString();
 
             const filtered = dataRecords.filter(r => {
                 const isAsset = r.type === '자산' || categorySet.자산.includes(r.category);
@@ -245,7 +257,7 @@
 
             const listArea = document.getElementById('main-list');
             if(filtered.length === 0) {
-                listArea.innerHTML = '<p class="text-center py-20 text-slate-300 font-bold">표시할 데이터가 없습니다</p>';
+                listArea.innerHTML = '<p class="text-center py-20 text-slate-300 font-bold">내역이 없습니다</p>';
                 return;
             }
 
@@ -274,9 +286,9 @@
             `).join('');
         }
 
-        // 글로벌 함수 바인딩 (HTML에서 직접 호출 가능하도록)
+        // 글로벌 바인딩 (window 객체에 명시적으로 할당해야 onclick이 작동함)
         window.saveData = async () => {
-            if (!user) return;
+            if (!user) { alert("연결 중입니다. 잠시만 기다려주세요."); return; }
             const amt = document.getElementById('input-amount').value;
             if(!amt) return;
             
@@ -284,7 +296,8 @@
             btn.disabled = true;
             document.getElementById('save-loader').classList.remove('hidden');
 
-            const date = document.getElementById('input-date').value.split('-');
+            const dateVal = document.getElementById('input-date').value || new Date().toISOString().split('T')[0];
+            const dateParts = dateVal.split('-');
             const cat = document.getElementById('input-cat').value;
             const id = state.editId || Date.now().toString();
 
@@ -294,10 +307,10 @@
                     type: state.type,
                     category: cat,
                     amount: Number(amt),
-                    date: `${date[0]}. ${date[1]}. ${date[2]}.`,
+                    date: `${dateParts[0]}. ${dateParts[1]}. ${dateParts[2]}.`,
                     description: document.getElementById('input-desc').value,
-                    ticker: document.getElementById('input-ticker').value,
-                    qty: document.getElementById('input-qty').value,
+                    ticker: document.getElementById('input-ticker').value || "",
+                    qty: document.getElementById('input-qty').value || "",
                     ts: Date.now()
                 });
                 if(state.editId) window.cancelEdit();
@@ -305,14 +318,14 @@
                     document.getElementById('input-amount').value = '';
                     document.getElementById('input-desc').value = '';
                 }
-            } catch(e) { console.error("저장 실패:", e); }
+            } catch(e) { alert("저장 실패: " + e.message); }
             btn.disabled = false;
             document.getElementById('save-loader').classList.add('hidden');
         };
 
         window.deleteItem = async (id) => {
             if (!user) return;
-            if(confirm("이 내역을 삭제할까요?")) {
+            if(confirm("정말 삭제하시겠습니까?")) {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'account_book', id));
             }
         };
@@ -333,6 +346,7 @@
         window.updateCategoryUI = () => {
             const cats = state.type === '수입' ? categorySet.수입.concat(categorySet.자산) : categorySet.지출;
             document.getElementById('input-cat').innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+            window.toggleStockFields();
         };
 
         window.setFilter = (f) => {
