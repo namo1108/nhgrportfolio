@@ -19,11 +19,13 @@
         .filter-btn { background: rgba(30, 41, 59, 0.6); color: #64748b; padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 700; border: 1px solid transparent; transition: all 0.2s; }
         .filter-btn.active { background: #6366f1; color: white; border-color: transparent; }
         
-        .list-item { background: rgba(30, 41, 59, 0.3); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 18px 24px; margin-bottom: 12px; transition: all 0.2s; border-left: 4px solid transparent; position: relative; }
+        .list-item { background: rgba(30, 41, 59, 0.3); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 18px 24px; margin-bottom: 12px; transition: all 0.2s; border-left: 4px solid transparent; position: relative; cursor: pointer; }
         .list-item.type-asset { border-left-color: #6366f1; }
         .list-item.type-expense { border-left-color: #f43f5e; }
+        .list-item:hover { background: rgba(30, 41, 59, 0.5); transform: translateY(-2px); }
         
-        input, select { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; width: 100%; color: #1e293b; font-size: 14px; }
+        input, select { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; width: 100%; color: #1e293b; font-size: 14px; outline: none; }
+        input:focus { border-color: #6366f1; ring: 2px ring-indigo-500; }
         label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; }
         
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
@@ -105,7 +107,7 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label>티커 (AAPL / 005930)</label>
-                                    <input type="text" id="i-ticker" placeholder="입력 후 외부 클릭" onblur="fetchSingleStockPrice()">
+                                    <input type="text" id="i-ticker" placeholder="입력 후 엔터" onkeydown="if(event.key==='Enter') fetchSingleStockPrice()" onblur="fetchSingleStockPrice()">
                                 </div>
                                 <div>
                                     <label>보유 수량</label>
@@ -167,26 +169,37 @@
             expense: ['생활비', '식비/카페', '문화/여가', '보험', '교통/통신', '쇼핑/기타']
         };
 
-        // 주가 가져오기 (CORS 우회 프록시 사용)
+        // 주가 가져오기 핵심 로직 (프록시 이중화 및 재시도)
         async function getLivePrice(ticker) {
             let symbol = ticker.trim().toUpperCase();
             if (/^\d{6}$/.test(symbol)) symbol += ".KS";
             
+            const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d&_=${Date.now()}`;
+            
+            // 시도 1: AllOrigins 프록시
             try {
-                // allorigins 프록시 사용 - 더 안정적임
-                const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d&_=${Date.now()}`;
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`);
                 const proxyData = await res.json();
                 const data = JSON.parse(proxyData.contents);
-                
-                if (data.chart && data.chart.result) {
+                if (data.chart?.result?.[0]?.meta?.regularMarketPrice) {
                     return data.chart.result[0].meta.regularMarketPrice;
                 }
-                return null;
             } catch (e) {
-                console.error("주가 로드 실패:", ticker, e);
-                return null;
+                console.warn(`AllOrigins 실패: ${symbol}, 시도 2 시작...`);
             }
+
+            // 시도 2: CorsProxy.io (대체재)
+            try {
+                const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`);
+                const data = await res.json();
+                if (data.chart?.result?.[0]?.meta?.regularMarketPrice) {
+                    return data.chart.result[0].meta.regularMarketPrice;
+                }
+            } catch (e) {
+                console.error(`모든 프록시 주가 로드 실패: ${symbol}`, e);
+            }
+            
+            return null;
         }
 
         window.fetchSingleStockPrice = async () => {
@@ -194,14 +207,19 @@
             const status = document.getElementById('price-status');
             if(!ticker) return;
             
-            status.innerText = "로딩 중...";
+            status.innerText = "⏳ 로딩 중...";
+            status.className = "text-[8px] font-bold text-amber-500";
+            
             const price = await getLivePrice(ticker);
+            
             if(price) {
                 document.getElementById('i-price').value = price;
-                status.innerText = "로드 성공";
+                status.innerText = "✅ 로드 성공";
+                status.className = "text-[8px] font-bold text-emerald-500";
                 calcStockTotal();
             } else {
-                status.innerText = "로드 실패 (수동 입력 필요)";
+                status.innerText = "❌ 로드 실패 (수동 입력)";
+                status.className = "text-[8px] font-bold text-rose-500";
             }
         };
 
@@ -211,7 +229,6 @@
             const qty = parseFloat(document.getElementById('i-quantity').value) || 0;
             const price = parseFloat(document.getElementById('i-price').value) || 0;
             
-            // 해외주식은 환율 곱하기
             let finalKrw = (cat === '주식(해외)') ? Math.round(qty * price * USD_RATE) : Math.round(qty * price);
             
             document.getElementById('i-display-amount').value = `₩${finalKrw.toLocaleString()}`;
@@ -229,7 +246,6 @@
                     const latestPrice = await getLivePrice(r.ticker);
                     if (latestPrice) {
                         r.price = latestPrice;
-                        // 평가 금액 강제 재계산
                         r.amount = r.category === '주식(해외)' ? Math.round(r.quantity * latestPrice * USD_RATE) : Math.round(r.quantity * latestPrice);
                     }
                 }
@@ -331,6 +347,7 @@
 
         window.resetForm = () => {
             document.getElementById('edit-id').value = "";
+            document.getElementById('form-title').innerText = "내역 추가";
             document.querySelectorAll('input').forEach(i => i.type !== 'date' && (i.value = ""));
             document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
             document.getElementById('price-status').innerText = "";
@@ -402,36 +419,24 @@
         function updateCharts(dist, timeline) {
             const aCtx = document.getElementById('assetChart');
             if(assetChart) assetChart.destroy();
-            assetChart = new Chart(aCtx, {
-                type: 'doughnut',
-                data: { labels: Object.keys(dist), datasets: [{ data: Object.values(dist), backgroundColor: ['#6366f1', '#10b981', '#fbbf24', '#f43f5e', '#38bdf8', '#8b5cf6', '#ec4899'] }] },
-                options: { 
-                    maintainAspectRatio: false, 
-                    plugins: { 
-                        legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' } } },
-                        title: { display: true, text: '자산 비중 (ASSET ALLOCATION)', color: '#f1f5f9', font: { size: 12, weight: '900' } }
-                    }, 
-                    cutout: '75%' 
-                }
-            });
+            if(Object.keys(dist).length > 0) {
+                assetChart = new Chart(aCtx, {
+                    type: 'doughnut',
+                    data: { labels: Object.keys(dist), datasets: [{ data: Object.values(dist), backgroundColor: ['#6366f1', '#10b981', '#fbbf24', '#f43f5e', '#38bdf8', '#8b5cf6', '#ec4899'] }] },
+                    options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' } } }, title: { display: true, text: '자산 비중', color: '#f1f5f9', font: { size: 12, weight: '900' } } }, cutout: '75%' }
+                });
+            }
+            
             const eCtx = document.getElementById('expenseChart');
             if(expenseChart) expenseChart.destroy();
             const dates = Object.keys(timeline).sort();
-            expenseChart = new Chart(eCtx, {
-                type: 'line',
-                data: { labels: dates, datasets: [{ label: '지출액', data: dates.map(d => timeline[d]), borderColor: '#f43f5e', tension: 0.4, fill: true, backgroundColor: 'rgba(244, 63, 94, 0.1)', borderWidth: 3, pointRadius: 4 }] },
-                options: { 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 9 } } }, 
-                        y: { display: false } 
-                    }, 
-                    plugins: { 
-                        legend: { display: false },
-                        title: { display: true, text: '지출 추이 (EXPENSE TREND)', color: '#f1f5f9', font: { size: 12, weight: '900' } }
-                    } 
-                }
-            });
+            if(dates.length > 0) {
+                expenseChart = new Chart(eCtx, {
+                    type: 'line',
+                    data: { labels: dates, datasets: [{ label: '지출액', data: dates.map(d => timeline[d]), borderColor: '#f43f5e', tension: 0.4, fill: true, backgroundColor: 'rgba(244, 63, 94, 0.1)', borderWidth: 3, pointRadius: 4 }] },
+                    options: { maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 9 } } }, y: { display: false } }, plugins: { legend: { display: false }, title: { display: true, text: '지출 추이', color: '#f1f5f9', font: { size: 12, weight: '900' } } } }
+                });
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -440,7 +445,6 @@
             resetForm();
             setType('asset');
             render();
-            // 페이지 진입 시 자동으로 주가 갱신 시도
             setTimeout(refreshStockPrices, 1000);
         });
     </script>
