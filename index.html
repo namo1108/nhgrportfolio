@@ -10,7 +10,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
         body { font-family: 'Pretendard', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; overflow-x: hidden; }
         
-        /* Glassmorphism & UI Elements */
         .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; }
         .input-card { background: white; border-radius: 24px; color: #1e293b; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
         
@@ -20,102 +19,77 @@
         .filter-btn { background: rgba(30, 41, 59, 0.6); color: #64748b; padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 700; border: 1px solid transparent; transition: all 0.2s; }
         .filter-btn.active { background: #6366f1; color: white; border-color: transparent; }
         
-        .list-item { background: rgba(30, 41, 59, 0.3); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 18px 24px; margin-bottom: 12px; transition: all 0.2s; border-left: 4px solid transparent; }
+        .list-item { background: rgba(30, 41, 59, 0.3); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 18px 24px; margin-bottom: 12px; transition: all 0.2s; border-left: 4px solid transparent; position: relative; }
         .list-item.type-asset { border-left-color: #6366f1; }
         .list-item.type-expense { border-left-color: #f43f5e; }
-        .list-item:hover { background: rgba(30, 41, 59, 0.5); transform: translateY(-2px); }
         
-        input, select { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; width: 100%; color: #1e293b; font-size: 14px; transition: border-color 0.2s; }
-        input:focus { border-color: #6366f1; outline: none; }
-        label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; margin-left: 4px; }
+        input, select { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; width: 100%; color: #1e293b; font-size: 14px; }
+        label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; }
         
-        .chart-container { height: 220px; position: relative; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
         .status-online { background: #10b981; box-shadow: 0 0 8px #10b981; }
-        
-        /* Animations */
         .loading-spinner { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
 
     <div class="max-w-7xl mx-auto">
-        <!-- Header Section -->
+        <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-8">
             <div>
                 <div class="flex items-center gap-2 mb-2">
                     <span class="text-[10px] font-black tracking-widest text-indigo-400 uppercase">Total Net Worth</span>
-                    <span class="flex items-center text-[9px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
+                    <span id="update-indicator" class="flex items-center text-[9px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
                         <span class="status-dot status-online"></span> LIVE MARKET CONNECTED
                     </span>
                 </div>
                 <div class="flex items-center gap-4">
                     <h1 class="text-6xl font-black tracking-tighter" id="total-wealth">₩0</h1>
-                    <button onclick="refreshStockPrices()" class="p-3 glass-card hover:bg-slate-700 transition-colors" title="주가 새로고침">
+                    <button onclick="refreshStockPrices()" title="전체 주가 새로고침" class="p-3 glass-card hover:bg-slate-700 transition-colors">
                         <svg id="refresh-icon" class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     </button>
                 </div>
             </div>
             
             <div class="flex flex-wrap gap-4 w-full md:w-auto">
-                <div class="glass-card px-6 py-4 flex-1 min-w-[150px] border-b-4 border-indigo-500">
+                <div class="glass-card px-6 py-4 flex-1 min-w-[140px] border-b-4 border-indigo-500">
                     <p class="text-[10px] text-slate-500 font-bold mb-1 uppercase">자산 총액</p>
                     <p class="text-xl font-black text-indigo-400" id="stat-asset">₩0</p>
                 </div>
-                <div class="glass-card px-6 py-4 flex-1 min-w-[150px] border-b-4 border-emerald-500">
+                <div class="glass-card px-6 py-4 flex-1 min-w-[140px] border-b-4 border-emerald-500">
                     <p class="text-[10px] text-slate-500 font-bold mb-1 uppercase">이번달 수입</p>
                     <p class="text-xl font-black text-emerald-400" id="stat-income">₩0</p>
                 </div>
-                <div class="glass-card px-6 py-4 flex-1 min-w-[150px] border-b-4 border-rose-500">
+                <div class="glass-card px-6 py-4 flex-1 min-w-[140px] border-b-4 border-rose-500">
                     <p class="text-[10px] text-slate-500 font-bold mb-1 uppercase">이번달 지출</p>
                     <p class="text-xl font-black text-rose-400" id="stat-expense">₩0</p>
-                </div>
-                <div class="glass-card px-6 py-4 flex-1 min-w-[150px] border-b-4 border-sky-500">
-                    <p class="text-[10px] text-slate-500 font-bold mb-1 uppercase">현재 환율 (USD)</p>
-                    <p class="text-xl font-black text-sky-400">₩1,481.50</p>
                 </div>
             </div>
         </header>
 
-        <!-- Charts Section -->
+        <!-- Charts -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            <div class="glass-card p-6">
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
-                    Asset Allocation
-                </p>
-                <div class="chart-container"><canvas id="assetChart"></canvas></div>
-            </div>
-            <div class="glass-card p-6">
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                    Expense Trend (Neon Curve)
-                </p>
-                <div class="chart-container"><canvas id="expenseChart"></canvas></div>
-            </div>
+            <div class="glass-card p-6 h-[300px]"><canvas id="assetChart"></canvas></div>
+            <div class="glass-card p-6 h-[300px]"><canvas id="expenseChart"></canvas></div>
         </div>
 
-        <!-- Main Content -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Form Area -->
+            <!-- Form Side -->
             <aside class="lg:col-span-4">
                 <div class="input-card">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-black tracking-tight" id="form-title">내역 추가</h2>
-                        <button onclick="resetForm()" class="text-[11px] text-slate-400 font-bold uppercase hover:text-indigo-600 transition-colors">초기화 ↺</button>
+                        <button onclick="resetForm()" class="text-[11px] text-slate-400 font-bold uppercase">초기화 ↺</button>
                     </div>
                     
                     <div class="space-y-5">
                         <input type="hidden" id="edit-id">
-                        
                         <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
                             <button onclick="setWriter('남호')" id="w-namho" class="btn-writer py-3 active">남호</button>
                             <button onclick="setWriter('가람')" id="w-garam" class="btn-writer py-3">가람</button>
                         </div>
-                        
                         <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
                             <button onclick="setType('asset')" id="t-asset" class="btn-type py-3 active">자산/수입</button>
                             <button onclick="setType('expense')" id="t-expense" class="btn-type py-3">지출/소비</button>
@@ -126,66 +100,56 @@
                             <select id="i-category" onchange="handleCategoryChange()"></select>
                         </div>
                         
-                        <!-- Stock Input Fields -->
+                        <!-- 주식 입력 섹션 -->
                         <div id="stock-group" class="space-y-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 hidden">
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label>티커 (AAPL / 005930)</label>
-                                    <input type="text" id="i-ticker" placeholder="입력 후 탭" onblur="fetchSingleStockPrice()">
+                                    <input type="text" id="i-ticker" placeholder="입력 후 외부 클릭" onblur="fetchSingleStockPrice()">
                                 </div>
                                 <div>
                                     <label>보유 수량</label>
-                                    <input type="number" id="i-quantity" placeholder="0" oninput="calcTotal()">
+                                    <input type="number" id="i-quantity" placeholder="0" oninput="calcStockTotal()">
                                 </div>
                             </div>
                             <div>
-                                <label class="flex justify-between">
-                                    현재가 (단가)
-                                    <span id="price-status" class="text-[9px] font-bold text-indigo-500"></span>
+                                <label class="flex justify-between items-center">
+                                    현재가 (실시간 자동 로드)
+                                    <span id="price-status" class="text-[8px] font-bold text-indigo-400"></span>
                                 </label>
-                                <input type="number" id="i-price" step="0.01" placeholder="0" oninput="calcTotal()">
+                                <input type="number" id="i-price" step="0.01" placeholder="0" oninput="calcStockTotal()">
                             </div>
                             <div>
-                                <label>평가 금액 (원화)</label>
+                                <label>평가 금액 (원화 환산)</label>
                                 <input type="text" id="i-display-amount" readonly class="bg-indigo-100 font-black text-indigo-700 border-none" placeholder="₩0">
                             </div>
                             <input type="hidden" id="i-amount-val">
                         </div>
 
-                        <!-- Normal Input Field -->
                         <div id="normal-group">
                             <label>금액 (₩)</label>
                             <input type="number" id="i-amount" placeholder="0">
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label>날짜</label>
-                                <input type="date" id="i-date">
-                            </div>
-                            <div>
-                                <label>항목/메모</label>
-                                <input type="text" id="i-name" placeholder="내용">
-                            </div>
+                            <div><label>날짜</label><input type="date" id="i-date"></div>
+                            <div><label>항목명/메모</label><input type="text" id="i-name" placeholder="내용"></div>
                         </div>
                         
-                        <button onclick="save()" class="w-full py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-indigo-600 transition-all shadow-xl active:scale-95 text-lg mt-2">데이터 저장하기</button>
+                        <button onclick="save()" class="w-full py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-indigo-600 transition-all text-lg mt-2 shadow-lg">기록 저장</button>
                     </div>
                 </div>
             </aside>
 
-            <!-- List Area -->
+            <!-- List Side -->
             <section class="lg:col-span-8">
-                <div class="flex gap-3 mb-8 overflow-x-auto no-scrollbar pb-2">
+                <div class="flex gap-3 mb-8 overflow-x-auto no-scrollbar">
                     <button onclick="setFilter('all')" id="f-all" class="filter-btn active">전체보기</button>
                     <button onclick="setFilter('asset-only')" id="f-asset-only" class="filter-btn">자산현황</button>
                     <button onclick="setFilter('income-only')" id="f-income-only" class="filter-btn">수입내역</button>
                     <button onclick="setFilter('expense')" id="f-expense" class="filter-btn">지출내역</button>
                 </div>
-                
-                <div id="main-list" class="space-y-3 pb-20">
-                    <!-- List items injected here -->
-                </div>
+                <div id="main-list" class="space-y-3 pb-24"></div>
             </section>
         </div>
     </div>
@@ -199,61 +163,86 @@
         let assetChart, expenseChart;
 
         const categories = {
-            asset: ['급여(수입)', '기타 수입', '이자/배당', '주식(국내)', '주식(해외)', '주택청약', '현금/예적금', '보증금'],
-            expense: ['생활비', '식비/카페', '문화/여가', '금융/대출', '보험', '교통/통신', '쇼핑/기타']
+            asset: ['급여(수입)', '기타 수입', '주식(국내)', '주식(해외)', '현금/예적금', '보증금', '연금/퇴직금', '주택청약'],
+            expense: ['생활비', '식비/카페', '문화/여가', '보험', '교통/통신', '쇼핑/기타']
         };
 
-        // 1. 단일 종목 시세 조회 (입력 시)
-        window.fetchSingleStockPrice = async () => {
-            const tickerInput = document.getElementById('i-ticker');
-            let ticker = tickerInput.value.trim().toUpperCase();
-            if (!ticker) return;
-            if (/^\d{6}$/.test(ticker)) ticker += ".KS";
-            
-            const statusEl = document.getElementById('price-status');
-            statusEl.innerText = "조회 중...";
+        // 주가 가져오기 (CORS 우회 프록시 사용)
+        async function getLivePrice(ticker) {
+            let symbol = ticker.trim().toUpperCase();
+            if (/^\d{6}$/.test(symbol)) symbol += ".KS";
             
             try {
-                const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1m&range=1d`);
-                const data = await res.json();
-                const price = data.chart.result[0].meta.regularMarketPrice;
-                if (price) {
-                    document.getElementById('i-price').value = price;
-                    statusEl.innerText = "시세 연결됨";
-                    calcTotal();
+                // allorigins 프록시 사용 - 더 안정적임
+                const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d&_=${Date.now()}`;
+                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+                const proxyData = await res.json();
+                const data = JSON.parse(proxyData.contents);
+                
+                if (data.chart && data.chart.result) {
+                    return data.chart.result[0].meta.regularMarketPrice;
                 }
+                return null;
             } catch (e) {
-                statusEl.innerText = "조회 불가(수동입력)";
+                console.error("주가 로드 실패:", ticker, e);
+                return null;
             }
-        };
+        }
 
-        // 2. 전체 주가 갱신 (30초 간격 자동 실행용)
-        window.refreshStockPrices = async () => {
-            console.log("실시간 주가 업데이트 실행 중...");
-            const icon = document.getElementById('refresh-icon');
-            if(icon) icon.classList.add('loading-spinner');
+        window.fetchSingleStockPrice = async () => {
+            const ticker = document.getElementById('i-ticker').value;
+            const status = document.getElementById('price-status');
+            if(!ticker) return;
             
-            const stockRecords = records.filter(r => r.category.includes('주식') && r.ticker);
-            for (let r of stockRecords) {
-                let ticker = r.ticker.toUpperCase();
-                if (/^\d{6}$/.test(ticker)) ticker += ".KS";
-                try {
-                    const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1m&range=1d`);
-                    const data = await res.json();
-                    const newPrice = data.chart.result[0].meta.regularMarketPrice;
-                    if (newPrice) {
-                        r.price = newPrice;
-                        r.amount = r.category === '주식(해외)' ? Math.round(r.quantity * newPrice * USD_RATE) : Math.round(r.quantity * newPrice);
-                    }
-                } catch (err) {}
+            status.innerText = "로딩 중...";
+            const price = await getLivePrice(ticker);
+            if(price) {
+                document.getElementById('i-price').value = price;
+                status.innerText = "로드 성공";
+                calcStockTotal();
+            } else {
+                status.innerText = "로드 실패 (수동 입력 필요)";
             }
-            localStorage.setItem('nhgr_v7_data', JSON.stringify(records));
-            render();
-            if(icon) setTimeout(() => icon.classList.remove('loading-spinner'), 1000);
         };
 
-        // 30초마다 자동 업데이트 설정
-        setInterval(refreshStockPrices, 30000);
+        window.calcStockTotal = () => {
+            const cat = document.getElementById('i-category').value;
+            if (!cat.includes('주식')) return;
+            const qty = parseFloat(document.getElementById('i-quantity').value) || 0;
+            const price = parseFloat(document.getElementById('i-price').value) || 0;
+            
+            // 해외주식은 환율 곱하기
+            let finalKrw = (cat === '주식(해외)') ? Math.round(qty * price * USD_RATE) : Math.round(qty * price);
+            
+            document.getElementById('i-display-amount').value = `₩${finalKrw.toLocaleString()}`;
+            document.getElementById('i-amount-val').value = finalKrw;
+        };
+
+        window.refreshStockPrices = async () => {
+            const icon = document.getElementById('refresh-icon');
+            const indicator = document.getElementById('update-indicator');
+            icon.classList.add('loading-spinner');
+            indicator.innerHTML = '<span class="status-dot bg-amber-400 animate-pulse"></span> UPDATING...';
+
+            for (let r of records) {
+                if (r.category.includes('주식') && r.ticker) {
+                    const latestPrice = await getLivePrice(r.ticker);
+                    if (latestPrice) {
+                        r.price = latestPrice;
+                        // 평가 금액 강제 재계산
+                        r.amount = r.category === '주식(해외)' ? Math.round(r.quantity * latestPrice * USD_RATE) : Math.round(r.quantity * latestPrice);
+                    }
+                }
+            }
+            
+            localStorage.setItem('nhgr_v9_data', JSON.stringify(records));
+            render();
+            
+            setTimeout(() => {
+                icon.classList.remove('loading-spinner');
+                indicator.innerHTML = '<span class="status-dot status-online"></span> LIVE MARKET CONNECTED';
+            }, 800);
+        };
 
         window.setWriter = (w) => {
             curWriter = w;
@@ -273,27 +262,7 @@
             const isStock = cat.includes('주식');
             document.getElementById('stock-group').classList.toggle('hidden', !isStock);
             document.getElementById('normal-group').classList.toggle('hidden', isStock);
-            calcTotal();
-        };
-
-        // 수량 * 단가 자동 계산
-        window.calcTotal = () => {
-            const cat = document.getElementById('i-category').value;
-            const isStock = cat.includes('주식');
-            if (!isStock) return;
-
-            const qty = parseFloat(document.getElementById('i-quantity').value) || 0;
-            const price = parseFloat(document.getElementById('i-price').value) || 0;
-            let finalKrw = 0;
-            
-            if (cat === '주식(해외)') {
-                finalKrw = Math.round(qty * price * USD_RATE);
-                document.getElementById('i-display-amount').value = `₩${finalKrw.toLocaleString()} (환율적용)`;
-            } else {
-                finalKrw = Math.round(qty * price);
-                document.getElementById('i-display-amount').value = `₩${finalKrw.toLocaleString()}`;
-            }
-            document.getElementById('i-amount-val').value = finalKrw;
+            if(isStock) calcStockTotal();
         };
 
         window.save = () => {
@@ -302,16 +271,20 @@
             const editId = document.getElementById('edit-id').value;
             
             let amount = isStock ? parseInt(document.getElementById('i-amount-val').value) : parseInt(document.getElementById('i-amount').value);
-            if (isNaN(amount) || amount <= 0) return alert("금액을 입력해주세요.");
+            
+            if (isNaN(amount) || amount <= 0) {
+                alert("금액을 정확히 입력해주세요.");
+                return;
+            }
 
             const data = {
                 id: editId || 'ID-' + Date.now(),
                 user: curWriter,
                 type: curType,
                 category: cat,
-                name: document.getElementById('i-name').value || (isStock ? document.getElementById('i-ticker').value : '항목 없음'),
+                name: document.getElementById('i-name').value || (isStock ? document.getElementById('i-ticker').value : '항목'),
                 amount: amount,
-                date: document.getElementById('i-date').value,
+                date: document.getElementById('i-date').value || new Date().toISOString().split('T')[0],
                 ticker: isStock ? document.getElementById('i-ticker').value.toUpperCase() : '',
                 quantity: isStock ? parseFloat(document.getElementById('i-quantity').value) : 0,
                 price: isStock ? parseFloat(document.getElementById('i-price').value) : 0
@@ -320,18 +293,17 @@
             if (editId) records = records.map(r => r.id === editId ? data : r);
             else records.push(data);
             
-            localStorage.setItem('nhgr_v7_data', JSON.stringify(records));
+            localStorage.setItem('nhgr_v9_data', JSON.stringify(records));
             render();
             resetForm();
         };
 
         window.deleteItem = (e, id) => {
             e.stopPropagation();
-            if (confirm('삭제하시겠습니까?')) {
-                records = records.filter(r => r.id !== id);
-                localStorage.setItem('nhgr_v7_data', JSON.stringify(records));
-                render();
-            }
+            if(!confirm("삭제하시겠습니까?")) return;
+            records = records.filter(r => r.id !== id);
+            localStorage.setItem('nhgr_v9_data', JSON.stringify(records));
+            render();
         };
 
         window.editItem = (id) => {
@@ -346,27 +318,22 @@
                 document.getElementById('i-name').value = r.name;
                 document.getElementById('i-date').value = r.date;
                 if (r.category.includes('주식')) {
-                    document.getElementById('i-ticker').value = r.ticker || '';
-                    document.getElementById('i-quantity').value = r.quantity || 0;
-                    document.getElementById('i-price').value = r.price || 0;
-                    calcTotal();
+                    document.getElementById('i-ticker').value = r.ticker;
+                    document.getElementById('i-quantity').value = r.quantity;
+                    document.getElementById('i-price').value = r.price;
+                    calcStockTotal();
                 } else {
                     document.getElementById('i-amount').value = r.amount;
                 }
             }, 50);
-            document.getElementById('form-title').innerText = "내역 수정";
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         window.resetForm = () => {
             document.getElementById('edit-id').value = "";
-            document.getElementById('i-name').value = "";
-            document.getElementById('i-amount').value = "";
-            document.getElementById('i-ticker').value = "";
-            document.getElementById('i-quantity').value = "";
-            document.getElementById('i-price').value = "";
-            document.getElementById('i-display-amount').value = "";
-            document.getElementById('form-title').innerText = "내역 추가";
+            document.querySelectorAll('input').forEach(i => i.type !== 'date' && (i.value = ""));
+            document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('price-status').innerText = "";
         };
 
         window.setFilter = (f) => {
@@ -377,59 +344,50 @@
 
         function render() {
             const listEl = document.getElementById('main-list');
-            const now = new Date();
-            const curMonthStr = now.toISOString().slice(0, 7);
-
-            // 필터링 로직
             const filtered = records.filter(r => {
                 if (curFilter === 'all') return true;
                 if (curFilter === 'expense') return r.type === 'expense';
-                if (curFilter === 'asset-only') return r.type === 'asset' && !(r.category.includes('수입') || r.category.includes('이자'));
-                if (curFilter === 'income-only') return r.type === 'asset' && (r.category.includes('수입') || r.category.includes('이자'));
+                if (curFilter === 'asset-only') return r.type === 'asset' && !(r.category.includes('수입'));
+                if (curFilter === 'income-only') return r.type === 'asset' && r.category.includes('수입');
                 return true;
             });
 
             let totalAsset = 0, monthIncome = 0, monthExpense = 0;
             let dist = {}, timeline = {};
-
-            listEl.innerHTML = filtered.length ? '' : '<div class="text-center py-20 opacity-30 font-bold">내역이 존재하지 않습니다.</div>';
+            listEl.innerHTML = '';
 
             filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
-                const isIncome = r.category.includes('수입') || r.category.includes('이자');
-                const isAsset = r.type === 'asset' && !isIncome;
-                const isThisMonth = r.date.startsWith(curMonthStr);
-
-                if (isAsset) totalAsset += r.amount;
+                const isIncome = r.category.includes('수입');
+                const isThisMonth = r.date.startsWith(new Date().toISOString().slice(0, 7));
+                
+                if (r.type === 'asset' && !isIncome) totalAsset += r.amount;
                 if (isIncome && isThisMonth) monthIncome += r.amount;
                 if (r.type === 'expense' && isThisMonth) monthExpense += r.amount;
 
-                // 통계 데이터
                 if (r.type === 'asset') dist[r.category] = (dist[r.category] || 0) + r.amount;
                 if (r.type === 'expense') timeline[r.date] = (timeline[r.date] || 0) + r.amount;
 
-                const colorClass = r.type === 'asset' ? (isIncome ? 'text-emerald-400' : 'text-indigo-400') : 'text-rose-400';
-                const sign = r.type === 'asset' ? '+' : '-';
-
                 listEl.innerHTML += `
                     <div class="list-item flex justify-between items-center ${r.type === 'asset' ? 'type-asset' : 'type-expense'}" onclick="editItem('${r.id}')">
-                        <div class="flex gap-5 items-center">
-                            <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center font-black text-xs text-indigo-400 border border-slate-700 shadow-inner">${r.user}</div>
+                        <div class="flex gap-4 items-center">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black text-[10px] text-indigo-400 border border-slate-700">${r.user}</div>
                             <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">${r.category}</span>
-                                    ${isIncome ? '<span class="text-[8px] font-bold bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded uppercase">Income</span>' : ''}
-                                    ${r.ticker ? `<span class="text-[8px] font-bold bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded uppercase">${r.ticker}</span>` : ''}
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <span class="text-[9px] font-black uppercase text-slate-500">${r.category}</span>
+                                    ${r.ticker ? `<span class="text-[8px] font-bold bg-indigo-500/20 text-indigo-400 px-1 py-0.5 rounded">${r.ticker}</span>` : ''}
+                                    <span class="text-[8px] text-slate-500">${r.date}</span>
                                 </div>
-                                <h4 class="text-base font-bold text-slate-100">${r.name}</h4>
-                                <p class="text-[10px] text-slate-500 font-bold">${r.date}</p>
+                                <h4 class="text-sm font-bold text-slate-100">${r.name}</h4>
                             </div>
                         </div>
                         <div class="flex items-center gap-6">
                             <div class="text-right">
-                                <p class="text-xl font-black ${colorClass}">${sign} ₩${r.amount.toLocaleString()}</p>
-                                ${r.quantity ? `<p class="text-[9px] text-slate-500 font-bold">${r.quantity}주 @ ₩${r.price.toLocaleString()}</p>` : ''}
+                                <p class="text-lg font-black ${r.type === 'asset' ? 'text-indigo-400' : 'text-rose-400'}">
+                                    ${r.type === 'asset' ? '+' : '-'} ₩${r.amount.toLocaleString()}
+                                </p>
+                                ${r.quantity ? `<p class="text-[9px] text-slate-500">${r.quantity}주 @ ₩${r.price.toLocaleString()}</p>` : ''}
                             </div>
-                            <button class="delete-btn text-slate-600 hover:text-rose-500 transition-colors text-xl font-bold px-2" onclick="deleteItem(event, '${r.id}')">×</button>
+                            <button class="text-slate-600 hover:text-rose-500 text-xl font-bold p-2" onclick="deleteItem(event, '${r.id}')">×</button>
                         </div>
                     </div>`;
             });
@@ -443,64 +401,46 @@
 
         function updateCharts(dist, timeline) {
             const aCtx = document.getElementById('assetChart');
-            if (aCtx) {
-                if(assetChart) assetChart.destroy();
-                assetChart = new Chart(aCtx, {
-                    type: 'doughnut',
-                    data: { 
-                        labels: Object.keys(dist), 
-                        datasets: [{ 
-                            data: Object.values(dist), 
-                            backgroundColor: ['#6366f1', '#10b981', '#fbbf24', '#f43f5e', '#38bdf8', '#a855f7'],
-                            hoverOffset: 10,
-                            borderWidth: 0 
-                        }] 
-                    },
-                    options: { 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' }, padding: 20 } } }, 
-                        cutout: '70%' 
-                    }
-                });
-            }
+            if(assetChart) assetChart.destroy();
+            assetChart = new Chart(aCtx, {
+                type: 'doughnut',
+                data: { labels: Object.keys(dist), datasets: [{ data: Object.values(dist), backgroundColor: ['#6366f1', '#10b981', '#fbbf24', '#f43f5e', '#38bdf8', '#8b5cf6', '#ec4899'] }] },
+                options: { 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' } } },
+                        title: { display: true, text: '자산 비중 (ASSET ALLOCATION)', color: '#f1f5f9', font: { size: 12, weight: '900' } }
+                    }, 
+                    cutout: '75%' 
+                }
+            });
             const eCtx = document.getElementById('expenseChart');
-            if (eCtx) {
-                if(expenseChart) expenseChart.destroy();
-                const dates = Object.keys(timeline).sort();
-                expenseChart = new Chart(eCtx, {
-                    type: 'line',
-                    data: { 
-                        labels: dates, 
-                        datasets: [{ 
-                            data: dates.map(d => timeline[d]), 
-                            borderColor: '#f43f5e', 
-                            borderWidth: 3,
-                            pointBackgroundColor: '#ffffff',
-                            pointRadius: 4,
-                            tension: 0.4, 
-                            fill: true, 
-                            backgroundColor: 'rgba(244, 63, 94, 0.1)' 
-                        }] 
-                    },
-                    options: { 
-                        maintainAspectRatio: false, 
-                        scales: { 
-                            x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 9 } } }, 
-                            y: { display: false } 
-                        }, 
-                        plugins: { legend: { display: false } } 
-                    }
-                });
-            }
+            if(expenseChart) expenseChart.destroy();
+            const dates = Object.keys(timeline).sort();
+            expenseChart = new Chart(eCtx, {
+                type: 'line',
+                data: { labels: dates, datasets: [{ label: '지출액', data: dates.map(d => timeline[d]), borderColor: '#f43f5e', tension: 0.4, fill: true, backgroundColor: 'rgba(244, 63, 94, 0.1)', borderWidth: 3, pointRadius: 4 }] },
+                options: { 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 9 } } }, 
+                        y: { display: false } 
+                    }, 
+                    plugins: { 
+                        legend: { display: false },
+                        title: { display: true, text: '지출 추이 (EXPENSE TREND)', color: '#f1f5f9', font: { size: 12, weight: '900' } }
+                    } 
+                }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const saved = localStorage.getItem('nhgr_v7_data');
+            const saved = localStorage.getItem('nhgr_v9_data');
             if (saved) records = JSON.parse(saved);
-            document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
+            resetForm();
             setType('asset');
             render();
-            // 페이지 로드 후 1초 뒤 첫 주가 갱신 실행
+            // 페이지 진입 시 자동으로 주가 갱신 시도
             setTimeout(refreshStockPrices, 1000);
         });
     </script>
