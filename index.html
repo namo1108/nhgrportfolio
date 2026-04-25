@@ -44,12 +44,12 @@
                 <div class="flex items-center gap-2 mb-2">
                     <span class="text-[10px] font-black tracking-widest text-indigo-400 uppercase">Total Net Worth</span>
                     <span id="update-indicator" class="flex items-center text-[9px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
-                        <span class="status-dot status-online"></span> LIVE MARKET CONNECTED
+                        <span class="status-dot status-online"></span> <span id="sync-text">CONNECTING...</span>
                     </span>
                 </div>
                 <div class="flex items-center gap-4">
                     <h1 class="text-6xl font-black tracking-tighter" id="total-wealth">₩0</h1>
-                    <button onclick="refreshStockPrices()" title="전체 주가 새로고침" class="p-3 glass-card hover:bg-slate-700 transition-colors">
+                    <button onclick="window.refreshStockPrices()" title="전체 주가 새로고침" class="p-3 glass-card hover:bg-slate-700 transition-colors">
                         <svg id="refresh-icon" class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     </button>
                 </div>
@@ -78,48 +78,46 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Form Side -->
             <aside class="lg:col-span-4">
                 <div class="input-card">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-black tracking-tight" id="form-title">내역 추가</h2>
-                        <button onclick="resetForm()" class="text-[11px] text-slate-400 font-bold uppercase">초기화 ↺</button>
+                        <button onclick="window.resetForm()" class="text-[11px] text-slate-400 font-bold uppercase">초기화 ↺</button>
                     </div>
                     
                     <div class="space-y-5">
                         <input type="hidden" id="edit-id">
                         <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
-                            <button onclick="setWriter('남호')" id="w-namho" class="btn-writer py-3 active">남호</button>
-                            <button onclick="setWriter('가람')" id="w-garam" class="btn-writer py-3">가람</button>
+                            <button onclick="window.setWriter('남호')" id="w-namho" class="btn-writer py-3 active">남호</button>
+                            <button onclick="window.setWriter('가람')" id="w-garam" class="btn-writer py-3">가람</button>
                         </div>
                         <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
-                            <button onclick="setType('asset')" id="t-asset" class="btn-type py-3 active">자산/수입</button>
-                            <button onclick="setType('expense')" id="t-expense" class="btn-type py-3">지출/소비</button>
+                            <button onclick="window.setType('asset')" id="t-asset" class="btn-type py-3 active">자산/수입</button>
+                            <button onclick="window.setType('expense')" id="t-expense" class="btn-type py-3">지출/소비</button>
                         </div>
 
                         <div>
                             <label>카테고리</label>
-                            <select id="i-category" onchange="handleCategoryChange()"></select>
+                            <select id="i-category" onchange="window.handleCategoryChange()"></select>
                         </div>
                         
-                        <!-- 주식 입력 섹션 -->
                         <div id="stock-group" class="space-y-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 hidden">
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label>티커 (AAPL / 005930)</label>
-                                    <input type="text" id="i-ticker" placeholder="입력 후 엔터" onkeydown="if(event.key==='Enter') fetchSingleStockPrice()" onblur="fetchSingleStockPrice()">
+                                    <input type="text" id="i-ticker" placeholder="입력 후 엔터" onkeydown="if(event.key==='Enter') window.fetchSingleStockPrice()" onblur="window.fetchSingleStockPrice()">
                                 </div>
                                 <div>
                                     <label>보유 수량</label>
-                                    <input type="number" id="i-quantity" placeholder="0" oninput="calcStockTotal()">
+                                    <input type="number" id="i-quantity" placeholder="0" oninput="window.calcStockTotal()">
                                 </div>
                             </div>
                             <div>
                                 <label class="flex justify-between items-center">
-                                    현재가 (실시간 자동 로드)
+                                    현재가 (자동 로드)
                                     <span id="price-status" class="text-[8px] font-bold text-indigo-400"></span>
                                 </label>
-                                <input type="number" id="i-price" step="0.01" placeholder="0" oninput="calcStockTotal()">
+                                <input type="number" id="i-price" step="0.01" placeholder="0" oninput="window.calcStockTotal()">
                             </div>
                             <div>
                                 <label>평가 금액 (원화 환산)</label>
@@ -138,126 +136,163 @@
                             <div><label>항목명/메모</label><input type="text" id="i-name" placeholder="내용"></div>
                         </div>
                         
-                        <button onclick="save()" class="w-full py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-indigo-600 transition-all text-lg mt-2 shadow-lg">기록 저장</button>
+                        <button onclick="window.save()" class="w-full py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-indigo-600 transition-all text-lg mt-2 shadow-lg">기록 저장</button>
                     </div>
                 </div>
             </aside>
 
-            <!-- List Side -->
             <section class="lg:col-span-8">
                 <div class="flex gap-3 mb-8 overflow-x-auto no-scrollbar">
-                    <button onclick="setFilter('all')" id="f-all" class="filter-btn active">전체보기</button>
-                    <button onclick="setFilter('asset-only')" id="f-asset-only" class="filter-btn">자산현황</button>
-                    <button onclick="setFilter('income-only')" id="f-income-only" class="filter-btn">수입내역</button>
-                    <button onclick="setFilter('expense')" id="f-expense" class="filter-btn">지출내역</button>
+                    <button onclick="window.setFilter('all')" id="f-all" class="filter-btn active">전체보기</button>
+                    <button onclick="window.setFilter('asset-only')" id="f-asset-only" class="filter-btn">자산현황</button>
+                    <button onclick="window.setFilter('income-only')" id="f-income-only" class="filter-btn">수입내역</button>
+                    <button onclick="window.setFilter('expense')" id="f-expense" class="filter-btn">지출내역</button>
                 </div>
                 <div id="main-list" class="space-y-3 pb-24"></div>
             </section>
         </div>
     </div>
 
-    <script>
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"
+      }
+    }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "firebase/auth";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, query, getDocs } from "firebase/firestore";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
         const USD_RATE = 1481.5; 
         let records = [];
         let curWriter = '남호';
         let curType = 'asset';
         let curFilter = 'all';
         let assetChart, expenseChart;
+        let currentUser = null;
 
         const categories = {
             asset: ['급여(수입)', '기타 수입', '주식(국내)', '주식(해외)', '현금/예적금', '보증금', '연금/퇴직금', '주택청약'],
             expense: ['생활비', '식비/카페', '문화/여가', '보험', '교통/통신', '쇼핑/기타']
         };
 
-        // 주가 가져오기 핵심 로직 (프록시 이중화 및 재시도)
+        // --- 자동 동기화 데이터 정의 ---
+        const initialData = [
+            { user: '남호', type: 'asset', category: '주식(국내)', ticker: '005930', date: '2026-04-25', name: '삼성전자', amount: 6804500, quantity: 31, price: 219500 },
+            { user: '남호', type: 'asset', category: '주식(국내)', ticker: '069500', date: '2026-04-25', name: 'KODEX200', amount: 2646000, quantity: 27, price: 98000 },
+            { user: '남호', type: 'asset', category: '주식(국내)', ticker: '316141', date: '2026-04-25', name: '우리금융지주', amount: 35050, quantity: 1, price: 35050 },
+            { user: '남호', type: 'asset', category: '주식(국내)', ticker: '239340', date: '2026-04-25', name: '이스트에이드', amount: 341130, quantity: 166, price: 2055 },
+            { user: '가람', type: 'asset', category: '주식(국내)', ticker: '005930', date: '2026-04-25', name: '삼성전자', amount: 10316500, quantity: 47, price: 219500 },
+            { user: '가람', type: 'asset', category: '주식(해외)', ticker: 'QQQ', date: '2026-04-25', name: 'QQQ', amount: 678641, quantity: 0.69, price: 663.88 },
+            { user: '가람', type: 'asset', category: '주식(해외)', ticker: 'SCHD', date: '2026-04-25', name: 'SCHD', amount: 36054, quantity: 0.78, price: 31.2 },
+            { user: '남호', type: 'asset', category: '연금/퇴직금', ticker: '', date: '2026-04-25', name: '퇴직연금', amount: 18898783, quantity: 0, price: 0 },
+            { user: '남호', type: 'asset', category: '주택청약', ticker: '', date: '2026-04-25', name: '주택청약', amount: 5760000, quantity: 0, price: 0 },
+            { user: '남호', type: 'asset', category: '보증금', ticker: '', date: '2026-04-25', name: '아파트보증금', amount: 15800000, quantity: 0, price: 0 },
+            { user: '남호', type: 'asset', category: '현금/예적금', ticker: '', date: '2026-04-25', name: '청년도약적금', amount: 7000000, quantity: 0, price: 0 },
+            { user: '남호', type: 'asset', category: '현금/예적금', ticker: '', date: '2026-04-25', name: '연지곤지', amount: 3510000, quantity: 0, price: 0 },
+            { user: '가람', type: 'asset', category: '연금/퇴직금', ticker: '', date: '2026-04-25', name: '퇴직금', amount: 5000000, quantity: 0, price: 0 },
+            { user: '가람', type: 'asset', category: '주택청약', ticker: '', date: '2026-04-25', name: '주택청약', amount: 6200000, quantity: 0, price: 0 },
+            { user: '가람', type: 'expense', category: '식비/카페', ticker: '', date: '2026-04-25', name: '어머니케이크', amount: 28000, quantity: 0, price: 0 },
+            { user: '가람', type: 'expense', category: '생활비', ticker: '', date: '2026-04-25', name: '바지수선', amount: 8000, quantity: 0, price: 0 },
+            { user: '가람', type: 'expense', category: '생활비', ticker: '', date: '2026-04-25', name: '에어컨', amount: 378000, quantity: 0, price: 0 }
+        ];
+
+        async function authenticate() {
+            try {
+                if (initialToken) await signInWithCustomToken(auth, initialToken);
+                else await signInAnonymously(auth);
+            } catch (err) { console.error("Auth failed:", err); }
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('sync-text').innerText = "CLOUD SYNCED";
+                
+                const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'records');
+                
+                // 데이터가 하나도 없을 때만 초기 데이터 삽입
+                const snap = await getDocs(query(recordsRef));
+                if (snap.empty) {
+                    const batch = writeBatch(db);
+                    initialData.forEach(item => {
+                        const id = 'INIT-' + Math.random().toString(36).substr(2, 9);
+                        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'records', id);
+                        batch.set(ref, { ...item, id: id });
+                    });
+                    await batch.commit();
+                }
+
+                onSnapshot(recordsRef, (snapshot) => {
+                    records = snapshot.docs.map(doc => ({...doc.data(), id: doc.id}));
+                    render();
+                }, (error) => console.error("Firestore error:", error));
+            }
+        });
+
         async function getLivePrice(ticker) {
             let symbol = ticker.trim().toUpperCase();
             if (/^\d{6}$/.test(symbol)) symbol += ".KS";
-            
             const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d&_=${Date.now()}`;
-            
-            // 시도 1: AllOrigins 프록시
             try {
                 const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`);
                 const proxyData = await res.json();
                 const data = JSON.parse(proxyData.contents);
-                if (data.chart?.result?.[0]?.meta?.regularMarketPrice) {
-                    return data.chart.result[0].meta.regularMarketPrice;
-                }
-            } catch (e) {
-                console.warn(`AllOrigins 실패: ${symbol}, 시도 2 시작...`);
-            }
-
-            // 시도 2: CorsProxy.io (대체재)
-            try {
-                const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`);
-                const data = await res.json();
-                if (data.chart?.result?.[0]?.meta?.regularMarketPrice) {
-                    return data.chart.result[0].meta.regularMarketPrice;
-                }
-            } catch (e) {
-                console.error(`모든 프록시 주가 로드 실패: ${symbol}`, e);
-            }
-            
-            return null;
+                return data.chart?.result?.[0]?.meta?.regularMarketPrice || null;
+            } catch (e) { return null; }
         }
 
         window.fetchSingleStockPrice = async () => {
             const ticker = document.getElementById('i-ticker').value;
             const status = document.getElementById('price-status');
             if(!ticker) return;
-            
-            status.innerText = "⏳ 로딩 중...";
-            status.className = "text-[8px] font-bold text-amber-500";
-            
+            status.innerText = "⏳...";
             const price = await getLivePrice(ticker);
-            
             if(price) {
                 document.getElementById('i-price').value = price;
-                status.innerText = "✅ 로드 성공";
-                status.className = "text-[8px] font-bold text-emerald-500";
-                calcStockTotal();
-            } else {
-                status.innerText = "❌ 로드 실패 (수동 입력)";
-                status.className = "text-[8px] font-bold text-rose-500";
-            }
+                status.innerText = "✅";
+                window.calcStockTotal();
+            } else { status.innerText = "❌"; }
         };
 
         window.calcStockTotal = () => {
             const cat = document.getElementById('i-category').value;
-            if (!cat.includes('주식')) return;
+            if (!cat || !cat.includes('주식')) return;
             const qty = parseFloat(document.getElementById('i-quantity').value) || 0;
             const price = parseFloat(document.getElementById('i-price').value) || 0;
-            
             let finalKrw = (cat === '주식(해외)') ? Math.round(qty * price * USD_RATE) : Math.round(qty * price);
-            
             document.getElementById('i-display-amount').value = `₩${finalKrw.toLocaleString()}`;
             document.getElementById('i-amount-val').value = finalKrw;
         };
 
         window.refreshStockPrices = async () => {
+            if (!currentUser) return;
             const icon = document.getElementById('refresh-icon');
-            const indicator = document.getElementById('update-indicator');
             icon.classList.add('loading-spinner');
-            indicator.innerHTML = '<span class="status-dot bg-amber-400 animate-pulse"></span> UPDATING...';
-
             for (let r of records) {
-                if (r.category.includes('주식') && r.ticker) {
+                if (r.category && r.category.includes('주식') && r.ticker) {
                     const latestPrice = await getLivePrice(r.ticker);
                     if (latestPrice) {
                         r.price = latestPrice;
                         r.amount = r.category === '주식(해외)' ? Math.round(r.quantity * latestPrice * USD_RATE) : Math.round(r.quantity * latestPrice);
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', r.id), r);
                     }
                 }
             }
-            
-            localStorage.setItem('nhgr_v9_data', JSON.stringify(records));
-            render();
-            
-            setTimeout(() => {
-                icon.classList.remove('loading-spinner');
-                indicator.innerHTML = '<span class="status-dot status-online"></span> LIVE MARKET CONNECTED';
-            }, 800);
+            icon.classList.remove('loading-spinner');
         };
 
         window.setWriter = (w) => {
@@ -270,77 +305,63 @@
             document.querySelectorAll('.btn-type').forEach(b => b.classList.toggle('active', b.id === 't-' + t));
             const select = document.getElementById('i-category');
             select.innerHTML = categories[t].map(cat => `<option value="${cat}">${cat}</option>`).join('');
-            handleCategoryChange();
+            window.handleCategoryChange();
         };
 
         window.handleCategoryChange = () => {
             const cat = document.getElementById('i-category').value;
-            const isStock = cat.includes('주식');
+            const isStock = cat && cat.includes('주식');
             document.getElementById('stock-group').classList.toggle('hidden', !isStock);
             document.getElementById('normal-group').classList.toggle('hidden', isStock);
-            if(isStock) calcStockTotal();
+            if(isStock) window.calcStockTotal();
         };
 
-        window.save = () => {
+        window.save = async () => {
+            if (!currentUser) return alert("연결 중...");
             const cat = document.getElementById('i-category').value;
-            const isStock = cat.includes('주식');
+            const isStock = cat && cat.includes('주식');
             const editId = document.getElementById('edit-id').value;
-            
             let amount = isStock ? parseInt(document.getElementById('i-amount-val').value) : parseInt(document.getElementById('i-amount').value);
-            
-            if (isNaN(amount) || amount <= 0) {
-                alert("금액을 정확히 입력해주세요.");
-                return;
-            }
-
+            if (isNaN(amount) || amount <= 0) return alert("금액을 정확히 입력해주세요.");
+            const id = editId || 'ID-' + Date.now();
             const data = {
-                id: editId || 'ID-' + Date.now(),
-                user: curWriter,
-                type: curType,
-                category: cat,
+                id: id, user: curWriter, type: curType, category: cat,
                 name: document.getElementById('i-name').value || (isStock ? document.getElementById('i-ticker').value : '항목'),
-                amount: amount,
-                date: document.getElementById('i-date').value || new Date().toISOString().split('T')[0],
+                amount: amount, date: document.getElementById('i-date').value || new Date().toISOString().split('T')[0],
                 ticker: isStock ? document.getElementById('i-ticker').value.toUpperCase() : '',
                 quantity: isStock ? parseFloat(document.getElementById('i-quantity').value) : 0,
                 price: isStock ? parseFloat(document.getElementById('i-price').value) : 0
             };
-
-            if (editId) records = records.map(r => r.id === editId ? data : r);
-            else records.push(data);
-            
-            localStorage.setItem('nhgr_v9_data', JSON.stringify(records));
-            render();
-            resetForm();
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id), data);
+                window.resetForm();
+            } catch (err) { console.error(err); }
         };
 
-        window.deleteItem = (e, id) => {
+        window.deleteItem = async (e, id) => {
             e.stopPropagation();
-            if(!confirm("삭제하시겠습니까?")) return;
-            records = records.filter(r => r.id !== id);
-            localStorage.setItem('nhgr_v9_data', JSON.stringify(records));
-            render();
+            if(!currentUser || !confirm("삭제하시겠습니까?")) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
         };
 
         window.editItem = (id) => {
             const r = records.find(x => x.id === id);
             if (!r) return;
             document.getElementById('edit-id').value = r.id;
-            setWriter(r.user);
-            setType(r.type);
+            document.getElementById('form-title').innerText = "기록 수정";
+            window.setWriter(r.user);
+            window.setType(r.type);
             setTimeout(() => {
                 document.getElementById('i-category').value = r.category;
-                handleCategoryChange();
+                window.handleCategoryChange();
                 document.getElementById('i-name').value = r.name;
                 document.getElementById('i-date').value = r.date;
                 if (r.category.includes('주식')) {
                     document.getElementById('i-ticker').value = r.ticker;
                     document.getElementById('i-quantity').value = r.quantity;
                     document.getElementById('i-price').value = r.price;
-                    calcStockTotal();
-                } else {
-                    document.getElementById('i-amount').value = r.amount;
-                }
+                    window.calcStockTotal();
+                } else document.getElementById('i-amount').value = r.amount;
             }, 50);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
@@ -364,51 +385,38 @@
             const filtered = records.filter(r => {
                 if (curFilter === 'all') return true;
                 if (curFilter === 'expense') return r.type === 'expense';
-                if (curFilter === 'asset-only') return r.type === 'asset' && !(r.category.includes('수입'));
-                if (curFilter === 'income-only') return r.type === 'asset' && r.category.includes('수입');
+                if (curFilter === 'asset-only') return r.type === 'asset' && r.category && !(r.category.includes('수입'));
+                if (curFilter === 'income-only') return r.type === 'asset' && r.category && r.category.includes('수입');
                 return true;
             });
-
-            let totalAsset = 0, monthIncome = 0, monthExpense = 0;
-            let dist = {}, timeline = {};
+            let totalAsset = 0, monthIncome = 0, monthExpense = 0, dist = {}, timeline = {};
             listEl.innerHTML = '';
-
             filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
-                const isIncome = r.category.includes('수입');
-                const isThisMonth = r.date.startsWith(new Date().toISOString().slice(0, 7));
-                
-                if (r.type === 'asset' && !isIncome) totalAsset += r.amount;
-                if (isIncome && isThisMonth) monthIncome += r.amount;
+                const isInc = r.category && r.category.includes('수입');
+                const isThisMonth = r.date && r.date.startsWith(new Date().toISOString().slice(0, 7));
+                if (r.type === 'asset' && !isInc) totalAsset += r.amount;
+                if (isInc && isThisMonth) monthIncome += r.amount;
                 if (r.type === 'expense' && isThisMonth) monthExpense += r.amount;
-
                 if (r.type === 'asset') dist[r.category] = (dist[r.category] || 0) + r.amount;
                 if (r.type === 'expense') timeline[r.date] = (timeline[r.date] || 0) + r.amount;
-
                 listEl.innerHTML += `
-                    <div class="list-item flex justify-between items-center ${r.type === 'asset' ? 'type-asset' : 'type-expense'}" onclick="editItem('${r.id}')">
+                    <div class="list-item flex justify-between items-center ${r.type === 'asset' ? 'type-asset' : 'type-expense'}" onclick="window.editItem('${r.id}')">
                         <div class="flex gap-4 items-center">
                             <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black text-[10px] text-indigo-400 border border-slate-700">${r.user}</div>
                             <div>
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <span class="text-[9px] font-black uppercase text-slate-500">${r.category}</span>
-                                    ${r.ticker ? `<span class="text-[8px] font-bold bg-indigo-500/20 text-indigo-400 px-1 py-0.5 rounded">${r.ticker}</span>` : ''}
-                                    <span class="text-[8px] text-slate-500">${r.date}</span>
-                                </div>
+                                <div class="flex items-center gap-2 mb-0.5"><span class="text-[9px] font-black uppercase text-slate-500">${r.category}</span>
+                                ${r.ticker ? `<span class="text-[8px] font-bold bg-indigo-500/20 text-indigo-400 px-1 py-0.5 rounded">${r.ticker}</span>` : ''}
+                                <span class="text-[8px] text-slate-500">${r.date}</span></div>
                                 <h4 class="text-sm font-bold text-slate-100">${r.name}</h4>
                             </div>
                         </div>
                         <div class="flex items-center gap-6">
-                            <div class="text-right">
-                                <p class="text-lg font-black ${r.type === 'asset' ? 'text-indigo-400' : 'text-rose-400'}">
-                                    ${r.type === 'asset' ? '+' : '-'} ₩${r.amount.toLocaleString()}
-                                </p>
-                                ${r.quantity ? `<p class="text-[9px] text-slate-500">${r.quantity}주 @ ₩${r.price.toLocaleString()}</p>` : ''}
-                            </div>
-                            <button class="text-slate-600 hover:text-rose-500 text-xl font-bold p-2" onclick="deleteItem(event, '${r.id}')">×</button>
+                            <div class="text-right"><p class="text-lg font-black ${r.type === 'asset' ? 'text-indigo-400' : 'text-rose-400'}">${r.type === 'asset' ? '+' : '-'} ₩${(r.amount || 0).toLocaleString()}</p>
+                            ${r.quantity ? `<p class="text-[9px] text-slate-500">${r.quantity}주 @ ₩${(r.price || 0).toLocaleString()}</p>` : ''}</div>
+                            <button class="text-slate-600 hover:text-rose-500 text-xl font-bold p-2" onclick="window.deleteItem(event, '${r.id}')">×</button>
                         </div>
                     </div>`;
             });
-
             document.getElementById('total-wealth').innerText = '₩' + (totalAsset + monthIncome - monthExpense).toLocaleString();
             document.getElementById('stat-asset').innerText = '₩' + totalAsset.toLocaleString();
             document.getElementById('stat-income').innerText = '₩' + monthIncome.toLocaleString();
@@ -426,7 +434,6 @@
                     options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' } } }, title: { display: true, text: '자산 비중', color: '#f1f5f9', font: { size: 12, weight: '900' } } }, cutout: '75%' }
                 });
             }
-            
             const eCtx = document.getElementById('expenseChart');
             if(expenseChart) expenseChart.destroy();
             const dates = Object.keys(timeline).sort();
@@ -439,13 +446,9 @@
             }
         }
 
+        authenticate();
         document.addEventListener('DOMContentLoaded', () => {
-            const saved = localStorage.getItem('nhgr_v9_data');
-            if (saved) records = JSON.parse(saved);
-            resetForm();
-            setType('asset');
-            render();
-            setTimeout(refreshStockPrices, 1000);
+            window.setType('asset');
         });
     </script>
 </body>
