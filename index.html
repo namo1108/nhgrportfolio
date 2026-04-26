@@ -8,156 +8,195 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background: #0b0f1a; color: #f8fafc; margin: 0; padding: 20px; min-height: 100vh; -webkit-font-smoothing: antialiased; }
         
-        .glass-card { background: rgba(22, 30, 46, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 24px; }
-        .input-card { background: white; border-radius: 28px; color: #1e293b; padding: 24px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); }
-        
-        .btn-toggle { background: #f1f5f9; color: #94a3b8; border-radius: 14px; font-weight: 800; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-size: 13px; border: none; cursor: pointer; }
-        .btn-toggle.active { background: #4f46e5 !important; color: white !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
-        
-        .filter-btn { background: rgba(30, 41, 59, 0.5); color: #64748b; padding: 8px 18px; border-radius: 12px; font-size: 13px; font-weight: 700; transition: all 0.2s; border: 1px solid transparent; }
-        .filter-btn.active { background: #4f46e5; color: white; }
-        
-        .list-item { background: rgba(30, 41, 59, 0.2); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 16px 20px; margin-bottom: 10px; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .list-item:active { transform: scale(0.98); background: rgba(30, 41, 59, 0.4); }
-        
-        input, select { background: #f1f5f9; border: 2px solid transparent; border-radius: 14px; padding: 12px 16px; width: 100%; color: #1e293b; font-size: 15px; font-weight: 600; transition: all 0.2s; }
-        input:focus { border-color: #4f46e5; background: white; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
-        
-        .skeleton { background: linear-gradient(90deg, rgba(30,41,59,0.2) 25%, rgba(30,41,59,0.5) 50%, rgba(30,41,59,0.2) 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 10px; }
-        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        :root {
+            --bg-deep: #0f172a;
+            --bg-card: #1e293b;
+            --accent: #6366f1;
+            --text-main: #f8fafc;
+        }
 
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-        .dot-syncing { background: #f59e0b; animation: pulse 1s infinite; }
-        .dot-online { background: #10b981; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background: var(--bg-deep); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism & Custom UI Elements */
+        .glass-panel { background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 24px; }
+        .input-container { background: white; border-radius: 32px; color: #1e293b; padding: 28px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        
+        .toggle-group { background: #f1f5f9; padding: 4px; border-radius: 16px; display: flex; gap: 4px; }
+        .toggle-btn { flex: 1; padding: 10px; border-radius: 12px; font-weight: 800; font-size: 14px; color: #94a3b8; transition: all 0.3s; cursor: pointer; border: none; }
+        .toggle-btn.active { background: #6366f1; color: white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+
+        .stat-box { padding: 16px 20px; border-radius: 20px; border: 1.5px solid rgba(255, 255, 255, 0.1); transition: transform 0.2s; }
+        .stat-box:hover { transform: translateY(-2px); border-color: var(--accent); }
+
+        .filter-btn { padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 700; color: #64748b; background: rgba(30, 41, 59, 0.8); transition: all 0.2s; border: 1px solid rgba(255, 255, 255, 0.05); }
+        .filter-btn.active { background: #6366f1; color: white; border-color: transparent; }
+
+        input, select { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; width: 100%; color: #1e293b; font-size: 15px; font-weight: 600; outline: none; }
+        input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+
+        .stock-calc-box { background: #f5f7ff; border: 1.5px solid #eef2ff; border-radius: 20px; padding: 20px; margin-top: 12px; }
+        .total-display { background: white; border-radius: 16px; padding: 16px; border: 1px solid #e0e7ff; text-align: center; }
+
+        .list-row { background: rgba(255, 255, 255, 0.03); border-radius: 16px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; }
+        .list-row:hover { background: rgba(255, 255, 255, 0.06); }
+
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 100px; font-size: 10px; font-weight: 800; }
+        
+        /* Hide scrollbars */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="max-w-6xl mx-auto pb-10">
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6 mt-4">
-            <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="text-[11px] font-black tracking-widest text-indigo-400 uppercase">Personal Finance</span>
-                    <div id="sync-indicator" class="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-full border border-white/5">
-                        <span id="sync-dot" class="status-dot dot-syncing"></span>
-                        <span id="sync-text" class="text-[10px] font-bold text-slate-400">CONNECTING...</span>
+    <div class="max-w-7xl mx-auto py-6 px-4">
+        <!-- Header Section -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+            <div class="flex items-center gap-5">
+                <h1 class="text-5xl font-black tracking-tighter" style="font-style: italic;">WO</h1>
+                <div>
+                    <div class="status-badge mb-1" id="status-container">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="status-text">LIVE SYNC</span>
                     </div>
+                    <p class="text-[11px] font-black tracking-[0.2em] text-slate-500 uppercase">Personal Finance Dashboard</p>
                 </div>
-                <h1 class="text-6xl font-black tracking-tighter" id="total-wealth">₩0</h1>
             </div>
-            
-            <div class="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar">
-                <div class="glass-card px-5 py-4 min-w-[130px]">
-                    <p class="text-[10px] text-slate-500 font-black mb-1">ASSET</p>
-                    <p class="text-xl font-black text-white" id="stat-asset">₩0</p>
+
+            <div class="flex gap-3">
+                <div class="stat-box min-w-[120px] bg-indigo-500/5">
+                    <p class="text-[10px] font-bold text-indigo-400 mb-1">자산 총액</p>
+                    <p class="text-xl font-black" id="top-total-asset">₩0</p>
                 </div>
-                <div class="glass-card px-5 py-4 min-w-[130px]">
-                    <p class="text-[10px] text-slate-500 font-black mb-1">INCOME</p>
-                    <p class="text-xl font-black text-emerald-400" id="stat-income">₩0</p>
+                <div class="stat-box min-w-[120px] bg-emerald-500/5">
+                    <p class="text-[10px] font-bold text-emerald-400 mb-1">이번달 수입</p>
+                    <p class="text-xl font-black text-emerald-400" id="top-monthly-income">₩0</p>
                 </div>
-                <div class="glass-card px-5 py-4 min-w-[130px]">
-                    <p class="text-[10px] text-slate-500 font-black mb-1">EXPENSE</p>
-                    <p class="text-xl font-black text-rose-400" id="stat-expense">₩0</p>
+                <div class="stat-box min-w-[120px] bg-rose-500/5">
+                    <p class="text-[10px] font-bold text-rose-400 mb-1">이번달 지출</p>
+                    <p class="text-xl font-black text-rose-400" id="top-monthly-expense">₩0</p>
                 </div>
             </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <aside class="lg:col-span-4">
-                <div class="input-card sticky top-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-black tracking-tight" id="form-title">기록하기</h2>
-                        <button id="btn-reset" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors">↺</button>
+            <!-- Left: Chart Dashboard -->
+            <div class="lg:col-span-8 space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-panel p-6 h-[320px]">
+                        <h3 class="text-xs font-black text-slate-500 uppercase mb-4">자산 구성 비율</h3>
+                        <canvas id="assetPieChart"></canvas>
                     </div>
-                    
-                    <div class="space-y-5">
+                    <div class="glass-panel p-6 h-[320px]">
+                        <h3 class="text-xs font-black text-slate-500 uppercase mb-4">최근 4개월 지출 추이</h3>
+                        <canvas id="trendBarChart"></canvas>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-2">
+                        <button id="f-all" class="filter-btn active">전체보기</button>
+                        <button id="f-asset" class="filter-btn">자산현황</button>
+                        <button id="f-income" class="filter-btn">수입내역</button>
+                        <button id="f-expense" class="filter-btn">지출내역</button>
+                    </div>
+                    <div id="record-list" class="space-y-3">
+                        <!-- Content via JS -->
+                        <p class="text-center py-20 text-slate-600 font-bold">데이터를 불러오는 중입니다...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Input Form -->
+            <aside class="lg:col-span-4">
+                <div class="input-container sticky top-6">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-2xl font-black tracking-tight" id="form-title">내역 추가</h2>
+                        <button id="btn-reset" class="text-slate-400 text-xs font-bold hover:text-indigo-500 flex items-center gap-1">초기화 ↺</button>
+                    </div>
+
+                    <div class="space-y-6">
                         <input type="hidden" id="edit-id">
                         
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl">
-                                <button type="button" id="m-namho" class="btn-toggle py-2.5 active">남호</button>
-                                <button type="button" id="m-garam" class="btn-toggle py-2.5">가람</button>
-                            </div>
-                            <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl">
-                                <button type="button" id="t-asset" class="btn-toggle py-2.5 active">자산</button>
-                                <button type="button" id="t-expense" class="btn-toggle py-2.5">수/지</button>
+                        <!-- Writer Toggle -->
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">작성자</label>
+                            <div class="toggle-group">
+                                <button type="button" id="w-namho" class="toggle-btn active">남호</button>
+                                <button type="button" id="w-garam" class="toggle-btn">가람</button>
                             </div>
                         </div>
 
+                        <!-- Type Toggle -->
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">카테고리</label>
-                            <select id="i-category"></select>
+                            <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">유형</label>
+                            <div class="toggle-group">
+                                <button type="button" id="t-asset" class="toggle-btn active">자산</button>
+                                <button type="button" id="t-expense" class="toggle-btn">수입/지출</button>
+                            </div>
                         </div>
-                        
-                        <div id="stock-group" class="hidden space-y-4 p-5 bg-indigo-50 rounded-3xl border border-indigo-100">
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="text-[9px] font-black text-indigo-400 uppercase ml-1 mb-1 block">티커</label>
-                                    <input type="text" id="i-ticker" placeholder="005930">
+
+                        <!-- Category -->
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">카테고리</label>
+                            <select id="i-category" class="cursor-pointer"></select>
+                        </div>
+
+                        <!-- Dynamic Stock Group -->
+                        <div id="stock-group" class="hidden stock-calc-box space-y-4">
+                            <div class="grid grid-cols-5 gap-3">
+                                <div class="col-span-3">
+                                    <label class="text-[9px] font-black text-indigo-400 mb-1 block">티커 (예: 005930 / TSLA)</label>
+                                    <div class="flex gap-1">
+                                        <input type="text" id="i-ticker" placeholder="005930" class="text-sm">
+                                        <button class="bg-indigo-500 text-white text-[10px] font-black px-3 rounded-xl whitespace-nowrap">가져오기</button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="text-[9px] font-black text-indigo-400 uppercase ml-1 mb-1 block">보유 수량</label>
-                                    <input type="number" id="i-quantity" step="any" placeholder="0">
+                                <div class="col-span-2">
+                                    <label class="text-[9px] font-black text-indigo-400 mb-1 block">보유 수량</label>
+                                    <input type="number" id="i-quantity" placeholder="0" class="text-sm">
                                 </div>
                             </div>
                             <div>
-                                <label class="text-[9px] font-black text-indigo-400 uppercase ml-1 mb-1 block">현재가 (단가)</label>
-                                <input type="number" id="i-price" step="any" placeholder="0">
+                                <label class="text-[9px] font-black text-indigo-400 mb-1 block">현재가 (KRW)</label>
+                                <input type="number" id="i-price" placeholder="0" class="text-sm">
                             </div>
-                            <div class="pt-2 border-t border-indigo-200/50">
-                                <div id="i-display-amount" class="text-2xl font-black text-indigo-900 tracking-tighter text-center">₩0</div>
-                                <input type="hidden" id="i-amount-val">
+                            <div class="total-display">
+                                <label class="text-[9px] font-black text-slate-400 mb-1 block">총 평가 금액</label>
+                                <p class="text-2xl font-black text-indigo-900 tracking-tighter" id="i-stock-total">₩0</p>
+                                <input type="hidden" id="i-stock-amount-val">
                             </div>
                         </div>
 
+                        <!-- Normal Amount -->
                         <div id="normal-group">
-                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">금액 (₩)</label>
+                            <label class="text-[10px] font-black text-slate-400 mb-2 block">금액 (₩)</label>
                             <input type="number" id="i-amount" placeholder="0">
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
+                        <!-- Meta Info -->
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">날짜</label>
+                                <label class="text-[10px] font-black text-slate-400 mb-2 block">날짜</label>
                                 <input type="date" id="i-date">
                             </div>
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase ml-1 mb-1 block">항목명/메모</label>
+                                <label class="text-[10px] font-black text-slate-400 mb-2 block">항목명/메모</label>
                                 <input type="text" id="i-name" placeholder="상세 내용">
                             </div>
                         </div>
-                        
-                        <button id="btn-save" class="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-indigo-600 active:scale-95 transition-all text-base shadow-xl mt-2">기록 저장하기</button>
+
+                        <button id="btn-save" class="w-full py-4 bg-[#1e293b] text-white font-black rounded-2xl hover:bg-indigo-600 transition-all text-base shadow-lg mt-4">데이터 저장하기</button>
                     </div>
                 </div>
             </aside>
-
-            <section class="lg:col-span-8">
-                <div class="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
-                    <button id="f-all" class="filter-btn active">전체보기</button>
-                    <button id="f-asset" class="filter-btn">자산현황</button>
-                    <button id="f-income" class="filter-btn">수입내역</button>
-                    <button id="f-expense" class="filter-btn">지출내역</button>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 mb-8">
-                    <div class="glass-card p-5 h-[240px] relative">
-                        <canvas id="assetChart"></canvas>
-                    </div>
-                    <div class="glass-card p-5 h-[240px] relative">
-                        <canvas id="trendChart"></canvas>
-                    </div>
-                </div>
-
-                <div id="main-list" class="space-y-3">
-                    <!-- 로딩 스켈레톤 -->
-                    <div class="list-item"><div class="h-12 w-full skeleton"></div></div>
-                    <div class="list-item"><div class="h-12 w-full skeleton"></div></div>
-                    <div class="list-item"><div class="h-12 w-full skeleton"></div></div>
-                </div>
-            </section>
         </div>
     </div>
 
@@ -176,97 +215,67 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "firebase/firestore";
 
+        // Firebase Setup
         const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-live';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-pro';
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 예시 데이터 없이 빈 배열로 시작
         let records = [];
-        let user = null;
         let curWriter = '남호';
         let curType = 'asset';
         let curFilter = 'all';
         let assetChart, trendChart;
 
         const CATEGORIES = {
-            asset: ['주식(국내)', '주식(해외)', '현금/예적금', '보증금', '연금/퇴직금', '보험(해지환급)', '주택청약', '기타자산'],
-            expense: ['급여(수입)', '기타 수입', '생활비(지출)', '식비/카페', '교통/통신', '쇼핑/문화', '기타 지출']
+            asset: ['주식(국내)', '주식(해외)', '현금/예적금', '보증금', '보험/청약', '연금/퇴직금', '부동산', '기타자산'],
+            expense: ['급여(수입)', '이자/배당(수입)', '기타 수입', '생활비(지출)', '식비(지출)', '교통/통신', '쇼핑/문화', '기타 지출']
         };
 
+        // Initialize
         window.onload = async () => {
             await initAuth();
+            document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
+            switchType('asset');
         };
 
         async function initAuth() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Auth Error:", error);
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
             }
-
-            onAuthStateChanged(auth, (u) => {
-                if (u) {
-                    user = u;
-                    bindFirestore();
-                }
-            });
+            onAuthStateChanged(auth, (u) => { if (u) bindFirestore(); });
         }
 
         function bindFirestore() {
-            if (!user) return;
-            // RULE 1 경로 준수
-            const q = query(
-                collection(db, 'artifacts', appId, 'public', 'data', 'records'), 
-                orderBy('updatedAt', 'desc')
-            );
-            
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'records'), orderBy('updatedAt', 'desc'));
             onSnapshot(q, (snap) => {
                 records = snap.docs.map(d => ({...d.data(), id: d.id}));
-                updateStatus('online');
                 render();
-            }, (err) => {
-                console.error("Firestore Error:", err);
-                updateStatus('offline');
-            });
-        }
-
-        function updateStatus(status) {
-            const dot = document.getElementById('sync-dot');
-            const text = document.getElementById('sync-text');
-            if (status === 'online') {
-                dot.className = "status-dot dot-online";
-                text.innerText = "실시간 동기화 중";
-            } else {
-                dot.className = "status-dot dot-syncing";
-                text.innerText = "연결 중...";
-            }
+            }, (err) => console.error(err));
         }
 
         function render() {
-            const listEl = document.getElementById('main-list');
-            const thisMonth = new Date().toISOString().slice(0, 7);
-            
-            let totalAsset = 0, mInc = 0, mExp = 0;
+            const listEl = document.getElementById('record-list');
+            const now = new Date();
+            const thisMonth = now.toISOString().slice(0, 7);
+
+            let totalAssets = 0, mIncome = 0, mExpense = 0;
 
             records.forEach(r => {
                 const amt = parseFloat(r.amount) || 0;
-                if (r.type === 'asset') totalAsset += amt;
+                if (r.type === 'asset') totalAssets += amt;
                 else if (r.date?.startsWith(thisMonth)) {
-                    if (r.category.includes('수입')) mInc += amt;
-                    else mExp += amt;
+                    if (r.category.includes('수입')) mIncome += amt;
+                    else mExpense += amt;
                 }
             });
 
-            document.getElementById('total-wealth').innerText = `₩${totalAsset.toLocaleString()}`;
-            document.getElementById('stat-asset').innerText = `₩${totalAsset.toLocaleString()}`;
-            document.getElementById('stat-income').innerText = `₩${mInc.toLocaleString()}`;
-            document.getElementById('stat-expense').innerText = `₩${mExp.toLocaleString()}`;
+            document.getElementById('top-total-asset').innerText = `₩${totalAssets.toLocaleString()}`;
+            document.getElementById('top-monthly-income').innerText = `₩${mIncome.toLocaleString()}`;
+            document.getElementById('top-monthly-expense').innerText = `₩${mExpense.toLocaleString()}`;
 
             const filtered = records.filter(r => {
                 if (curFilter === 'all') return true;
@@ -276,36 +285,30 @@
                 return true;
             });
 
-            listEl.innerHTML = filtered.length ? '' : `
-                <div class="py-20 text-center glass-card">
-                    <p class="text-slate-500 font-bold mb-2">데이터가 없습니다.</p>
-                    <p class="text-xs text-slate-600">왼쪽 폼에서 새로운 내역을 입력해주세요.</p>
-                </div>`;
-            
+            listEl.innerHTML = filtered.length ? '' : `<div class="py-20 text-center text-slate-600 font-bold glass-panel">표시할 내역이 없습니다.</div>`;
+
             filtered.forEach(r => {
                 const div = document.createElement('div');
-                div.className = 'list-item';
-                
+                div.className = 'list-row cursor-pointer';
+                div.onclick = () => editItem(r.id);
+
                 const isExp = r.category.includes('지출') || (r.type === 'expense' && !r.category.includes('수입'));
                 const isInc = r.category.includes('수입');
-                const priceColor = isExp ? 'text-rose-400' : (isInc ? 'text-emerald-400' : 'text-white');
+                const amtColor = isExp ? 'text-rose-400' : (isInc ? 'text-emerald-400' : 'text-white');
 
                 div.innerHTML = `
-                    <div class="flex items-center gap-3" onclick="editItem('${r.id}')">
-                        <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-black text-indigo-400">${r.user[0]}</div>
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black text-indigo-400 text-xs">${r.user[0]}</div>
                         <div>
                             <div class="flex items-center gap-2 mb-0.5">
-                                <span class="text-[9px] font-black text-slate-500 uppercase">${r.category}</span>
-                                <span class="text-[9px] font-bold text-slate-600">${r.date}</span>
+                                <span class="text-[9px] font-black text-indigo-400 uppercase tracking-tighter">${r.category}</span>
+                                <span class="text-[9px] font-bold text-slate-500">${r.date}</span>
                             </div>
                             <h4 class="text-sm font-bold text-slate-100">${r.name || r.ticker || '-'}</h4>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="text-right" onclick="editItem('${r.id}')">
-                            <p class="text-base font-black ${priceColor}">${isExp ? '-' : '+'} ₩${(Math.abs(r.amount) || 0).toLocaleString()}</p>
-                        </div>
-                        <button onclick="deleteItem('${r.id}')" class="p-2 text-slate-600 hover:text-rose-500 transition-colors">✕</button>
+                    <div class="text-right">
+                        <p class="text-base font-black ${amtColor}">${isExp ? '-' : '+'} ₩${Math.abs(r.amount).toLocaleString()}</p>
                     </div>
                 `;
                 listEl.appendChild(div);
@@ -315,14 +318,12 @@
         }
 
         function updateCharts() {
-            const assetCtx = document.getElementById('assetChart').getContext('2d');
-            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            const assetCtx = document.getElementById('assetPieChart').getContext('2d');
+            const trendCtx = document.getElementById('trendBarChart').getContext('2d');
 
+            // Pie Chart
             const assetMap = {};
-            records.filter(r => r.type === 'asset').forEach(r => {
-                assetMap[r.category] = (assetMap[r.category] || 0) + (parseFloat(r.amount) || 0);
-            });
-
+            records.filter(r => r.type === 'asset').forEach(r => assetMap[r.category] = (assetMap[r.category] || 0) + r.amount);
             if (assetChart) assetChart.destroy();
             assetChart = new Chart(assetCtx, {
                 type: 'doughnut',
@@ -334,26 +335,19 @@
                         borderWidth: 0
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '80%', plugins: { legend: { display: false } } }
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
             });
 
+            // Trend Chart
             const months = [];
-            const trendData = {};
+            const trend = {};
             for (let i = 3; i >= 0; i--) {
-                const d = new Date();
-                d.setMonth(d.getMonth() - i);
-                const key = d.toISOString().slice(0, 7);
-                months.push(key);
-                trendData[key] = { inc: 0, exp: 0 };
+                const d = new Date(); d.setMonth(d.getMonth() - i);
+                const k = d.toISOString().slice(0, 7);
+                months.push(k); trend[k] = 0;
             }
-
-            records.forEach(r => {
-                const m = r.date?.slice(0, 7);
-                if (trendData[m]) {
-                    const amt = Math.abs(parseFloat(r.amount) || 0);
-                    if (r.category.includes('수입')) trendData[m].inc += amt;
-                    else if (r.category.includes('지출') || r.type === 'expense') trendData[m].exp += amt;
-                }
+            records.filter(r => r.category.includes('지출') || (r.type === 'expense' && !r.category.includes('수입'))).forEach(r => {
+                const m = r.date.slice(0, 7); if (trend[m] !== undefined) trend[m] += r.amount;
             });
 
             if (trendChart) trendChart.destroy();
@@ -361,17 +355,13 @@
                 type: 'bar',
                 data: {
                     labels: months.map(m => m.split('-')[1] + '월'),
-                    datasets: [
-                        { label: '수입', data: months.map(m => trendData[m].inc), backgroundColor: '#10b981', borderRadius: 4 },
-                        { label: '지출', data: months.map(m => trendData[m].exp), backgroundColor: '#f43f5e', borderRadius: 4 }
-                    ]
+                    datasets: [{ label: '지출', data: months.map(m => trend[m]), backgroundColor: '#f43f5e', borderRadius: 8 }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
             });
         }
 
         async function save() {
-            if (!user) return;
             const btn = document.getElementById('btn-save');
             btn.disabled = true;
             btn.innerText = "저장 중...";
@@ -380,14 +370,14 @@
             const id = editId || `REC-${Date.now()}`;
             const cat = document.getElementById('i-category').value;
             const isStock = cat.includes('주식');
-            
+
             const data = {
                 user: curWriter,
                 type: curType,
                 category: cat,
                 name: document.getElementById('i-name').value || (isStock ? document.getElementById('i-ticker').value : '기타'),
-                date: document.getElementById('i-date').value || new Date().toISOString().split('T')[0],
-                amount: isStock ? (parseInt(document.getElementById('i-amount-val').value) || 0) : (parseInt(document.getElementById('i-amount').value) || 0),
+                date: document.getElementById('i-date').value,
+                amount: isStock ? (parseInt(document.getElementById('i-stock-amount-val').value) || 0) : (parseInt(document.getElementById('i-amount').value) || 0),
                 ticker: isStock ? document.getElementById('i-ticker').value.toUpperCase() : '',
                 quantity: isStock ? (parseFloat(document.getElementById('i-quantity').value) || 0) : 0,
                 price: isStock ? (parseFloat(document.getElementById('i-price').value) || 0) : 0,
@@ -397,106 +387,92 @@
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id), data);
                 resetForm();
-            } catch (e) {
-                console.error("Save Fail:", e);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "기록 저장하기";
-            }
+            } catch (e) { alert("저장 실패"); }
+            finally { btn.disabled = false; btn.innerText = "데이터 저장하기"; }
         }
-
-        window.deleteItem = async (id) => {
-            if (!confirm("정말 삭제하시겠습니까?")) return;
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
-            } catch (e) {
-                console.error("Delete Fail:", e);
-            }
-        };
-
-        window.editItem = (id) => {
-            const r = records.find(x => x.id === id);
-            if (!r) return;
-            document.getElementById('edit-id').value = id;
-            document.getElementById('form-title').innerText = "기록 수정";
-            document.getElementById('btn-save').innerText = "수정 완료";
-            
-            curWriter = r.user;
-            document.getElementById('m-namho').classList.toggle('active', r.user === '남호');
-            document.getElementById('m-garam').classList.toggle('active', r.user === '가람');
-            
-            switchType(r.type);
-            document.getElementById('i-category').value = r.category;
-            refreshInputUI();
-            
-            document.getElementById('i-name').value = r.name || "";
-            document.getElementById('i-date').value = r.date;
-            if (r.ticker) {
-                document.getElementById('i-ticker').value = r.ticker;
-                document.getElementById('i-quantity').value = r.quantity;
-                document.getElementById('i-price').value = r.price;
-                updateStockTotal();
-            } else {
-                document.getElementById('i-amount').value = r.amount;
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
 
         function switchType(type) {
             curType = type;
             document.getElementById('t-asset').classList.toggle('active', type === 'asset');
             document.getElementById('t-expense').classList.toggle('active', type === 'expense');
             document.getElementById('i-category').innerHTML = CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join('');
-            refreshInputUI();
+            refreshUI();
         }
 
-        function refreshInputUI() {
+        function refreshUI() {
             const isStock = document.getElementById('i-category').value.includes('주식');
             document.getElementById('stock-group').classList.toggle('hidden', !isStock);
             document.getElementById('normal-group').classList.toggle('hidden', isStock);
         }
 
-        function updateStockTotal() {
-            const qty = parseFloat(document.getElementById('i-quantity').value) || 0;
-            const price = parseFloat(document.getElementById('i-price').value) || 0;
-            const total = Math.round(qty * price);
-            document.getElementById('i-display-amount').innerText = `₩${total.toLocaleString()}`;
-            document.getElementById('i-amount-val').value = total;
+        function calcStock() {
+            const q = parseFloat(document.getElementById('i-quantity').value) || 0;
+            const p = parseFloat(document.getElementById('i-price').value) || 0;
+            const total = Math.round(q * p);
+            document.getElementById('i-stock-total').innerText = `₩${total.toLocaleString()}`;
+            document.getElementById('i-stock-amount-val').value = total;
         }
 
         function resetForm() {
             document.getElementById('edit-id').value = "";
-            document.getElementById('form-title').innerText = "기록하기";
-            document.getElementById('btn-save').innerText = "기록 저장하기";
+            document.getElementById('form-title').innerText = "내역 추가";
+            document.getElementById('btn-save').innerText = "데이터 저장하기";
             document.getElementById('i-name').value = "";
             document.getElementById('i-ticker').value = "";
             document.getElementById('i-quantity').value = "";
             document.getElementById('i-price').value = "";
             document.getElementById('i-amount').value = "";
-            document.getElementById('i-display-amount').innerText = "₩0";
+            document.getElementById('i-stock-total').innerText = "₩0";
             document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
         }
 
+        function editItem(id) {
+            const r = records.find(x => x.id === id);
+            if (!r) return;
+            if (confirm("이 내역을 수정하시겠습니까? (삭제하려면 취소 후 항목을 길게 눌러주세요 - 본 예시는 클릭 시 바로 편집 모드)")) {
+                document.getElementById('edit-id').value = id;
+                document.getElementById('form-title').innerText = "기록 수정";
+                document.getElementById('btn-save').innerText = "수정 완료";
+                curWriter = r.user;
+                document.getElementById('w-namho').classList.toggle('active', r.user === '남호');
+                document.getElementById('w-garam').classList.toggle('active', r.user === '가람');
+                switchType(r.type);
+                document.getElementById('i-category').value = r.category;
+                refreshUI();
+                if (r.ticker) {
+                    document.getElementById('i-ticker').value = r.ticker;
+                    document.getElementById('i-quantity').value = r.quantity;
+                    document.getElementById('i-price').value = r.price;
+                    calcStock();
+                } else {
+                    document.getElementById('i-amount').value = r.amount;
+                }
+                document.getElementById('i-name').value = r.name;
+                document.getElementById('i-date').value = r.date;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (confirm("혹시 삭제하시겠습니까?")) {
+                deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
+            }
+        }
+
+        // Event Listeners
         document.getElementById('btn-save').onclick = save;
-        document.getElementById('m-namho').onclick = () => { curWriter = '남호'; document.getElementById('m-namho').classList.add('active'); document.getElementById('m-garam').classList.remove('active'); };
-        document.getElementById('m-garam').onclick = () => { curWriter = '가람'; document.getElementById('m-garam').classList.add('active'); document.getElementById('m-namho').classList.remove('active'); };
+        document.getElementById('btn-reset').onclick = resetForm;
+        document.getElementById('w-namho').onclick = () => { curWriter = '남호'; document.getElementById('w-namho').classList.add('active'); document.getElementById('w-garam').classList.remove('active'); };
+        document.getElementById('w-garam').onclick = () => { curWriter = '가람'; document.getElementById('w-garam').classList.add('active'); document.getElementById('w-namho').classList.remove('active'); };
         document.getElementById('t-asset').onclick = () => switchType('asset');
         document.getElementById('t-expense').onclick = () => switchType('expense');
-        document.getElementById('i-category').onchange = refreshInputUI;
-        document.getElementById('i-quantity').oninput = updateStockTotal;
-        document.getElementById('i-price').oninput = updateStockTotal;
-        document.getElementById('btn-reset').onclick = resetForm;
-        
-        ['f-all', 'f-asset', 'f-income', 'f-expense'].forEach(id => {
-            document.getElementById(id).onclick = () => {
-                curFilter = id.split('-')[1];
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === id));
+        document.getElementById('i-category').onchange = refreshUI;
+        document.getElementById('i-quantity').oninput = calcStock;
+        document.getElementById('i-price').oninput = calcStock;
+
+        ['all', 'asset', 'income', 'expense'].forEach(f => {
+            document.getElementById(`f-${f}`).onclick = () => {
+                curFilter = f;
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `f-${f}`));
                 render();
             };
         });
-
-        document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
-        switchType('asset');
     </script>
 </body>
 </html>
