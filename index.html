@@ -19,13 +19,12 @@
         .filter-btn { background: rgba(30, 41, 59, 0.5); color: #64748b; padding: 8px 18px; border-radius: 12px; font-size: 13px; font-weight: 700; transition: all 0.2s; border: 1px solid transparent; }
         .filter-btn.active { background: #4f46e5; color: white; }
         
-        .list-item { background: rgba(30, 41, 59, 0.2); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 16px 20px; margin-bottom: 10px; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .list-item { background: rgba(30, 41, 59, 0.2); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 16px 20px; margin-bottom: 10px; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .list-item:active { transform: scale(0.98); background: rgba(30, 41, 59, 0.4); }
         
         input, select { background: #f1f5f9; border: 2px solid transparent; border-radius: 14px; padding: 12px 16px; width: 100%; color: #1e293b; font-size: 15px; font-weight: 600; transition: all 0.2s; }
         input:focus { border-color: #4f46e5; background: white; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
         
-        /* Skeleton Animation */
         .skeleton { background: linear-gradient(90deg, rgba(30,41,59,0.2) 25%, rgba(30,41,59,0.5) 50%, rgba(30,41,59,0.2) 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 10px; }
         @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
@@ -153,6 +152,7 @@
                 </div>
 
                 <div id="main-list" class="space-y-3">
+                    <!-- 로딩 스켈레톤 -->
                     <div class="list-item"><div class="h-12 w-full skeleton"></div></div>
                     <div class="list-item"><div class="h-12 w-full skeleton"></div></div>
                     <div class="list-item"><div class="h-12 w-full skeleton"></div></div>
@@ -174,16 +174,16 @@
     <script type="module">
         import { initializeApp } from "firebase/app";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, query, orderBy } from "firebase/firestore";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "firebase/firestore";
 
         const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-v3';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-live';
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const CACHE_KEY = `records_cache_${appId}`;
-        let records = JSON.parse(localStorage.getItem(CACHE_KEY) || "[]");
+        // 예시 데이터 없이 빈 배열로 시작
+        let records = [];
         let user = null;
         let curWriter = '남호';
         let curType = 'asset';
@@ -196,20 +196,18 @@
         };
 
         window.onload = async () => {
-            if (records.length > 0) render();
             await initAuth();
         };
 
         async function initAuth() {
             try {
-                // RULE 3: signInWithCustomToken 우선 사용 후 signInAnonymously 로 백업
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
             } catch (error) {
-                console.error("Auth failed:", error);
+                console.error("Auth Error:", error);
             }
 
             onAuthStateChanged(auth, (u) => {
@@ -221,23 +219,19 @@
         }
 
         function bindFirestore() {
-            if (!user) return; // 인증되지 않은 경우 쿼리 중단
-
-            // RULE 1: /artifacts/{appId}/public/data/{collectionName} 경로 준수
+            if (!user) return;
+            // RULE 1 경로 준수
             const q = query(
                 collection(db, 'artifacts', appId, 'public', 'data', 'records'), 
                 orderBy('updatedAt', 'desc')
             );
             
-            // onSnapshot 에 성공 및 에러 콜백 필수 포함
             onSnapshot(q, (snap) => {
-                const newRecords = snap.docs.map(d => ({...d.data(), id: d.id}));
-                records = newRecords;
-                localStorage.setItem(CACHE_KEY, JSON.stringify(records));
+                records = snap.docs.map(d => ({...d.data(), id: d.id}));
                 updateStatus('online');
                 render();
             }, (err) => {
-                console.error("Firestore Permission/Fetch Error:", err);
+                console.error("Firestore Error:", err);
                 updateStatus('offline');
             });
         }
@@ -247,10 +241,10 @@
             const text = document.getElementById('sync-text');
             if (status === 'online') {
                 dot.className = "status-dot dot-online";
-                text.innerText = "LIVE SYNC";
+                text.innerText = "실시간 동기화 중";
             } else {
                 dot.className = "status-dot dot-syncing";
-                text.innerText = "OFFLINE/SYNCING...";
+                text.innerText = "연결 중...";
             }
         }
 
@@ -282,18 +276,22 @@
                 return true;
             });
 
-            listEl.innerHTML = filtered.length ? '' : '<div class="py-10 text-center text-slate-600 font-bold">내역이 없습니다.</div>';
+            listEl.innerHTML = filtered.length ? '' : `
+                <div class="py-20 text-center glass-card">
+                    <p class="text-slate-500 font-bold mb-2">데이터가 없습니다.</p>
+                    <p class="text-xs text-slate-600">왼쪽 폼에서 새로운 내역을 입력해주세요.</p>
+                </div>`;
+            
             filtered.forEach(r => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
-                div.onclick = () => editItem(r.id);
                 
                 const isExp = r.category.includes('지출') || (r.type === 'expense' && !r.category.includes('수입'));
                 const isInc = r.category.includes('수입');
                 const priceColor = isExp ? 'text-rose-400' : (isInc ? 'text-emerald-400' : 'text-white');
 
                 div.innerHTML = `
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3" onclick="editItem('${r.id}')">
                         <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-black text-indigo-400">${r.user[0]}</div>
                         <div>
                             <div class="flex items-center gap-2 mb-0.5">
@@ -303,8 +301,11 @@
                             <h4 class="text-sm font-bold text-slate-100">${r.name || r.ticker || '-'}</h4>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <p class="text-base font-black ${priceColor}">${isExp ? '-' : '+'} ₩${(Math.abs(r.amount) || 0).toLocaleString()}</p>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right" onclick="editItem('${r.id}')">
+                            <p class="text-base font-black ${priceColor}">${isExp ? '-' : '+'} ₩${(Math.abs(r.amount) || 0).toLocaleString()}</p>
+                        </div>
+                        <button onclick="deleteItem('${r.id}')" class="p-2 text-slate-600 hover:text-rose-500 transition-colors">✕</button>
                     </div>
                 `;
                 listEl.appendChild(div);
@@ -371,6 +372,10 @@
 
         async function save() {
             if (!user) return;
+            const btn = document.getElementById('btn-save');
+            btn.disabled = true;
+            btn.innerText = "저장 중...";
+
             const editId = document.getElementById('edit-id').value;
             const id = editId || `REC-${Date.now()}`;
             const cat = document.getElementById('i-category').value;
@@ -389,21 +394,27 @@
                 updatedAt: Date.now()
             };
 
-            const idx = records.findIndex(r => r.id === id);
-            if (idx > -1) records[idx] = { ...data, id };
-            else records.unshift({ ...data, id });
-            render(); 
-
             try {
-                // RULE 1 준수
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id), data);
                 resetForm();
             } catch (e) {
                 console.error("Save Fail:", e);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "기록 저장하기";
             }
         }
 
-        function editItem(id) {
+        window.deleteItem = async (id) => {
+            if (!confirm("정말 삭제하시겠습니까?")) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
+            } catch (e) {
+                console.error("Delete Fail:", e);
+            }
+        };
+
+        window.editItem = (id) => {
             const r = records.find(x => x.id === id);
             if (!r) return;
             document.getElementById('edit-id').value = id;
@@ -429,7 +440,7 @@
                 document.getElementById('i-amount').value = r.amount;
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        };
 
         function switchType(type) {
             curType = type;
