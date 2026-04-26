@@ -8,102 +8,106 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; overflow-x: hidden; min-height: 100vh; }
+        body { font-family: 'Pretendard', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; min-height: 100vh; }
         
-        .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 24px; }
-        .input-card { background: white; border-radius: 28px; color: #1e293b; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; }
+        .input-card { background: white; border-radius: 24px; color: #1e293b; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
         
-        /* 버튼 공통 스타일 */
-        .btn-toggle { background: #f1f5f9; color: #94a3b8; border-radius: 14px; font-weight: 800; transition: all 0.2s ease; font-size: 14px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .btn-toggle.active { background: #6366f1 !important; color: white !important; transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4); }
+        .btn-toggle { background: #f1f5f9; color: #94a3b8; border-radius: 12px; font-weight: 800; transition: all 0.2s ease; font-size: 13px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-toggle.active { background: #6366f1 !important; color: white !important; box-shadow: 0 8px 12px -3px rgba(99, 102, 241, 0.3); }
         
-        .filter-btn { background: rgba(30, 41, 59, 0.6); color: #64748b; padding: 12px 24px; border-radius: 14px; font-size: 14px; font-weight: 700; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
-        .filter-btn.active { background: #6366f1; color: white; border-color: transparent; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
+        .filter-btn { background: rgba(30, 41, 59, 0.6); color: #64748b; padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 700; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+        .filter-btn.active { background: #6366f1; color: white; border-color: transparent; }
         
-        .list-item { background: rgba(30, 41, 59, 0.3); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 24px; padding: 20px 28px; margin-bottom: 16px; transition: all 0.3s; position: relative; cursor: pointer; overflow: hidden; }
-        .list-item:hover { background: rgba(30, 41, 59, 0.5); transform: translateX(4px); }
-        .list-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
+        .list-item { background: rgba(30, 41, 59, 0.3); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 16px 24px; margin-bottom: 12px; transition: all 0.3s; position: relative; cursor: pointer; }
+        .list-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
         .type-asset::before { background: #6366f1; }
         .type-income::before { background: #10b981; }
         .type-expense::before { background: #f43f5e; }
         
-        input, select { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 14px; padding: 14px; width: 100%; color: #1e293b; font-size: 15px; font-weight: 600; outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
+        input, select { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; width: 100%; color: #1e293b; font-size: 14px; font-weight: 600; outline: none; }
         input:focus { border-color: #6366f1; background: white; }
-        label { font-size: 11px; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 0.05em; }
+        label { font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 0.05em; }
+
+        .loader-inline { border: 2px solid #e2e8f0; border-top: 2px solid #6366f1; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-        .status-online { background: #10b981; box-shadow: 0 0 10px #10b981; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-8">
-            <div class="animate-in fade-in duration-700">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="text-xs font-black tracking-[0.2em] text-indigo-400 uppercase">Total Net Worth</span>
-                    <span id="update-indicator" class="flex items-center text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full">
-                        <span class="status-dot status-online"></span> <span id="sync-text">CONNECTING...</span>
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-[10px] font-black tracking-[0.2em] text-indigo-400 uppercase">Personal Finance Dashboard</span>
+                    <span id="status-badge" class="flex items-center text-[9px] font-bold text-slate-400 bg-slate-400/10 px-2 py-0.5 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span> LIVE SYNC
                     </span>
                 </div>
-                <div class="flex items-center gap-5">
-                    <h1 class="text-7xl font-black tracking-tighter" id="total-wealth">₩0</h1>
-                </div>
+                <h1 class="text-5xl font-black tracking-tighter" id="total-wealth">₩0</h1>
             </div>
             
-            <div class="flex flex-wrap gap-4 w-full md:w-auto">
-                <div class="glass-card px-8 py-5 flex-1 min-w-[160px] border-l-4 border-indigo-500">
-                    <p class="text-xs text-slate-500 font-black mb-1 uppercase">자산 총액</p>
-                    <p class="text-2xl font-black text-indigo-400" id="stat-asset">₩0</p>
+            <div class="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar">
+                <div class="glass-card px-5 py-3 min-w-[120px]">
+                    <p class="text-[9px] text-slate-500 font-black mb-1 uppercase">자산 총계</p>
+                    <p class="text-lg font-black text-indigo-400" id="stat-asset">₩0</p>
                 </div>
-                <div class="glass-card px-8 py-5 flex-1 min-w-[160px] border-l-4 border-emerald-500">
-                    <p class="text-xs text-slate-500 font-black mb-1 uppercase">이번달 수입</p>
-                    <p class="text-2xl font-black text-emerald-400" id="stat-income">₩0</p>
+                <div class="glass-card px-5 py-3 min-w-[120px]">
+                    <p class="text-[9px] text-slate-500 font-black mb-1 uppercase">이번달 수입</p>
+                    <p class="text-lg font-black text-emerald-400" id="stat-income">₩0</p>
                 </div>
-                <div class="glass-card px-8 py-5 flex-1 min-w-[160px] border-l-4 border-rose-500">
-                    <p class="text-xs text-slate-500 font-black mb-1 uppercase">이번달 지출</p>
-                    <p class="text-2xl font-black text-rose-400" id="stat-expense">₩0</p>
+                <div class="glass-card px-5 py-3 min-w-[120px]">
+                    <p class="text-[9px] text-slate-500 font-black mb-1 uppercase">이번달 지출</p>
+                    <p class="text-lg font-black text-rose-400" id="stat-expense">₩0</p>
                 </div>
             </div>
         </header>
 
-        <!-- Charts -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <div class="glass-card p-8 h-[350px]"><canvas id="assetChart"></canvas></div>
-            <div class="glass-card p-8 h-[350px]"><canvas id="expenseChart"></canvas></div>
+        <!-- Visual Analytics Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <div class="glass-card p-6 min-h-[300px]">
+                <h3 class="text-sm font-black text-slate-400 uppercase mb-4 tracking-wider">자산 구성 비율</h3>
+                <div class="relative h-[220px] flex items-center justify-center">
+                    <canvas id="assetChart"></canvas>
+                </div>
+            </div>
+            <div class="glass-card p-6 min-h-[300px]">
+                <h3 class="text-sm font-black text-slate-400 uppercase mb-4 tracking-wider">최근 4개월 지출 추이</h3>
+                <div class="relative h-[220px]">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            <!-- Form -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left: Form -->
             <aside class="lg:col-span-4">
-                <div class="input-card sticky top-8">
-                    <div class="flex justify-between items-center mb-8">
-                        <h2 class="text-3xl font-black tracking-tight" id="form-title">기록하기</h2>
-                        <button id="btn-reset" class="text-xs text-slate-400 font-black uppercase hover:text-indigo-500 transition-colors">초기화 ↺</button>
+                <div class="input-card sticky top-6">
+                    <div class="flex justify-between items-center mb-5">
+                        <h2 class="text-xl font-black tracking-tight" id="form-title">기록하기</h2>
+                        <button id="btn-reset" class="text-[10px] text-slate-400 font-black uppercase hover:text-indigo-600 transition-colors">초기화 ↺</button>
                     </div>
                     
-                    <div class="space-y-6">
+                    <div class="space-y-4">
                         <input type="hidden" id="edit-id">
                         
-                        <!-- 멤버 선택 -->
-                        <div>
-                            <label>작성자</label>
-                            <div class="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 rounded-2xl">
-                                <button type="button" data-member="남호" class="btn-toggle member-toggle py-3.5 active">남호</button>
-                                <button type="button" data-member="가람" class="btn-toggle member-toggle py-3.5">가람</button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label>작성자</label>
+                                <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
+                                    <button type="button" id="m-namho" class="btn-toggle py-2 active">남호</button>
+                                    <button type="button" id="m-garam" class="btn-toggle py-2">가람</button>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- 타입 선택 -->
-                        <div>
-                            <label>유형</label>
-                            <div class="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 rounded-2xl">
-                                <button type="button" data-type="asset" class="btn-toggle type-toggle py-3 active">자산</button>
-                                <button type="button" data-type="income" class="btn-toggle type-toggle py-3">수입</button>
-                                <button type="button" data-type="expense" class="btn-toggle type-toggle py-3">지출</button>
+                            <div>
+                                <label>유형</label>
+                                <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
+                                    <button type="button" id="t-asset" class="btn-toggle py-2 active">자산</button>
+                                    <button type="button" id="t-expense" class="btn-toggle py-2">수입/지출</button>
+                                </div>
                             </div>
                         </div>
 
@@ -112,61 +116,56 @@
                             <select id="i-category"></select>
                         </div>
                         
-                        <!-- 주식 입력 섹션 -->
-                        <div id="stock-group" class="space-y-4 p-5 bg-indigo-50 rounded-2xl border-2 border-indigo-100 hidden">
+                        <div id="stock-group" class="space-y-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 hidden">
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label>티커 (005930 / QQQ)</label>
-                                    <input type="text" id="i-ticker" placeholder="입력">
+                                    <label class="flex justify-between">티커 <span id="price-loader" class="hidden"><span class="loader-inline"></span></span></label>
+                                    <input type="text" id="i-ticker" placeholder="005930 / TSLA">
                                 </div>
-                                <div>
-                                    <label>수량</label>
-                                    <input type="number" id="i-quantity" step="any" placeholder="0">
-                                </div>
+                                <div><label>수량</label><input type="number" id="i-quantity" step="any" placeholder="0"></div>
                             </div>
                             <div>
-                                <label>현재가 (단가)</label>
-                                <input type="number" id="i-price" step="any" placeholder="0">
+                                <label id="price-label">현재 주가 (조회 결과)</label>
+                                <input type="number" id="i-price" step="any" placeholder="조회 중...">
+                                <p id="price-msg" class="text-[9px] mt-1 font-bold text-indigo-400 hidden">✓ 실시간 데이터 로드 완료</p>
                             </div>
                             <div>
-                                <label>평가 금액 (자동 계산)</label>
-                                <div id="i-display-amount" class="w-full p-4 bg-white/80 border border-indigo-200 rounded-xl text-indigo-900 font-black text-xl">₩0</div>
+                                <label>총 평가 금액</label>
+                                <div id="i-display-amount" class="w-full p-3 bg-white border border-indigo-200 rounded-xl text-indigo-900 font-black text-xl shadow-sm">₩0</div>
                                 <input type="hidden" id="i-amount-val">
                             </div>
                         </div>
 
-                        <!-- 일반 금액 입력 -->
                         <div id="normal-group">
                             <label>금액 (₩)</label>
                             <input type="number" id="i-amount" placeholder="0">
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-2 gap-3">
                             <div><label>날짜</label><input type="date" id="i-date"></div>
-                            <div><label>내용</label><input type="text" id="i-name" placeholder="메모"></div>
+                            <div><label>항목명/메모</label><input type="text" id="i-name" placeholder="상세내용"></div>
                         </div>
                         
-                        <button id="btn-save" class="w-full py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-indigo-600 active:scale-[0.98] transition-all text-xl mt-4">데이터 저장</button>
+                        <button id="btn-save" class="w-full py-4 bg-slate-900 text-white font-black rounded-xl hover:bg-indigo-600 active:scale-[0.98] transition-all text-base mt-2 shadow-lg">기록 저장하기</button>
                     </div>
                 </div>
             </aside>
 
-            <!-- List -->
+            <!-- Right: List -->
             <section class="lg:col-span-8">
-                <div class="flex gap-3 mb-10 overflow-x-auto no-scrollbar pb-2" id="filter-container">
-                    <button data-filter="all" class="filter-btn active">전체보기</button>
-                    <button data-filter="asset" class="filter-btn">자산현황</button>
-                    <button data-filter="income" class="filter-btn">수입내역</button>
-                    <button data-filter="expense" class="filter-btn">지출내역</button>
+                <div class="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
+                    <button id="f-all" class="filter-btn active">전체보기</button>
+                    <button id="f-asset" class="filter-btn">자산현황</button>
+                    <button id="f-income" class="filter-btn">수입내역</button>
+                    <button id="f-expense" class="filter-btn">지출내역</button>
                 </div>
-                <div id="main-list" class="space-y-4 pb-32">
-                    <div class="py-20 text-center text-slate-500 font-bold">데이터를 불러오는 중입니다...</div>
+                <div id="main-list" class="space-y-3 pb-20">
+                    <div class="py-20 text-center text-slate-500 font-bold">데이터를 불러오는 중...</div>
                 </div>
             </section>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="importmap">
     {
       "imports": {
@@ -180,190 +179,263 @@
     <script type="module">
         import { initializeApp } from "firebase/app";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "firebase/auth";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, writeBatch } from "firebase/firestore";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query } from "firebase/firestore";
 
-        // CONFIG
+        const apiKey = ""; 
         const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-asset';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-live';
         const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // STATE
         let records = [];
         let curWriter = '남호';
         let curType = 'asset';
         let curFilter = 'all';
         let user = null;
-        let assetChart = null;
-        let expenseChart = null;
+        let fetchTimer = null;
+        let assetChart, trendChart;
 
-        const USD_RATE = 1481.5;
         const CATEGORIES = {
-            asset: ['주식(국내)', '주식(해외)', '현금/예적금', '보증금', '연금/퇴직금', '주택청약'],
-            income: ['급여(수입)', '기타 수입'],
-            expense: ['생활비', '식비/카페', '문화/여가', '보험', '교통/통신', '쇼핑/기타']
+            asset: ['주식(국내)', '주식(해외)', '현금/예적금', '보증금', '연금/퇴직금', '보험(해지환급)', '주택청약', '기타자산'],
+            expense: ['급여(수입)', '기타 수입', '생활비(지출)', '식비/카페', '교통/통신', '쇼핑/문화', '기타 지출']
         };
 
-        // UI ELEMENTS
-        const listEl = document.getElementById('main-list');
-        const catSelect = document.getElementById('i-category');
-        const stockGroup = document.getElementById('stock-group');
-        const normalGroup = document.getElementById('normal-group');
+        // --- Chart Functions ---
+        function updateCharts() {
+            const assetCtx = document.getElementById('assetChart').getContext('2d');
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
 
-        // FUNCTIONS: CORE
-        async function initAuth() {
-            try {
-                if (initialToken) await signInWithCustomToken(auth, initialToken);
-                else await signInAnonymously(auth);
-            } catch (e) {
-                console.error("Auth Fail", e);
-                document.getElementById('sync-text').innerText = "AUTH ERROR";
+            // 1. Asset Distribution Data
+            const assetDataMap = {};
+            records.filter(r => r.type === 'asset').forEach(r => {
+                assetDataMap[r.category] = (assetDataMap[r.category] || 0) + (parseFloat(r.amount) || 0);
+            });
+
+            if (assetChart) assetChart.destroy();
+            assetChart = new Chart(assetCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(assetDataMap),
+                    datasets: [{
+                        data: Object.values(assetDataMap),
+                        backgroundColor: ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#94a3b8'],
+                        borderWidth: 0,
+                        hoverOffset: 15
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#94a3b8', font: { weight: 'bold', size: 10 }, usePointStyle: true } }
+                    },
+                    cutout: '70%'
+                }
+            });
+
+            // 2. Monthly Trend Data (Last 4 Months)
+            const trendMap = {};
+            const months = [];
+            for (let i = 3; i >= 0; i--) {
+                const d = new Date();
+                d.setMonth(d.getMonth() - i);
+                const mKey = d.toISOString().slice(0, 7);
+                months.push(mKey);
+                trendMap[mKey] = { inc: 0, exp: 0 };
             }
-        }
 
-        onAuthStateChanged(auth, (u) => {
-            if (u) {
-                user = u;
-                document.getElementById('sync-text').innerText = "LIVE SYNC ACTIVE";
-                setupRealtimeListener();
-            }
-        });
+            records.forEach(r => {
+                const m = r.date?.slice(0, 7);
+                if (trendMap[m]) {
+                    if (r.category.includes('수입')) trendMap[m].inc += (parseFloat(r.amount) || 0);
+                    else if (r.type === 'expense' || r.category.includes('지출')) trendMap[m].exp += (parseFloat(r.amount) || 0);
+                }
+            });
 
-        function setupRealtimeListener() {
-            const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'records');
-            onSnapshot(recordsRef, (snap) => {
-                records = snap.docs.map(d => d.data());
-                render();
-            }, (err) => {
-                console.error("Listen Error", err);
-                document.getElementById('sync-text').innerText = "SYNC FAILED";
+            if (trendChart) trendChart.destroy();
+            trendChart = new Chart(trendCtx, {
+                type: 'bar',
+                data: {
+                    labels: months.map(m => m.split('-')[1] + '월'),
+                    datasets: [
+                        { label: '수입', data: months.map(m => trendMap[m].inc), backgroundColor: '#10b981', borderRadius: 6 },
+                        { label: '지출', data: months.map(m => trendMap[m].exp), backgroundColor: '#f43f5e', borderRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { weight: 'bold' } } },
+                        y: { display: false }
+                    }
+                }
             });
         }
 
         function render() {
             const now = new Date();
             const thisMonth = now.toISOString().slice(0, 7);
-
             let totalAsset = 0, monthInc = 0, monthExp = 0;
-            let assetDist = {}, timeline = {};
 
-            const filtered = records.filter(r => curFilter === 'all' || r.type === curFilter)
-                                  .sort((a,b) => new Date(b.date) - new Date(a.date));
+            const filtered = records.filter(r => {
+                if (curFilter === 'all') return true;
+                if (curFilter === 'asset') return r.type === 'asset';
+                if (curFilter === 'income') return r.category.includes('수입');
+                if (curFilter === 'expense') return r.category.includes('지출') || (r.type === 'expense' && !r.category.includes('수입'));
+                return true;
+            }).sort((a,b) => new Date(b.date) - new Date(a.date));
 
             records.forEach(r => {
                 const amt = parseFloat(r.amount) || 0;
-                const isThisMonth = r.date?.startsWith(thisMonth);
-
                 if (r.type === 'asset') {
                     totalAsset += amt;
-                    assetDist[r.category] = (assetDist[r.category] || 0) + amt;
-                } else if (r.type === 'income' && isThisMonth) {
-                    monthInc += amt;
-                } else if (r.type === 'expense' && isThisMonth) {
-                    monthExp += amt;
-                    timeline[r.date] = (timeline[r.date] || 0) + amt;
+                } else if (r.date?.startsWith(thisMonth)) {
+                    if (r.category.includes('수입')) monthInc += amt;
+                    else monthExp += amt;
                 }
             });
 
-            document.getElementById('total-wealth').innerText = `₩${(totalAsset).toLocaleString()}`;
+            document.getElementById('total-wealth').innerText = `₩${totalAsset.toLocaleString()}`;
             document.getElementById('stat-asset').innerText = `₩${totalAsset.toLocaleString()}`;
             document.getElementById('stat-income').innerText = `₩${monthInc.toLocaleString()}`;
             document.getElementById('stat-expense').innerText = `₩${monthExp.toLocaleString()}`;
 
+            const listEl = document.getElementById('main-list');
             listEl.innerHTML = filtered.length ? '' : '<div class="py-20 text-center text-slate-600 font-bold">내역이 없습니다.</div>';
             
             filtered.forEach(r => {
                 const div = document.createElement('div');
                 div.className = `list-item flex justify-between items-center type-${r.type}`;
                 div.onclick = () => editItem(r.id);
+                
+                const isExpense = r.category.includes('지출') || r.type === 'expense';
+                const isIncome = r.category.includes('수입');
+                const priceColor = isExpense ? 'text-rose-400' : (isIncome ? 'text-emerald-400' : 'text-indigo-400');
+
                 div.innerHTML = `
-                    <div class="flex items-center gap-5">
-                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center font-black text-xs text-indigo-400 border border-slate-700">${r.user}</div>
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black text-[10px] text-indigo-400 border border-slate-700 shadow-inner">${r.user}</div>
                         <div>
                             <div class="flex items-center gap-2 mb-1">
-                                <span class="text-[10px] font-black uppercase text-indigo-500/80">${r.category}</span>
-                                ${r.ticker ? `<span class="text-[9px] font-bold bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-md">${r.ticker}</span>` : ''}
-                                <span class="text-[10px] font-bold text-slate-500 ml-1">${r.date}</span>
+                                <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400">${r.category}</span>
+                                ${r.ticker ? `<span class="text-[9px] font-bold text-slate-500">[${r.ticker}]</span>` : ''}
+                                <span class="text-[9px] font-bold text-slate-600">${r.date}</span>
                             </div>
-                            <h4 class="text-base font-bold text-slate-100">${r.name}</h4>
+                            <h4 class="text-sm font-bold text-slate-100">${r.name || '상세내용 없음'}</h4>
                         </div>
                     </div>
-                    <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-4">
                         <div class="text-right">
-                            <p class="text-xl font-black ${r.type === 'expense' ? 'text-rose-400' : (r.type === 'income' ? 'text-emerald-400' : 'text-indigo-400')}">
-                                ${r.type === 'expense' ? '-' : '+'} ₩${(r.amount || 0).toLocaleString()}
+                            <p class="text-base font-black ${priceColor}">
+                                ${isExpense ? '-' : '+'} ₩${(Math.abs(r.amount) || 0).toLocaleString()}
                             </p>
+                            ${r.quantity ? `<p class="text-[10px] text-slate-500 font-bold">${r.quantity}주 x ₩${(r.price || 0).toLocaleString()}</p>` : ''}
                         </div>
-                        <button class="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:text-rose-500 text-2xl font-light" onclick="event.stopPropagation(); window.deleteItem('${r.id}')">×</button>
+                        <button class="w-8 h-8 flex items-center justify-center rounded-full text-slate-600 hover:bg-rose-500/10 hover:text-rose-500 transition-colors" onclick="event.stopPropagation(); window.deleteItem('${r.id}')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
                     </div>
                 `;
                 listEl.appendChild(div);
             });
 
-            updateCharts(assetDist, timeline);
+            updateCharts();
         }
 
-        function updateCharts(dist, timeline) {
-            const commonOptions = { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } } };
-            
-            if (assetChart) assetChart.destroy();
-            assetChart = new Chart(document.getElementById('assetChart'), {
-                type: 'doughnut',
-                data: { labels: Object.keys(dist), datasets: [{ data: Object.values(dist), backgroundColor: ['#6366f1', '#10b981', '#fbbf24', '#f43f5e', '#38bdf8'], borderWidth: 0 }] },
-                options: { ...commonOptions, cutout: '75%' }
-            });
-
-            if (expenseChart) expenseChart.destroy();
-            const dates = Object.keys(timeline).sort();
-            expenseChart = new Chart(document.getElementById('expenseChart'), {
-                type: 'line',
-                data: { labels: dates, datasets: [{ label: '지출', data: dates.map(d => timeline[d]), borderColor: '#f43f5e', tension: 0.4, fill: true, backgroundColor: 'rgba(244, 63, 94, 0.1)' }] },
-                options: { ...commonOptions, scales: { x: { display: false }, y: { display: false } } }
-            });
-        }
-
-        // FUNCTIONS: INTERACTION
-        function switchType(type) {
-            curType = type;
-            document.querySelectorAll('.type-toggle').forEach(b => b.classList.toggle('active', b.dataset.type === type));
-            catSelect.innerHTML = CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join('');
-            handleCategoryUI();
-        }
-
-        function handleCategoryUI() {
-            const isStock = catSelect.value.includes('주식');
-            stockGroup.classList.toggle('hidden', !isStock);
-            normalGroup.classList.toggle('hidden', isStock);
-            if (isStock) updateStockCalc();
+        async function autoFetchPrice() {
+            const rawTicker = document.getElementById('i-ticker').value.trim().toUpperCase();
+            if (!rawTicker || rawTicker.length < 2) return;
+            const loader = document.getElementById('price-loader');
+            const msg = document.getElementById('price-msg');
+            loader.classList.remove('hidden');
+            msg.classList.add('hidden');
+            try {
+                const category = document.getElementById('i-category').value;
+                const isForeign = category === '주식(해외)';
+                let ticker = rawTicker;
+                if (!isForeign && /^\d+$/.test(ticker)) ticker += ".KS";
+                const prompt = isForeign 
+                    ? `Get the latest stock price of "${ticker}" from Yahoo Finance in USD. Return ONLY the number. Example: 180.23`
+                    : `Get the latest stock price of South Korean stock "${ticker}" from Yahoo Finance or Google in KRW. Return ONLY the number. Example: 78200. Do not add currency symbols or commas.`;
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        contents: [{ parts: [{ text: prompt }] }],
+                        tools: [{ "google_search": {} }]
+                    })
+                });
+                const result = await response.json();
+                const priceText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+                if (!isNaN(price) && price > 0) {
+                    document.getElementById('i-price').value = price;
+                    msg.classList.remove('hidden');
+                    updateStockCalc();
+                }
+            } catch (e) { console.warn("Price fetch error:", e); }
+            finally { loader.classList.add('hidden'); }
         }
 
         function updateStockCalc() {
             const qty = parseFloat(document.getElementById('i-quantity').value) || 0;
             const price = parseFloat(document.getElementById('i-price').value) || 0;
-            const isForeign = catSelect.value === '주식(해외)';
-            const krw = Math.round(qty * price * (isForeign ? USD_RATE : 1));
+            const isForeign = document.getElementById('i-category').value === '주식(해외)';
+            const rate = isForeign ? 1481.5 : 1; 
+            const krw = Math.round(qty * price * rate);
             document.getElementById('i-display-amount').innerText = `₩${krw.toLocaleString()}`;
             document.getElementById('i-amount-val').value = krw;
         }
 
+        function switchType(type) {
+            curType = type;
+            ['t-asset', 't-expense'].forEach(id => document.getElementById(id).classList.toggle('active', id === `t-${type}`));
+            const sel = document.getElementById('i-category');
+            sel.innerHTML = CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join('');
+            handleCategoryUI();
+        }
+
+        function handleCategoryUI() {
+            const category = document.getElementById('i-category').value;
+            const isStock = category.includes('주식');
+            document.getElementById('stock-group').classList.toggle('hidden', !isStock);
+            document.getElementById('normal-group').classList.toggle('hidden', isStock);
+            document.getElementById('price-label').innerText = category === '주식(해외)' ? "현재 주가 (USD)" : "현재 주가 (KRW)";
+            if (isStock) updateStockCalc();
+        }
+
+        document.getElementById('i-ticker').addEventListener('input', () => {
+            clearTimeout(fetchTimer);
+            fetchTimer = setTimeout(autoFetchPrice, 1000);
+        });
+
+        document.getElementById('m-namho').onclick = () => { curWriter = '남호'; document.getElementById('m-namho').classList.add('active'); document.getElementById('m-garam').classList.remove('active'); };
+        document.getElementById('m-garam').onclick = () => { curWriter = '가람'; document.getElementById('m-garam').classList.add('active'); document.getElementById('m-namho').classList.remove('active'); };
+        document.getElementById('t-asset').onclick = () => switchType('asset');
+        document.getElementById('t-expense').onclick = () => switchType('expense');
+        document.getElementById('i-category').onchange = handleCategoryUI;
+        document.getElementById('i-quantity').oninput = updateStockCalc;
+        document.getElementById('i-price').oninput = updateStockCalc;
+
         async function save() {
             if (!user) return;
-            const id = document.getElementById('edit-id').value || `REC-${Date.now()}`;
-            const isStock = catSelect.value.includes('주식');
-            
+            const id = document.getElementById('edit-id').value || `ID-${Date.now()}`;
+            const category = document.getElementById('i-category').value;
+            const isStock = category.includes('주식');
             const data = {
-                id, user: curWriter, type: curType, category: catSelect.value,
-                name: document.getElementById('i-name').value || '기록',
+                id, user: curWriter, type: curType, category,
+                name: document.getElementById('i-name').value || (isStock ? document.getElementById('i-ticker').value : '기타'),
                 date: document.getElementById('i-date').value || new Date().toISOString().split('T')[0],
                 amount: isStock ? parseInt(document.getElementById('i-amount-val').value) : (parseInt(document.getElementById('i-amount').value) || 0),
                 ticker: isStock ? document.getElementById('i-ticker').value.toUpperCase() : '',
                 quantity: isStock ? parseFloat(document.getElementById('i-quantity').value) : 0,
                 price: isStock ? parseFloat(document.getElementById('i-price').value) : 0
             };
-
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id), data);
             resetForm();
         }
@@ -372,15 +444,13 @@
             const r = records.find(x => x.id === id);
             if (!r) return;
             document.getElementById('edit-id').value = r.id;
-            document.getElementById('form-title').innerText = "기록 수정";
-            
+            document.getElementById('form-title').innerText = "내역 수정";
             curWriter = r.user;
-            document.querySelectorAll('.member-toggle').forEach(b => b.classList.toggle('active', b.dataset.member === r.user));
-            
+            document.getElementById('m-namho').classList.toggle('active', r.user === '남호');
+            document.getElementById('m-garam').classList.toggle('active', r.user === '가람');
             switchType(r.type);
-            catSelect.value = r.category;
+            document.getElementById('i-category').value = r.category;
             handleCategoryUI();
-
             document.getElementById('i-name').value = r.name;
             document.getElementById('i-date').value = r.date;
             if (r.category.includes('주식')) {
@@ -391,50 +461,57 @@
             } else {
                 document.getElementById('i-amount').value = r.amount;
             }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-
-        window.deleteItem = async (id) => {
-            if (confirm("삭제할까요?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
-        };
 
         function resetForm() {
             document.getElementById('edit-id').value = "";
             document.getElementById('form-title').innerText = "기록하기";
-            document.querySelectorAll('.input-card input').forEach(i => i.type !== 'date' && (i.value = ""));
-            document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('i-name').value = "";
+            document.getElementById('i-ticker').value = "";
+            document.getElementById('i-quantity').value = "";
+            document.getElementById('i-price').value = "";
+            document.getElementById('i-amount').value = "";
             document.getElementById('i-display-amount').innerText = "₩0";
+            document.getElementById('price-msg').classList.add('hidden');
         }
 
-        // EVENT LISTENERS
-        document.querySelectorAll('.member-toggle').forEach(btn => {
-            btn.addEventListener('click', () => {
-                curWriter = btn.dataset.member;
-                document.querySelectorAll('.member-toggle').forEach(b => b.classList.toggle('active', b === btn));
-            });
-        });
+        window.deleteItem = async (id) => {
+            if (confirm("정말 삭제하시겠습니까?")) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
+            }
+        };
 
-        document.querySelectorAll('.type-toggle').forEach(btn => {
-            btn.addEventListener('click', () => switchType(btn.dataset.type));
-        });
-
-        catSelect.addEventListener('change', handleCategoryUI);
-        document.getElementById('i-quantity').addEventListener('input', updateStockCalc);
-        document.getElementById('i-price').addEventListener('input', updateStockCalc);
-        document.getElementById('btn-save').addEventListener('click', save);
-        document.getElementById('btn-reset').addEventListener('click', resetForm);
-
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                curFilter = btn.dataset.filter;
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+        document.getElementById('btn-save').onclick = save;
+        document.getElementById('btn-reset').onclick = resetForm;
+        
+        ['f-all', 'f-asset', 'f-income', 'f-expense'].forEach(id => {
+            document.getElementById(id).onclick = () => {
+                curFilter = id.split('-')[1];
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === id));
                 render();
-            });
+            };
         });
 
-        // INIT
+        async function start() {
+            try {
+                if (initialToken) await signInWithCustomToken(auth, initialToken);
+                else await signInAnonymously(auth);
+                onAuthStateChanged(auth, (u) => {
+                    if (u) {
+                        user = u;
+                        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'records'), (snap) => {
+                            records = snap.docs.map(d => d.data());
+                            render();
+                        }, (err) => console.error("Firestore Error:", err));
+                    }
+                });
+            } catch (e) { console.error("Auth Error:", e); }
+        }
+
         document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
         switchType('asset');
-        initAuth();
+        start();
     </script>
 </body>
 </html>
