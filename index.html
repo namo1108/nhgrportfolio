@@ -13,6 +13,15 @@
         .tab-active { background-color: #6366f1 !important; color: white !important; }
         input, select { background-color: #f1f5f9 !important; color: #1e293b !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        #list-container:empty::before {
+            content: '기록을 입력해주세요.';
+            display: block;
+            text-align: center;
+            padding: 40px 0;
+            opacity: 0.2;
+            font-size: 0.875rem;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -24,7 +33,7 @@
                 <h1 class="text-3xl font-black tracking-tighter flex items-center gap-2">
                     <span class="text-indigo-500">NHGR</span> 가계부
                 </h1>
-                <p id="status-text" class="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">● 시스템 연결됨</p>
+                <p id="status-text" class="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">● 시스템 대기 중</p>
             </div>
             
             <div class="flex gap-3 overflow-x-auto no-scrollbar w-full md:w-auto">
@@ -99,17 +108,14 @@
                     <button onclick="setFilter('지출')" id="f-지출" class="f-btn glass-card px-6 py-2 rounded-xl text-xs font-bold text-slate-500 whitespace-nowrap">지출</button>
                 </div>
 
-                <div id="list-container" class="space-y-3">
-                    <!-- 데이터 로딩 표시 -->
-                    <div class="text-center py-10 opacity-30">연결 시도 중...</div>
-                </div>
+                <div id="list-container" class="space-y-3"></div>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse(__firebase_config);
@@ -118,28 +124,48 @@
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'nh-gr-fast-book';
 
-        let state = { writer: '남호', filter: 'all', records: [] };
+        let state = { writer: '남호', filter: 'all', records: [], user: null };
 
-        // 1. 빠른 인증 및 실시간 동기화 시작
-        const init = async () => {
+        // 1. 보안 규칙 통과를 위해 인증 완료 후 데이터 리스너를 실행하는 핵심 로직
+        const startDataSync = (user) => {
+            if (!user) return;
+            
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'records');
+            onSnapshot(colRef, (snap) => {
+                state.records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                render();
+                document.getElementById('status-text').innerText = "● 실시간 모드 활성";
+            }, (err) => {
+                console.error("Firestore Error:", err);
+                document.getElementById('status-text').innerText = "● 권한 오류 재시도 중...";
+            });
+        };
+
+        const initAuth = async () => {
             document.getElementById('field-date').value = new Date().toISOString().split('T')[0];
             
             try {
-                const userCred = await signInAnonymously(auth);
-                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'records');
-                
-                onSnapshot(colRef, (snap) => {
-                    state.records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    render();
-                }, (err) => {
-                    document.getElementById('status-text').innerText = "● 연결 오류";
-                });
+                // 토큰이 있으면 커스텀 토큰으로, 없으면 익명으로 우선 인증 완료
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
             } catch (err) {
-                document.getElementById('status-text').innerText = "● 오프라인 모드";
+                console.error("Auth Failed:", err);
+                document.getElementById('status-text').innerText = "● 접속 장애";
             }
         };
 
-        // 2. 데이터 렌더링 (통계 포함)
+        // 인증 상태 변경 감지
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                state.user = user;
+                startDataSync(user);
+            }
+        });
+
+        // 2. 화면 렌더링
         const render = () => {
             const container = document.getElementById('list-container');
             const thisMonth = new Date().toISOString().slice(0, 7);
@@ -163,14 +189,14 @@
                 .sort((a, b) => new Date(b.date) - new Date(a.date));
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="text-center py-20 opacity-20 text-sm">기록이 없습니다.</div>`;
+                container.innerHTML = `<div class="text-center py-20 opacity-20 text-sm font-bold">기록된 내역이 없습니다.</div>`;
                 return;
             }
 
             container.innerHTML = filtered.map(r => `
                 <div class="glass-card p-4 rounded-2xl flex justify-between items-center group">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${r.writer === '남호' ? 'bg-indigo-600' : 'bg-slate-600'}">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${r.writer === '남호' ? 'bg-indigo-600 text-white' : 'bg-slate-600 text-white'}">
                             ${r.writer}
                         </div>
                         <div>
@@ -185,8 +211,8 @@
                         <p class="font-black text-lg ${r.type === '수입' ? 'text-emerald-400' : (r.type === '지출' ? 'text-rose-400' : 'text-white')}">
                             ${r.type === '지출' ? '-' : ''}${Number(r.amt).toLocaleString()}
                         </p>
-                        <button onclick="deleteData('${r.id}')" class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-rose-500 transition-all">
-                            <i data-lucide="x" class="w-4 h-4"></i>
+                        <button onclick="deleteData('${r.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-700 hover:text-rose-500 transition-all">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
@@ -194,42 +220,52 @@
             lucide.createIcons();
         };
 
-        // 3. 저장 및 삭제 기능
+        // 3. 저장 및 삭제
         window.saveData = async () => {
-            const amt = document.getElementById('field-amt').value;
-            if (!amt) return;
+            if (!state.user) {
+                alert("아직 시스템에 연결되지 않았습니다. 잠시만 기다려주세요.");
+                return;
+            }
+            
+            const amtEl = document.getElementById('field-amt');
+            const memoEl = document.getElementById('field-memo');
+            const amt = amtEl.value;
+            
+            if (!amt || amt <= 0) return;
 
             const [type, cat] = document.getElementById('field-cat').value.split('|');
-            const btn = document.getElementById('btn-save');
-            btn.disabled = true;
-
             const id = `rec_${Date.now()}`;
             const data = {
                 id, writer: state.writer, type, cat,
                 amt: Number(amt),
-                memo: document.getElementById('field-memo').value,
+                memo: memoEl.value,
                 date: document.getElementById('field-date').value,
-                ts: serverTimestamp()
+                ts: serverTimestamp(),
+                userId: state.user.uid
             };
 
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id), data);
-                document.getElementById('field-amt').value = '';
-                document.getElementById('field-memo').value = '';
+                amtEl.value = '';
+                memoEl.value = '';
+                amtEl.focus();
             } catch (e) {
-                alert("연결 상태를 확인해주세요.");
-            } finally {
-                btn.disabled = false;
+                console.error("Save error:", e);
+                alert("저장 권한이 없습니다. 다시 시도해주세요.");
             }
         };
 
         window.deleteData = async (id) => {
+            if (!state.user) return;
             if (confirm("삭제할까요?")) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
+                } catch (e) {
+                    alert("삭제 권한이 없습니다.");
+                }
             }
         };
 
-        // 4. UI 제어
         window.setWriter = (w) => {
             state.writer = w;
             document.querySelectorAll('.w-btn').forEach(b => b.classList.toggle('tab-active', b.id === `w-${w}`));
@@ -241,7 +277,7 @@
             render();
         };
 
-        init();
+        initAuth();
     </script>
 </body>
 </html>
