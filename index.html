@@ -13,11 +13,10 @@
         .glass-card { background: #1a1f2e; border: 1px solid rgba(255, 255, 255, 0.05); }
         input, select { outline: none; transition: all 0.2s; border: 1px solid transparent; }
         input:focus { border-color: #6366f1 !important; background-color: #fff !important; color: #000; }
+        
         .toggle-btn.active { background-color: #6366f1 !important; color: white !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
         .tab-btn.active { background-color: #6366f1 !important; border-color: #6366f1 !important; color: white !important; }
         button:active { transform: scale(0.96); }
-        .loading-shimmer { background: linear-gradient(90deg, #1a1f2e 25%, #2a2f3e 50%, #1a1f2e 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -45,8 +44,8 @@
                 <div class="bg-white text-slate-900 p-8 rounded-[40px] shadow-2xl sticky top-8">
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-2xl font-black">내역 추가</h3>
-                        <button id="btn-reset" class="text-slate-400 text-xs flex items-center gap-1 hover:text-indigo-500 transition-colors">
-                            <i data-lucide="rotate-ccw" class="w-3 h-3"></i> 초기화
+                        <button id="btn-reset-form" class="text-slate-400 text-xs flex items-center gap-1 hover:text-indigo-500 transition-colors">
+                            <i data-lucide="rotate-ccw" class="w-3 h-3"></i> 입력창 비우기
                         </button>
                     </div>
 
@@ -127,9 +126,9 @@
                 </div>
 
                 <div id="record-list" class="space-y-4">
-                    <div class="flex flex-col items-center justify-center py-20 text-slate-600">
-                        <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-4"></i>
-                        <p class="font-bold">안전하게 데이터를 불러오는 중...</p>
+                    <div id="empty-state" class="flex flex-col items-center justify-center py-20 text-slate-600">
+                        <i data-lucide="database" class="w-12 h-12 mb-4 opacity-20"></i>
+                        <p class="font-bold">데이터를 연결하는 중...</p>
                     </div>
                 </div>
             </div>
@@ -141,20 +140,16 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 1. Firebase Config
-        let firebaseConfig = {};
-        try {
-            firebaseConfig = JSON.parse(__firebase_config);
-        } catch(e) {
-            console.error("Firebase Config missing");
-        }
-
+        // 1. Firebase Config & Initialization
+        const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-service-v3';
+        
+        // 경로 고정 (권한 안정성 확보)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'namho-garam-v1-stable';
 
-        // 2. Local State
+        // 2. State
         let records = [];
         let state = { writer: '남호', type: 'asset', filter: 'all' };
 
@@ -163,20 +158,75 @@
             flow: ['수입(급여)', '수입(기타)', '지출(생활비)', '지출(식비)', '지출(교통)', '지출(쇼핑)', '지출(기타)']
         };
 
-        // 3. Data Fetching (에러 방지를 위해 getDocs + Interval 조합 사용)
+        // 3. UI Update Helpers
+        const updateWriterUI = (selectedWriter) => {
+            state.writer = selectedWriter;
+            document.querySelectorAll('.writer-btn').forEach(btn => {
+                const isActive = btn.dataset.writer === selectedWriter;
+                btn.classList.toggle('active', isActive);
+                btn.classList.toggle('text-white', isActive);
+                btn.classList.toggle('text-slate-400', !isActive);
+            });
+        };
+
+        const updateTypeUI = (selectedType) => {
+            state.type = selectedType;
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                const isActive = btn.dataset.type === selectedType;
+                btn.classList.toggle('active', isActive);
+                btn.classList.toggle('text-white', isActive);
+                btn.classList.toggle('text-slate-400', !isActive);
+            });
+            updateCategoryList();
+        };
+
+        const updateCategoryList = () => {
+            const select = document.getElementById('field-category');
+            const list = state.type === 'asset' ? categories.asset : categories.flow;
+            select.innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
+            toggleStockView();
+        };
+
+        const toggleStockView = () => {
+            const cat = document.getElementById('field-category').value;
+            const isStock = cat.includes('주식') || cat.includes('코인');
+            document.getElementById('stock-section').classList.toggle('hidden', !isStock);
+            document.getElementById('amount-section').classList.toggle('hidden', isStock);
+        };
+
+        const calcStock = () => {
+            const qty = Number(document.getElementById('field-qty').value) || 0;
+            const price = Number(document.getElementById('field-price').value) || 0;
+            document.getElementById('display-calc').innerText = `₩${(qty * price).toLocaleString()}`;
+        };
+
+        // 4. Data Handling
         const fetchData = async () => {
-            if (!auth.currentUser) return;
+            // RULE 3: Auth Before Queries
+            if (!auth.currentUser) {
+                console.warn("인증되지 않은 사용자입니다.");
+                return;
+            }
+
             try {
-                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'records'));
+                // RULE 1: Strict Paths
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'records');
+                const q = query(colRef);
                 const querySnapshot = await getDocs(q);
                 records = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 render();
             } catch (err) {
-                console.error("Data fetch error:", err);
+                console.error("데이터 로드 실패:", err);
+                if (err.code === 'permission-denied') {
+                    document.getElementById('record-list').innerHTML = `
+                        <div class="text-center py-10 text-rose-500 font-bold">
+                            데이터 접근 권한이 없습니다.<br>잠시 후 다시 시도해 주세요.
+                        </div>
+                    `;
+                }
             }
         };
 
-        // 4. Rendering
         const render = () => {
             const listEl = document.getElementById('record-list');
             const thisMonth = new Date().toISOString().slice(0, 7);
@@ -200,19 +250,19 @@
             const filtered = sorted.filter(r => state.filter === 'all' || r.type === state.filter);
             
             if (filtered.length === 0) {
-                listEl.innerHTML = '<div class="text-center py-20 text-slate-700 font-bold">내역이 없습니다.</div>';
+                listEl.innerHTML = '<div class="text-center py-20 text-slate-700 font-bold opacity-30">내역이 없습니다.</div>';
                 return;
             }
 
             listEl.innerHTML = filtered.map(r => `
                 <div class="glass-card p-5 rounded-[24px] flex justify-between items-center group">
                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-[11px] ${r.writer === '남호' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'}">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-[11px] ${r.writer === '남호' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'}">
                             ${r.writer}
                         </div>
                         <div>
                             <div class="flex items-center gap-2 mb-0.5">
-                                <span class="text-[9px] font-black px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded uppercase tracking-tighter">${r.category || '기타'}</span>
+                                <span class="text-[9px] font-black px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded uppercase tracking-tighter">${r.category || '기타'}</span>
                                 <span class="text-[9px] text-slate-600 font-bold">${r.date || ''}</span>
                             </div>
                             <h4 class="font-bold text-slate-300 text-sm">
@@ -224,29 +274,32 @@
                         <p class="text-lg font-black ${r.type === 'expense' ? 'text-rose-400' : (r.type === 'income' ? 'text-emerald-400' : 'text-white')}">
                             ${r.type === 'expense' ? '-' : ''}₩${Number(r.amount).toLocaleString()}
                         </p>
-                        <button class="btn-delete opacity-0 group-hover:opacity-100 p-2 text-slate-700 hover:text-rose-500 transition-all" data-id="${r.id}">
+                        <button class="btn-delete p-2 text-slate-700 hover:text-rose-500 transition-all" data-id="${r.id}">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
             `).join('');
             
-            // 삭제 핸들러 연결
             document.querySelectorAll('.btn-delete').forEach(btn => {
-                btn.addEventListener('click', () => deleteRecord(btn.dataset.id));
+                btn.onclick = () => deleteRecord(btn.dataset.id);
             });
             lucide.createIcons();
         };
 
-        // 5. Actions
         const saveRecord = async () => {
+            if (!auth.currentUser) return;
+
             const cat = document.getElementById('field-category').value;
             const isStock = cat.includes('주식') || cat.includes('코인');
             let amount = isStock 
                 ? (Number(document.getElementById('field-qty').value) * Number(document.getElementById('field-price').value)) 
                 : Number(document.getElementById('field-amount').value);
 
-            if (!amount || amount <= 0) return alert("금액을 정확히 입력해주세요.");
+            if (!amount || amount <= 0) {
+                alert("금액을 정확히 입력해주세요.");
+                return;
+            }
 
             const data = {
                 writer: state.writer,
@@ -261,18 +314,22 @@
 
             try {
                 const docId = `rec_${Date.now()}`;
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', docId), data);
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'records', docId);
+                await setDoc(docRef, data);
                 resetForm();
-                await fetchData(); // 저장 후 즉시 갱신
-            } catch (e) { alert("저장 중 오류가 발생했습니다."); }
+                await fetchData();
+            } catch (e) { 
+                console.error("저장 오류:", e);
+                alert("저장 실패. 권한을 확인해 주세요."); 
+            }
         };
 
         const deleteRecord = async (id) => {
-            if (!confirm("정말 삭제할까요?")) return;
+            if (!auth.currentUser || !confirm("삭제하시겠습니까?")) return;
             try {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', id));
-                await fetchData(); // 삭제 후 즉시 갱신
-            } catch (e) { console.error("Delete error", e); }
+                await fetchData();
+            } catch (e) { console.error("삭제 실패:", e); }
         };
 
         const resetForm = () => {
@@ -282,84 +339,56 @@
             document.getElementById('display-calc').innerText = '₩0';
         };
 
-        const updateCategoryUI = () => {
-            const select = document.getElementById('field-category');
-            const list = state.type === 'asset' ? categories.asset : categories.flow;
-            select.innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
-            toggleStockView();
-        };
-
-        const toggleStockView = () => {
-            const cat = document.getElementById('field-category').value;
-            const isStock = cat.includes('주식') || cat.includes('코인');
-            document.getElementById('stock-section').classList.toggle('hidden', !isStock);
-            document.getElementById('amount-section').classList.toggle('hidden', isStock);
-        };
-
-        const calcStock = () => {
-            const qty = Number(document.getElementById('field-qty').value) || 0;
-            const price = Number(document.getElementById('field-price').value) || 0;
-            document.getElementById('display-calc').innerText = `₩${(qty * price).toLocaleString()}`;
-        };
-
-        // 6. Init
+        // 5. Initial Setup
         const init = async () => {
-            // 기본 세팅
             document.getElementById('field-date').value = new Date().toISOString().split('T')[0];
-            updateCategoryUI();
-            lucide.createIcons();
-
-            // 이벤트 바인딩
-            document.querySelectorAll('.writer-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    state.writer = btn.dataset.writer;
-                    document.querySelectorAll('.writer-btn').forEach(b => b.classList.remove('active', 'text-white'));
-                    btn.classList.add('active', 'text-white');
-                });
-            });
-
-            document.querySelectorAll('.type-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    state.type = btn.dataset.type;
-                    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active', 'text-white'));
-                    btn.classList.add('active', 'text-white');
-                    updateCategoryUI();
-                });
-            });
+            updateCategoryList();
+            
+            // Event bindings
+            document.getElementById('btn-writer-namho').onclick = () => updateWriterUI('남호');
+            document.getElementById('btn-writer-garam').onclick = () => updateWriterUI('가람');
+            document.getElementById('btn-type-asset').onclick = () => updateTypeUI('asset');
+            document.getElementById('btn-type-flow').onclick = () => updateTypeUI('flow');
+            document.getElementById('field-category').onchange = toggleStockView;
+            document.getElementById('field-qty').oninput = calcStock;
+            document.getElementById('field-price').oninput = calcStock;
+            document.getElementById('btn-reset-form').onclick = resetForm;
+            document.getElementById('btn-save').onclick = saveRecord;
 
             document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.onclick = () => {
                     state.filter = btn.dataset.filter;
                     document.querySelectorAll('.filter-btn').forEach(b => {
-                        b.classList.remove('active', 'bg-indigo-500', 'text-white');
+                        b.classList.remove('active', 'bg-indigo-50', 'text-indigo-600', 'bg-indigo-500', 'text-white');
                         b.classList.add('bg-[#1a1f2e]', 'text-slate-500');
                     });
                     btn.classList.add('active', 'bg-indigo-500', 'text-white');
                     render();
-                });
+                };
             });
 
-            document.getElementById('field-category').addEventListener('change', toggleStockView);
-            document.getElementById('field-qty').addEventListener('input', calcStock);
-            document.getElementById('field-price').addEventListener('input', calcStock);
-            document.getElementById('btn-reset').addEventListener('click', resetForm);
-            document.getElementById('btn-save').addEventListener('click', saveRecord);
+            lucide.createIcons();
 
-            // Auth & Data Load
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        fetchData();
-                        setInterval(fetchData, 30000); // 30초마다 자동 갱신 (에러 방지용 수동 동기화)
+            // RULE 3: Secure Auth Initialization
+            const initAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
                     }
-                });
-            } catch (e) { console.error("Init Error", e); }
+                } catch (err) {
+                    console.error("인증 실패:", err);
+                }
+            };
+
+            await initAuth();
+            
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    fetchData();
+                }
+            });
         };
 
         init();
