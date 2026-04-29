@@ -598,30 +598,52 @@ let editingId = null;
 
 /* ── 환율 ── */
 async function fetchUsdRate() {
-    try {
-        const j = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
-        if (j?.rates?.KRW) usdRate = j.rates.KRW;
-    } catch {
+    const apis = [
+        () => fetch('https://open.er-api.com/v6/latest/USD', { signal: AbortSignal.timeout(5000) }).then(r => r.json()).then(j => j?.rates?.KRW),
+        () => fetch('https://frankfurter.app/latest?from=USD&to=KRW', { signal: AbortSignal.timeout(5000) }).then(r => r.json()).then(j => j?.rates?.KRW),
+        () => fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json', { signal: AbortSignal.timeout(5000) }).then(r => r.json()).then(j => j?.usd?.krw)
+    ];
+    for (const api of apis) {
         try {
-            const j = await fetch('https://frankfurter.app/latest?from=USD&to=KRW').then(r => r.json());
-            if (j?.rates?.KRW) usdRate = j.rates.KRW;
+            const rate = await api();
+            if (rate && rate > 100) { usdRate = rate; console.log('환율 로드 완료:', Math.round(rate)); return; }
         } catch {}
     }
+    usdRate = 1380; // 모든 API 실패 시 fallback
+    console.warn('환율 API 실패, fallback 1380 사용');
 }
 
 /* ── 주가 ── */
 async function getPrice(ticker, isUS) {
-    const key = ticker.toUpperCase();
+    const key = ticker.toUpperCase().trim();
+    if (!key) return null;
     if (livePrice[key]) return livePrice[key];
+
+    // 국내: 6자리 숫자면 .KS 추가
     const symbol = isUS ? key : (/^\d{6}$/.test(key) ? key + '.KS' : key);
-    const proxy = 'https://api.allorigins.win/get?url=' +
-        encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d');
-    try {
-        const j = await fetch(proxy).then(r => r.json());
-        const data = JSON.parse(j.contents);
-        const p = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-        if (p) { livePrice[key] = { raw: p, krw: isUS ? p * (usdRate || 1380) : p }; return livePrice[key]; }
-    } catch {}
+
+    // proxy 두 개 시도
+    const proxies = [
+        'https://api.allorigins.win/get?url=' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d'),
+        'https://corsproxy.io/?' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d')
+    ];
+
+    for (const proxy of proxies) {
+        try {
+            const resp = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
+            let data;
+            const text = await resp.text();
+            // allorigins는 {contents: "..."} 형식, corsproxy는 직접 JSON
+            try { const wrap = JSON.parse(text); data = typeof wrap.contents === 'string' ? JSON.parse(wrap.contents) : wrap; }
+            catch { data = JSON.parse(text); }
+            const p = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+            if (p && p > 0) {
+                const rate = usdRate > 0 ? usdRate : 1380; // 환율 fallback
+                livePrice[key] = { raw: p, krw: isUS ? p * rate : p };
+                return livePrice[key];
+            }
+        } catch(e) { /* 다음 proxy 시도 */ }
+    }
     return null;
 }
 
@@ -872,9 +894,10 @@ async function submitEdit() {
         const qty       = parseFloat(document.getElementById('edit-qty').value) || 0;
         const unitPrice = parseFloat(document.getElementById('edit-unit').value) || 0;
         if (!ticker || !qty) { alert('티커와 수량을 입력해주세요.'); return; }
+        if (isUS && usdRate <= 0) await fetchUsdRate();
         let priceKRW = unitPrice, priceRaw = unitPrice;
         const live = await getPrice(ticker, isUS);
-        if (live) { priceKRW = live.krw; priceRaw = live.raw; }
+        if (live) { priceKRW = live.krw; priceRaw = live.raw; livePrice[ticker] = live; }
         amount      = Math.round(priceKRW * qty);
         description = JSON.stringify({ ticker, qty, unitPrice, currentPrice: priceRaw, usdRate: isUS ? usdRate : null, memo: memoVal });
     } else {
@@ -940,9 +963,16 @@ window.saveData = async () => {
         const unitPrice = parseFloat(document.getElementById('field-unit').value) || 0;
         if (!ticker) { alert('티커를 입력해주세요.'); return; }
         if (!qty)    { alert('수량을 입력해주세요.'); return; }
+        // 환율 미로드 시 먼저 조회
+        if (isUS && usdRate <= 0) await fetchUsdRate();
         let priceKRW = unitPrice, priceRaw = unitPrice;
         const live = await getPrice(ticker, isUS);
-        if (live) { priceKRW = live.krw; priceRaw = live.raw; }
+        if (live) {
+            priceKRW = live.krw;
+            priceRaw = live.raw;
+            // livePrice 캐시 갱신 (화면 표시용)
+            livePrice[ticker] = live;
+        }
         amount      = Math.round(priceKRW * qty);
         description = JSON.stringify({ ticker, qty, unitPrice, currentPrice: priceRaw, usdRate: isUS ? usdRate : null, memo: memoVal });
     } else {
@@ -952,14 +982,10 @@ window.saveData = async () => {
     }
 
     const writerName_ = writerName(state.writer);
-    const payload     = { user_name: writerName_, type, category: cat, amount, date: dateVal, description };
+    // id 미포함 → Supabase uuid 자동 생성
+    const payload = { user_name: writerName_, type, category: cat, amount, date: dateVal, description };
 
-    const tempId = 'tmp_' + Date.now();
-    const ticker = isStock ? document.getElementById('field-ticker').value.trim().toUpperCase() : null;
-    const qty    = isStock ? parseFloat(document.getElementById('field-qty').value) : null;
-    state.records.unshift({ id: tempId, writer: state.writer, type, cat, amt: amount, date: dateVal, memo: memoVal, raw_desc: description, ticker, qty, isUS });
-    render();
-
+    // 폼 초기화
     document.getElementById('field-memo').value = '';
     document.getElementById('field-amt').value  = '';
     if (isStock) {
@@ -967,15 +993,22 @@ window.saveData = async () => {
         document.getElementById('price-info').classList.add('hidden');
     }
 
+    // 저장 버튼 비활성화
+    const saveBtn = document.getElementById('btn-save');
+    saveBtn.disabled = true; saveBtn.textContent = '저장 중...';
+
     const { data, error } = await sb.from(TABLE).insert([payload]).select().single();
+    saveBtn.disabled = false; saveBtn.textContent = '저장';
+
     if (error) {
-        state.records = state.records.filter(r => r.id !== tempId);
-        render();
         alert('저장 실패: ' + error.message);
         return;
     }
-    const idx = state.records.findIndex(r => r.id === tempId);
-    if (idx !== -1) state.records[idx] = toView(data);
+    // 실시간 구독 INSERT 이벤트로 render() 되지만 혹시 없을 때 대비
+    if (data && !state.records.find(r => String(r.id) === String(data.id))) {
+        state.records.unshift(toView(data));
+        render();
+    }
 };
 
 /* ══════════════════════════════════════════
