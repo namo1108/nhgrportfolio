@@ -741,7 +741,7 @@ function toView(r) {
     try { extra = JSON.parse(r.description || '{}'); } catch {}
     const isStockJson = typeof extra === 'object' && extra.ticker;
     return {
-        id:       r.id,
+        id:       r.id ?? null,  // uuid or bigint or null
         writer:   r.user_name || 'user1',
         type:     r.type || '지출',
         cat:      r.category || '',
@@ -808,7 +808,7 @@ function render() {
         const wColor    = isUser1Color(r.writer) ? 'bg-indigo-600' : 'bg-slate-600';
 
         return `
-        <div class="record-row glass-card p-4 rounded-2xl flex justify-between items-center group" data-record-id="${r.id}" onclick="openEditModal(this.dataset.recordId)">
+        <div class="${r.id ? 'record-row cursor-pointer' : 'cursor-default'} glass-card p-4 rounded-2xl flex justify-between items-center group" ${r.id ? `data-record-id="${r.id}" onclick="openEditModal(this.dataset.recordId)"` : ''}>
             <div class="flex items-center gap-3 min-w-0 flex-1">
                 <div class="w-8 h-8 rounded-lg flex items-center justify-center text-[9px] font-black flex-shrink-0 ${wColor} text-white">${wName.slice(0,2)}</div>
                 <div class="min-w-0">
@@ -877,7 +877,11 @@ function closeEditModal() {
 }
 
 async function submitEdit() {
-    if (!editingId) return;
+    if (editingId === null || editingId === undefined || String(editingId) === 'null') {
+        alert('이 항목은 ID가 없어 수정할 수 없습니다. Supabase에서 직접 삭제해주세요.');
+        closeEditModal();
+        return;
+    }
     const r = state.records.find(x => String(x.id) === String(editingId));
     if (!r) return;
 
@@ -921,7 +925,10 @@ async function submitEdit() {
 
     // editingId를 DB 원본 타입에 맞게 변환
     // account_v3의 id가 bigint면 Number, uuid/text면 String
-    const { error } = await sb.from(TABLE).update(payload).eq('id', editingId);
+    // uuid 타입: 반드시 문자열로 전달
+    console.log('[수정] editingId:', editingId, '| type:', typeof editingId, '| payload:', JSON.stringify(payload));
+    const { data: updData, error } = await sb.from(TABLE).update(payload).eq('id', String(editingId)).select();
+    console.log('[수정 결과]', updData, error);
     if (error) {
         state.records[idx] = oldRec;
         render();
@@ -930,7 +937,11 @@ async function submitEdit() {
 }
 
 async function confirmDelete() {
-    if (!editingId) return;
+    if (editingId === null || editingId === undefined || String(editingId) === 'null') {
+        alert('이 항목은 ID가 없어 삭제할 수 없습니다. Supabase에서 직접 삭제해주세요.');
+        closeEditModal();
+        return;
+    }
     if (!confirm('이 내역을 삭제할까요?')) return;
 
     const id      = editingId;
@@ -939,7 +950,8 @@ async function confirmDelete() {
     render();
     closeEditModal();
 
-    const { error } = await sb.from(TABLE).delete().eq('id', id);
+    // uuid 타입: 반드시 문자열로 전달
+    const { error } = await sb.from(TABLE).delete().eq('id', String(id));
     if (error) {
         if (removed) state.records.unshift(removed);
         render();
