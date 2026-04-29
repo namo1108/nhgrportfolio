@@ -450,7 +450,7 @@
 ══════════════════════════════════════════ */
 const SB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0dXdicW93dWNkZWdjdWN3Y3ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDk2OTAsImV4cCI6MjA5MTQ4NTY5MH0.ay6poW7tgKHWrjWGKKTTuCvdow57halg3vHmOQjwRSQ';
-const TABLE  = 'account_v3';
+const TABLE  = 'nhgr_budget'; // id TEXT primary key (uuid 없음)
 const sb     = window.supabase.createClient(SB_URL, SB_KEY);
 
 /* ══════════════════════════════════════════
@@ -737,11 +737,34 @@ async function refreshLivePrices() {
 
 /* ── DB row → view ── */
 function toView(r) {
+    // nhgr_budget 컬럼: id(text), writer, type, cat, amt, memo, date
+    // account_v3 컬럼: id(uuid), user_name, type, category, amount, description, date
+    // 두 테이블 모두 지원
+    const isNewTable = r.cat !== undefined;
+    if (isNewTable) {
+        let extra = {};
+        try { extra = JSON.parse(r.memo || '{}'); } catch {}
+        const isStockJson = typeof extra === 'object' && extra.ticker;
+        return {
+            id:       r.id,
+            writer:   r.writer || 'user1',
+            type:     r.type || '지출',
+            cat:      r.cat || '',
+            amt:      Number(r.amt) || 0,
+            date:     r.date || '',
+            memo:     isStockJson ? (extra.memo || '') : (r.memo || ''),
+            raw_desc: r.memo || '',
+            ticker:   extra.ticker || null,
+            qty:      extra.qty    || null,
+            isUS:     r.cat === '주식(해외)'
+        };
+    }
+    // account_v3 fallback
     let extra = {};
     try { extra = JSON.parse(r.description || '{}'); } catch {}
     const isStockJson = typeof extra === 'object' && extra.ticker;
     return {
-        id:       r.id ?? null,  // uuid or bigint or null
+        id:       r.id ?? null,
         writer:   r.user_name || 'user1',
         type:     r.type || '지출',
         cat:      r.category || '',
@@ -912,7 +935,7 @@ async function submitEdit() {
         description = memoVal;
     }
 
-    const payload = { type, category: cat, amount, date: dateVal, description };
+    const payload = { writer: writerName(state.editWriter || state.writer), type, cat, amt: amount, memo: description, date: dateVal };
 
     // 낙관적 업데이트
     const idx = state.records.findIndex(x => String(x.id) === String(editingId));
@@ -925,9 +948,8 @@ async function submitEdit() {
 
     // editingId를 DB 원본 타입에 맞게 변환
     // account_v3의 id가 bigint면 Number, uuid/text면 String
-    // uuid 타입: 반드시 문자열로 전달
-    console.log('[수정] editingId:', editingId, '| type:', typeof editingId, '| payload:', JSON.stringify(payload));
-    const { data: updData, error } = await sb.from(TABLE).update(payload).eq('id', String(editingId)).select();
+    console.log('[수정] id:', editingId, 'payload:', JSON.stringify(payload));
+    const { data: updData, error } = await sb.from(TABLE).update(payload).eq('id', editingId).select();
     console.log('[수정 결과]', updData, error);
     if (error) {
         state.records[idx] = oldRec;
@@ -950,8 +972,7 @@ async function confirmDelete() {
     render();
     closeEditModal();
 
-    // uuid 타입: 반드시 문자열로 전달
-    const { error } = await sb.from(TABLE).delete().eq('id', String(id));
+    const { error } = await sb.from(TABLE).delete().eq('id', id);
     if (error) {
         if (removed) state.records.unshift(removed);
         render();
@@ -998,8 +1019,9 @@ window.saveData = async () => {
     }
 
     const writerName_ = writerName(state.writer);
-    // id 미포함 → Supabase uuid 자동 생성
-    const payload = { user_name: writerName_, type, category: cat, amount, date: dateVal, description };
+    // nhgr_budget: id는 Date.now() 문자열로 직접 생성 (uuid 타입 아님)
+    const newId = String(Date.now()) + '_' + Math.random().toString(36).slice(2,7);
+    const payload = { id: newId, writer: writerName_, type, cat, amt: amount, memo: description, date: dateVal };
 
     // 폼 초기화
     document.getElementById('field-memo').value = '';
@@ -1013,18 +1035,24 @@ window.saveData = async () => {
     const saveBtn = document.getElementById('btn-save');
     saveBtn.disabled = true; saveBtn.textContent = '저장 중...';
 
+    // 낙관적 업데이트 (즉시 화면 반영)
+    const optimistic = { id: newId, writer: writerName(state.writer), type, cat, amt: amount,
+        memo: memoVal, raw_desc: description, date: dateVal, ticker, qty, isUS };
+    state.records.unshift(optimistic);
+    render();
+
     const { data, error } = await sb.from(TABLE).insert([payload]).select().single();
     saveBtn.disabled = false; saveBtn.textContent = '저장';
 
     if (error) {
+        state.records = state.records.filter(r => r.id !== newId);
+        render();
         alert('저장 실패: ' + error.message);
         return;
     }
-    // 실시간 구독 INSERT 이벤트로 render() 되지만 혹시 없을 때 대비
-    if (data && !state.records.find(r => String(r.id) === String(data.id))) {
-        state.records.unshift(toView(data));
-        render();
-    }
+    // 임시 id → 실제 DB id로 교체
+    const oidx = state.records.findIndex(r => r.id === newId);
+    if (oidx !== -1) state.records[oidx] = toView(data);
 };
 
 /* ══════════════════════════════════════════
