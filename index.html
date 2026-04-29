@@ -9,31 +9,295 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background-color: #0b0e14; color: #f8fafc; margin: 0; }
+        * { font-family: 'Pretendard', sans-serif; }
+        body { background-color: #0b0e14; color: #f8fafc; margin: 0; min-height: 100vh; }
         .glass-card { background: #161a23; border: 1px solid rgba(255,255,255,0.05); }
         .tab-active { background-color: #6366f1 !important; color: white !important; }
-        input, select { background-color: #f1f5f9 !important; color: #1e293b !important; }
+        input, select, textarea { background-color: #f1f5f9 !important; color: #1e293b !important; font-family: 'Pretendard', sans-serif; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        #list-container:empty::before {
-            content: '기록을 입력해주세요.';
-            display: block; text-align: center;
-            padding: 40px 0; opacity: 0.2; font-size: 0.875rem;
-        }
         @media (max-width: 1023px) { .del-btn { opacity: 1 !important; } }
         .stock-panel { display: none; }
         .stock-panel.show { display: block; }
-        .price-badge {
-            display: inline-flex; align-items: center; gap: 4px;
-            background: #1e3a5f; color: #60a5fa;
-            font-size: 10px; font-weight: 900;
-            padding: 2px 8px; border-radius: 999px;
+        .price-badge { display: inline-flex; align-items: center; gap: 4px; background: #1e3a5f; color: #60a5fa; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 999px; }
+        @keyframes pulse-anim { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .fetching { animation: pulse-anim 1s infinite; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        .fade-in { animation: fadeIn 0.35s ease forwards; }
+
+        /* ── 로그인 화면 ── */
+        #login-screen {
+            position: fixed; inset: 0; z-index: 100;
+            background: #0b0e14;
+            display: flex; align-items: center; justify-content: center;
         }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        .fetching { animation: pulse 1s infinite; }
+        #login-screen.hidden { display: none; }
+
+        /* ── 온보딩 화면 ── */
+        #onboarding-screen {
+            position: fixed; inset: 0; z-index: 99;
+            background: #0b0e14; overflow-y: auto;
+            display: flex; align-items: flex-start; justify-content: center;
+            padding: 40px 16px;
+        }
+        #onboarding-screen.hidden { display: none; }
+
+        /* ── 수정 모달 ── */
+        #edit-modal {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center;
+            padding: 16px;
+        }
+        #edit-modal.hidden { display: none; }
+        #edit-modal-inner {
+            background: white; border-radius: 28px; padding: 28px;
+            width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+            color: #1e293b;
+        }
+
+        /* 수정 가능한 항목 hover */
+        .record-row { cursor: pointer; transition: all 0.15s; }
+        .record-row:hover { background: #1e2330 !important; border-color: rgba(99,102,241,0.4) !important; }
+        .edit-hint { opacity: 0; transition: opacity 0.15s; font-size: 9px; color: #6366f1; }
+        .record-row:hover .edit-hint { opacity: 1; }
+
+        /* 입력 스타일 통일 */
+        .inp { width: 100%; padding: 10px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-size: 13px; font-weight: 700; outline: none; transition: border-color 0.2s; }
+        .inp:focus { border-color: #6366f1; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body>
 
+<!-- ════════════════════════════════════
+     로그인 화면
+════════════════════════════════════ -->
+<div id="login-screen">
+    <div class="w-full max-w-sm mx-auto px-6 fade-in">
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-black tracking-tighter mb-2">
+                <span class="text-indigo-500">NHGR</span> 가계부
+            </h1>
+            <p class="text-slate-500 text-sm font-bold">남호가람 자산 관리</p>
+        </div>
+
+        <div class="glass-card rounded-3xl p-7 space-y-4">
+            <div id="login-error" class="hidden text-rose-400 text-xs font-bold text-center bg-rose-500/10 rounded-xl py-2"></div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">아이디</label>
+                <input type="text" id="login-id" placeholder="아이디 입력"
+                    class="inp mt-1" onkeydown="if(event.key==='Enter') doLogin()">
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">비밀번호</label>
+                <input type="password" id="login-pw" placeholder="비밀번호 입력"
+                    class="inp mt-1" onkeydown="if(event.key==='Enter') doLogin()">
+            </div>
+
+            <button onclick="doLogin()" id="login-btn"
+                class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-all text-sm">
+                로그인
+            </button>
+
+            <div class="text-center pt-2">
+                <button onclick="showOnboarding()" class="text-[11px] text-slate-500 font-bold hover:text-indigo-400 transition-colors">
+                    처음 사용하시나요? 계정 설정 →
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════
+     온보딩 / 계정 설정 화면
+════════════════════════════════════ -->
+<div id="onboarding-screen" class="hidden">
+    <div class="w-full max-w-lg mx-auto fade-in">
+        <button onclick="hideOnboarding()" class="flex items-center gap-2 text-slate-500 font-bold text-sm mb-6 hover:text-white transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 로그인으로 돌아가기
+        </button>
+
+        <div class="text-center mb-8">
+            <h2 class="text-2xl font-black mb-1">계정 설정</h2>
+            <p class="text-slate-500 text-sm">두 분의 계정 아이디/비밀번호를 설정하세요</p>
+            <p class="text-slate-600 text-xs mt-1 font-bold">설정 정보는 이 기기에만 저장됩니다</p>
+        </div>
+
+        <div class="space-y-6">
+            <!-- 남호 계정 -->
+            <div class="glass-card rounded-3xl p-6">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-black">남호</div>
+                    <div>
+                        <p class="font-black text-sm">남호 계정</p>
+                        <p class="text-[10px] text-slate-500">첫 번째 사용자</p>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">아이디</label>
+                        <input type="text" id="ob-id1" placeholder="아이디 설정" class="inp mt-1"
+                            value="">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">비밀번호</label>
+                        <input type="password" id="ob-pw1" placeholder="비밀번호 설정" class="inp mt-1">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">표시 이름</label>
+                        <input type="text" id="ob-name1" placeholder="남호" value="남호" class="inp mt-1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 가람 계정 -->
+            <div class="glass-card rounded-3xl p-6">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-9 h-9 rounded-xl bg-slate-600 flex items-center justify-center text-xs font-black">가람</div>
+                    <div>
+                        <p class="font-black text-sm">가람 계정</p>
+                        <p class="text-[10px] text-slate-500">두 번째 사용자</p>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">아이디</label>
+                        <input type="text" id="ob-id2" placeholder="아이디 설정" class="inp mt-1"
+                            value="">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">비밀번호</label>
+                        <input type="password" id="ob-pw2" placeholder="비밀번호 설정" class="inp mt-1">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">표시 이름</label>
+                        <input type="text" id="ob-name2" placeholder="가람" value="가람" class="inp mt-1">
+                    </div>
+                </div>
+            </div>
+
+            <div id="ob-error" class="hidden text-rose-400 text-xs font-bold text-center bg-rose-500/10 rounded-xl py-2"></div>
+
+            <button onclick="saveOnboarding()"
+                class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-all text-sm">
+                계정 저장 및 로그인하기
+            </button>
+
+            <p class="text-center text-[10px] text-slate-600 font-bold pb-4">
+                * 비밀번호는 이 기기의 로컬 저장소에 저장됩니다. GitHub에 업로드되지 않습니다.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════
+     수정 모달
+════════════════════════════════════ -->
+<div id="edit-modal" class="hidden">
+    <div id="edit-modal-inner">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-black text-slate-900">내역 수정</h3>
+            <button onclick="closeEditModal()" class="p-2 rounded-full hover:bg-slate-100 text-slate-400">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">분류</label>
+                <select id="edit-cat" onchange="onEditCatChange()" class="w-full p-3 rounded-xl font-bold mt-1 text-sm outline-none">
+                    <optgroup label="── 자산 ──">
+                        <option value="자산|현금">현금</option>
+                        <option value="자산|예금">예금</option>
+                        <option value="자산|적금">적금</option>
+                        <option value="자산|주택청약">주택청약</option>
+                        <option value="자산|보증금">보증금</option>
+                        <option value="자산|주식(국내)">주식 (국내)</option>
+                        <option value="자산|주식(해외)">주식 (해외)</option>
+                        <option value="자산|퇴직금">퇴직금</option>
+                        <option value="자산|퇴직연금">퇴직연금</option>
+                    </optgroup>
+                    <optgroup label="── 수입 ──">
+                        <option value="수입|급여">급여</option>
+                        <option value="수입|상여금">상여금</option>
+                        <option value="수입|이자배당금">이자배당금</option>
+                        <option value="수입|스톡옵션">스톡옵션</option>
+                    </optgroup>
+                    <optgroup label="── 지출 ──">
+                        <option value="지출|생활비">생활비</option>
+                        <option value="지출|교통">교통</option>
+                        <option value="지출|금융/대출">금융/대출</option>
+                        <option value="지출|식비">식비</option>
+                        <option value="지출|문화/여가">문화/여가</option>
+                        <option value="지출|쇼핑">쇼핑</option>
+                        <option value="지출|경조금">경조금</option>
+                        <option value="지출|관리비">관리비</option>
+                        <option value="지출|임대료">임대료</option>
+                        <option value="지출|보험">보험</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- 수정 - 주식 패널 -->
+            <div id="edit-stock-panel" class="hidden bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-200">
+                <p id="edit-stock-label" class="text-[10px] font-black text-indigo-600 uppercase">주식 정보</p>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 ml-1">티커 심볼</label>
+                    <input type="text" id="edit-ticker" placeholder="예: 005930 / AAPL"
+                        class="w-full p-2.5 rounded-lg font-black mt-1 text-sm outline-none uppercase"
+                        oninput="this.value=this.value.toUpperCase()">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 ml-1">보유 수량</label>
+                        <input type="number" id="edit-qty" placeholder="0" min="0" step="0.0001"
+                            class="w-full p-2.5 rounded-lg font-bold mt-1 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 ml-1">매입 단가</label>
+                        <input type="number" id="edit-unit" placeholder="0" min="0"
+                            class="w-full p-2.5 rounded-lg font-bold mt-1 text-sm outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 수정 - 일반 금액 -->
+            <div id="edit-amt-row">
+                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">금액 (₩)</label>
+                <input type="number" id="edit-amt" placeholder="0"
+                    class="w-full p-3 rounded-xl font-black text-xl mt-1 outline-none">
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">내용</label>
+                <input type="text" id="edit-memo" placeholder="메모"
+                    class="w-full p-3 rounded-xl font-bold mt-1 text-sm outline-none">
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">날짜</label>
+                <input type="date" id="edit-date"
+                    class="w-full p-3 rounded-xl font-bold mt-1 text-sm outline-none">
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="confirmDelete()" id="edit-del-btn"
+                    class="flex-none px-5 py-4 bg-rose-50 text-rose-500 font-black rounded-2xl text-sm hover:bg-rose-100 transition-all flex items-center gap-2">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> 삭제
+                </button>
+                <button onclick="submitEdit()" id="edit-save-btn"
+                    class="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl text-sm transition-all">
+                    수정 저장
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════
+     메인 앱
+════════════════════════════════════ -->
+<div id="app" class="hidden p-4 md:p-8">
 <div class="max-w-6xl mx-auto">
 
     <!-- 헤더 -->
@@ -42,7 +306,15 @@
             <h1 class="text-3xl font-black tracking-tighter flex items-center gap-2">
                 <span class="text-indigo-500">NHGR</span> 가계부
             </h1>
-            <p id="status-text" class="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">● 연결 중...</p>
+            <div class="flex items-center gap-3 mt-1">
+                <p id="status-text" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">● 연결 중...</p>
+                <span class="text-slate-700">|</span>
+                <div class="flex items-center gap-2">
+                    <div id="user-badge" class="w-5 h-5 rounded-md bg-indigo-600 flex items-center justify-center text-[8px] font-black"></div>
+                    <span id="user-label" class="text-[10px] font-black text-slate-400"></span>
+                    <button onclick="doLogout()" class="text-[10px] font-bold text-slate-600 hover:text-rose-400 transition-colors ml-1">로그아웃</button>
+                </div>
+            </div>
         </div>
         <div class="flex gap-3 overflow-x-auto no-scrollbar w-full md:w-auto">
             <div class="glass-card px-5 py-3 rounded-2xl min-w-[120px]">
@@ -65,15 +337,11 @@
         <!-- ── 입력 폼 ── -->
         <div class="lg:col-span-4">
             <div class="bg-white rounded-[32px] p-6 shadow-xl text-slate-900">
-
-                <!-- 작성자 -->
                 <div class="flex gap-2 mb-4 bg-slate-100 p-1 rounded-xl">
-                    <button onclick="setWriter('남호')" id="w-남호" class="w-btn tab-active flex-1 py-2 rounded-lg text-xs font-bold transition-all">남호</button>
-                    <button onclick="setWriter('가람')" id="w-가람" class="w-btn flex-1 py-2 rounded-lg text-xs font-bold text-slate-400 transition-all">가람</button>
+                    <button onclick="setWriter('user1')" id="w-user1" class="w-btn tab-active flex-1 py-2 rounded-lg text-xs font-bold transition-all" id="w-btn-1"></button>
+                    <button onclick="setWriter('user2')" id="w-user2" class="w-btn flex-1 py-2 rounded-lg text-xs font-bold text-slate-400 transition-all" id="w-btn-2"></button>
                 </div>
-
                 <div class="space-y-3">
-                    <!-- 분류 -->
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 ml-1">분류</label>
                         <select id="field-cat" onchange="onCatChange()" class="w-full p-3 rounded-xl font-bold mt-1 text-sm outline-none">
@@ -108,23 +376,19 @@
                             </optgroup>
                         </select>
                     </div>
-
-                    <!-- 주식 전용 패널 -->
                     <div id="stock-panel" class="stock-panel bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-200">
                         <p id="stock-label" class="text-[10px] font-black text-indigo-600 uppercase">주식 정보</p>
                         <div>
                             <label class="text-[10px] font-bold text-slate-400 ml-1">티커 심볼</label>
                             <input type="text" id="field-ticker" placeholder="예: 005930 / AAPL"
                                 class="w-full p-2.5 rounded-lg font-black mt-1 text-sm outline-none uppercase tracking-wider"
-                                oninput="this.value=this.value.toUpperCase()"
-                                onblur="fetchAndShowPrice()">
+                                oninput="this.value=this.value.toUpperCase()" onblur="fetchAndShowPrice()">
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 ml-1">보유 수량</label>
                                 <input type="number" id="field-qty" placeholder="0" min="0" step="0.0001"
-                                    class="w-full p-2.5 rounded-lg font-bold mt-1 text-sm outline-none"
-                                    oninput="recalcEval()">
+                                    class="w-full p-2.5 rounded-lg font-bold mt-1 text-sm outline-none" oninput="recalcEval()">
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 ml-1">매입 단가</label>
@@ -132,7 +396,6 @@
                                     class="w-full p-2.5 rounded-lg font-bold mt-1 text-sm outline-none">
                             </div>
                         </div>
-                        <!-- 실시간 주가 정보 -->
                         <div id="price-info" class="hidden pt-1 space-y-1 text-xs border-t border-slate-200">
                             <div class="flex justify-between">
                                 <span class="text-slate-500">현재가</span>
@@ -148,28 +411,20 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- 일반 금액 필드 -->
                     <div id="amt-row">
                         <label class="text-[10px] font-bold text-slate-400 ml-1">금액 (₩)</label>
                         <input type="number" id="field-amt" placeholder="0"
                             class="w-full p-3 rounded-xl font-black text-xl mt-1 outline-none">
                     </div>
-
-                    <!-- 내용 -->
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 ml-1">내용</label>
                         <input type="text" id="field-memo" placeholder="메모"
                             class="w-full p-3 rounded-xl font-bold mt-1 text-sm outline-none">
                     </div>
-
-                    <!-- 날짜 + 저장 버튼 -->
                     <div class="grid grid-cols-2 gap-2 pt-1">
                         <input type="date" id="field-date" class="p-3 rounded-xl font-bold text-xs outline-none">
                         <button onclick="saveData()" id="btn-save"
-                            class="bg-indigo-600 text-white font-black rounded-xl py-3 hover:bg-indigo-700 transition-all">
-                            저장
-                        </button>
+                            class="bg-indigo-600 text-white font-black rounded-xl py-3 hover:bg-indigo-700 transition-all text-sm">저장</button>
                     </div>
                 </div>
             </div>
@@ -185,24 +440,163 @@
             </div>
             <div id="list-container" class="space-y-3"></div>
         </div>
-
     </div>
 </div>
+</div><!-- /#app -->
 
 <script>
-/* ═══════════════════════════════
-   Supabase — account_v3 테이블
-═══════════════════════════════ */
+/* ══════════════════════════════════════════
+   Supabase
+══════════════════════════════════════════ */
 const SB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0dXdicW93dWNkZWdjdWN3Y3ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDk2OTAsImV4cCI6MjA5MTQ4NTY5MH0.ay6poW7tgKHWrjWGKKTTuCvdow57halg3vHmOQjwRSQ';
 const TABLE  = 'account_v3';
+const sb     = window.supabase.createClient(SB_URL, SB_KEY);
 
-const sb = window.supabase.createClient(SB_URL, SB_KEY);
-let state   = { writer: '남호', filter: 'all', records: [] };
-let usdRate = 0;
-let livePrice = {};   // ticker → { raw(원화/달러), krw(원화 환산) }
+/* ══════════════════════════════════════════
+   계정 관리 (localStorage)
+   비밀번호를 GitHub에 올리지 않고 로컬에 저장
+══════════════════════════════════════════ */
+const ACCOUNTS_KEY = 'nhgr_accounts_v1';
+const SESSION_KEY  = 'nhgr_session_v1';
 
-/* ═══ 환율 ═══ */
+function loadAccounts() {
+    try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || 'null'); } catch { return null; }
+}
+function saveAccounts(accounts) {
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+}
+function loadSession() {
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
+}
+function saveSession(user) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+}
+function clearSession() {
+    localStorage.removeItem(SESSION_KEY);
+}
+
+/* ══════════════════════════════════════════
+   로그인 / 온보딩
+══════════════════════════════════════════ */
+function showLogin() {
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('onboarding-screen').classList.add('hidden');
+    document.getElementById('app').classList.add('hidden');
+}
+function showOnboarding() {
+    document.getElementById('onboarding-screen').classList.remove('hidden');
+    document.getElementById('login-screen').classList.add('hidden');
+    lucide.createIcons();
+}
+function hideOnboarding() {
+    document.getElementById('onboarding-screen').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+}
+
+function doLogin() {
+    const id = document.getElementById('login-id').value.trim();
+    const pw = document.getElementById('login-pw').value;
+    const errEl = document.getElementById('login-error');
+
+    const accounts = loadAccounts();
+    if (!accounts) {
+        errEl.textContent = '계정이 없습니다. 계정 설정을 먼저 해주세요.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    const matched = [accounts.user1, accounts.user2].find(u => u.id === id && u.pw === pw);
+    if (!matched) {
+        errEl.textContent = '아이디 또는 비밀번호가 틀렸습니다.';
+        errEl.classList.remove('hidden');
+        document.getElementById('login-pw').value = '';
+        return;
+    }
+
+    saveSession(matched);
+    startApp(matched);
+}
+
+function saveOnboarding() {
+    const id1   = document.getElementById('ob-id1').value.trim();
+    const pw1   = document.getElementById('ob-pw1').value;
+    const name1 = document.getElementById('ob-name1').value.trim() || '남호';
+    const id2   = document.getElementById('ob-id2').value.trim();
+    const pw2   = document.getElementById('ob-pw2').value;
+    const name2 = document.getElementById('ob-name2').value.trim() || '가람';
+    const errEl = document.getElementById('ob-error');
+
+    if (!id1 || !pw1 || !id2 || !pw2) {
+        errEl.textContent = '모든 항목을 입력해주세요.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+    if (id1 === id2) {
+        errEl.textContent = '두 계정의 아이디가 달라야 합니다.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    const accounts = {
+        user1: { key: 'user1', id: id1, pw: pw1, name: name1 },
+        user2: { key: 'user2', id: id2, pw: pw2, name: name2 }
+    };
+    saveAccounts(accounts);
+    saveSession(accounts.user1);
+    startApp(accounts.user1);
+}
+
+function doLogout() {
+    clearSession();
+    showLogin();
+    document.getElementById('login-id').value = '';
+    document.getElementById('login-pw').value = '';
+    document.getElementById('login-error').classList.add('hidden');
+}
+
+/* ══════════════════════════════════════════
+   앱 시작
+══════════════════════════════════════════ */
+let currentUser = null;
+let accounts = null;
+
+function startApp(user) {
+    currentUser = user;
+    accounts    = loadAccounts();
+
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('onboarding-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+
+    // 헤더에 로그인 사용자 표시
+    document.getElementById('user-badge').textContent = user.name.slice(0, 2);
+    document.getElementById('user-label').textContent = user.name + '님';
+
+    // 작성자 버튼 이름 설정
+    const u1 = accounts.user1, u2 = accounts.user2;
+    document.getElementById('w-user1').textContent = u1.name;
+    document.getElementById('w-user2').textContent = u2.name;
+
+    // 현재 로그인한 사람으로 작성자 기본값
+    state.writer = user.key;
+    document.getElementById('w-user1').classList.toggle('tab-active', user.key === 'user1');
+    document.getElementById('w-user2').classList.toggle('tab-active', user.key === 'user2');
+    document.getElementById('w-user1').classList.toggle('text-slate-400', user.key !== 'user1');
+    document.getElementById('w-user2').classList.toggle('text-slate-400', user.key !== 'user2');
+
+    init();
+}
+
+/* ══════════════════════════════════════════
+   앱 상태
+══════════════════════════════════════════ */
+let state     = { writer: 'user1', filter: 'all', records: [] };
+let usdRate   = 0;
+let livePrice = {};
+let editingId = null;
+
+/* ── 환율 ── */
 async function fetchUsdRate() {
     try {
         const j = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
@@ -215,102 +609,72 @@ async function fetchUsdRate() {
     }
 }
 
-/* ═══ 주가 조회 ═══ */
+/* ── 주가 ── */
 async function getPrice(ticker, isUS) {
     const key = ticker.toUpperCase();
     if (livePrice[key]) return livePrice[key];
-
     const symbol = isUS ? key : (/^\d{6}$/.test(key) ? key + '.KS' : key);
-    const proxy  = 'https://api.allorigins.win/get?url=' +
+    const proxy = 'https://api.allorigins.win/get?url=' +
         encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d');
     try {
-        const j    = await fetch(proxy).then(r => r.json());
+        const j = await fetch(proxy).then(r => r.json());
         const data = JSON.parse(j.contents);
-        const p    = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-        if (p) {
-            const krw = isUS ? p * (usdRate || 1380) : p;
-            livePrice[key] = { raw: p, krw };
-            return livePrice[key];
-        }
+        const p = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+        if (p) { livePrice[key] = { raw: p, krw: isUS ? p * (usdRate || 1380) : p }; return livePrice[key]; }
     } catch {}
     return null;
 }
 
-/* ═══ 분류 변경 ═══ */
+/* ── 분류 변경 ── */
 function onCatChange() {
-    const cat   = document.getElementById('field-cat').value;
-    const isKR  = cat === '자산|주식(국내)';
-    const isUS  = cat === '자산|주식(해외)';
+    const cat  = document.getElementById('field-cat').value;
+    const isKR = cat === '자산|주식(국내)', isUS = cat === '자산|주식(해외)';
     const stock = isKR || isUS;
-
     document.getElementById('stock-panel').classList.toggle('show', stock);
     document.getElementById('amt-row').style.display = stock ? 'none' : 'block';
     document.getElementById('price-info').classList.add('hidden');
     document.getElementById('rate-row').classList.toggle('hidden', !isUS);
-    document.getElementById('stock-label').innerText =
-        isKR ? '국내 주식 정보' : '해외 주식 정보 (USD → KRW)';
-
-    ['field-ticker','field-qty','field-unit','field-amt'].forEach(id =>
-        document.getElementById(id).value = '');
+    document.getElementById('stock-label').innerText = isKR ? '국내 주식 정보' : '해외 주식 정보 (USD→KRW)';
+    if (!stock) { ['field-ticker','field-qty','field-unit'].forEach(id => document.getElementById(id).value = ''); }
 }
 
-/* ═══ 티커 입력 후 실시간 주가 표시 ═══ */
+function onEditCatChange() {
+    const cat  = document.getElementById('edit-cat').value;
+    const isKR = cat === '자산|주식(국내)', isUS = cat === '자산|주식(해외)';
+    const stock = isKR || isUS;
+    document.getElementById('edit-stock-panel').classList.toggle('hidden', !stock);
+    document.getElementById('edit-amt-row').style.display = stock ? 'none' : 'block';
+    if (isUS) document.getElementById('edit-stock-label').innerText = '해외 주식 정보 (USD→KRW)';
+    else      document.getElementById('edit-stock-label').innerText = '국내 주식 정보';
+}
+
+/* ── 실시간 주가 조회 ── */
 async function fetchAndShowPrice() {
     const ticker = document.getElementById('field-ticker').value.trim().toUpperCase();
     if (!ticker) return;
-    const isUS   = document.getElementById('field-cat').value === '자산|주식(해외)';
+    const isUS = document.getElementById('field-cat').value === '자산|주식(해외)';
     const priceEl = document.getElementById('live-price');
-    const infoEl  = document.getElementById('price-info');
-
-    infoEl.classList.remove('hidden');
-    priceEl.classList.add('fetching');
-    priceEl.innerText = '조회 중...';
-
+    document.getElementById('price-info').classList.remove('hidden');
+    priceEl.classList.add('fetching'); priceEl.innerText = '조회 중...';
     const p = await getPrice(ticker, isUS);
     priceEl.classList.remove('fetching');
-
     if (p) {
-        priceEl.innerText = isUS
-            ? `$${p.raw.toLocaleString()} → ₩${Math.round(p.krw).toLocaleString()}`
-            : `₩${Math.round(p.krw).toLocaleString()}`;
+        priceEl.innerText = isUS ? `$${p.raw.toLocaleString()} → ₩${Math.round(p.krw).toLocaleString()}` : `₩${Math.round(p.krw).toLocaleString()}`;
         if (isUS) document.getElementById('rate-val').innerText = `₩${Math.round(usdRate).toLocaleString()}`;
         recalcEval();
-    } else {
-        priceEl.innerText = '조회 실패 (수동 입력)';
-    }
+    } else { priceEl.innerText = '조회 실패 (수동 입력)'; }
 }
 
-/* ═══ 수량 변경 → 평가금액 재계산 ═══ */
 function recalcEval() {
     const ticker = document.getElementById('field-ticker').value.trim().toUpperCase();
     const qty    = parseFloat(document.getElementById('field-qty').value) || 0;
-    let   eval_  = 0;
+    let eval_ = 0;
     if (ticker && livePrice[ticker] && qty > 0) eval_ = livePrice[ticker].krw * qty;
     document.getElementById('eval-amt').innerText = '₩' + Math.round(eval_).toLocaleString();
     if (eval_) document.getElementById('field-amt').value = Math.round(eval_);
 }
 
-/* ═══ DB row → view 객체 ═══ */
-function toView(r) {
-    let extra = {};
-    try { extra = JSON.parse(r.description || '{}'); } catch {}
-    const isStockJson = typeof extra === 'object' && extra.ticker;
-    return {
-        id:      r.id,
-        writer:  r.user_name || '남호',
-        type:    r.type || '지출',
-        cat:     r.category || '',
-        amt:     Number(r.amount) || 0,
-        date:    r.date || '',
-        memo:    isStockJson ? (extra.memo || '') : (r.description || ''),
-        raw_desc: r.description || '',
-        ticker:  extra.ticker  || null,
-        qty:     extra.qty     || null,
-        isUS:    r.category === '주식(해외)'
-    };
-}
-
-/* ═══ 초기 로드 ═══ */
+/* ── 초기 로드 ── */
 async function init() {
     document.getElementById('field-date').value = new Date().toISOString().split('T')[0];
     setStatus('loading', '데이터 불러오는 중...');
@@ -323,8 +687,7 @@ async function init() {
     render();
     setStatus('live', '실시간 연결됨 ✓');
 
-    // 실시간 구독
-    sb.channel('nhgr_rt')
+    sb.channel('nhgr_main_rt')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLE }, ({ new: row }) => {
             if (!state.records.find(r => r.id === row.id)) state.records.unshift(toView(row));
             render();
@@ -333,9 +696,13 @@ async function init() {
             state.records = state.records.filter(r => r.id !== row.id);
             render();
         })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: TABLE }, ({ new: row }) => {
+            const idx = state.records.findIndex(r => r.id === row.id);
+            if (idx !== -1) state.records[idx] = toView(row);
+            render();
+        })
         .subscribe();
 
-    // 저장된 주식 종목 실시간 가격 갱신
     refreshLivePrices();
 }
 
@@ -346,15 +713,41 @@ async function refreshLivePrices() {
     if (pairs.length) render();
 }
 
-/* ═══ 렌더 ═══ */
+/* ── DB row → view ── */
+function toView(r) {
+    let extra = {};
+    try { extra = JSON.parse(r.description || '{}'); } catch {}
+    const isStockJson = typeof extra === 'object' && extra.ticker;
+    return {
+        id:       r.id,
+        writer:   r.user_name || 'user1',
+        type:     r.type || '지출',
+        cat:      r.category || '',
+        amt:      Number(r.amount) || 0,
+        date:     r.date || '',
+        memo:     isStockJson ? (extra.memo || '') : (r.description || ''),
+        raw_desc: r.description || '',
+        ticker:   extra.ticker  || null,
+        qty:      extra.qty     || null,
+        isUS:     r.category === '주식(해외)'
+    };
+}
+
+/* ── 작성자 이름 조회 ── */
+function writerName(key) {
+    if (!accounts) return key;
+    return (accounts[key] || accounts.user1).name;
+}
+
+/* ── 렌더 ── */
 function render() {
     const thisMonth = new Date().toISOString().slice(0, 7);
     let stats = { asset: 0, inc: 0, exp: 0 };
 
     state.records.forEach(r => {
         let amt = r.amt;
-        if (r.ticker && r.qty && livePrice[r.ticker?.toUpperCase()])
-            amt = livePrice[r.ticker.toUpperCase()].krw * r.qty;
+        const tk = r.ticker?.toUpperCase();
+        if (tk && r.qty && livePrice[tk]) amt = livePrice[tk].krw * r.qty;
         if (r.type === '자산') stats.asset += amt;
         else if (r.date?.startsWith(thisMonth)) {
             if (r.type === '수입') stats.inc += amt;
@@ -376,40 +769,32 @@ function render() {
         return;
     }
 
-    container.innerHTML = filtered.map(r => {
-        const tk  = r.ticker?.toUpperCase();
-        let dispAmt = r.amt;
-        let liveBadge = '';
+    const isUser1Color = (w) => w === 'user1' || w === '남호';
 
+    container.innerHTML = filtered.map(r => {
+        const tk = r.ticker?.toUpperCase();
+        let dispAmt = r.amt, liveBadge = '';
         if (tk && r.qty && livePrice[tk]) {
-            dispAmt   = livePrice[tk].krw * r.qty;
-            const cur = r.isUS
-                ? `$${livePrice[tk].raw.toLocaleString(undefined,{maximumFractionDigits:2})}`
-                : `₩${Math.round(livePrice[tk].krw).toLocaleString()}`;
+            dispAmt = livePrice[tk].krw * r.qty;
+            const cur = r.isUS ? `$${livePrice[tk].raw.toLocaleString(undefined,{maximumFractionDigits:2})}` : `₩${Math.round(livePrice[tk].krw).toLocaleString()}`;
             liveBadge = `<span class="price-badge">LIVE ${cur}</span>`;
         }
-
-        const stockMeta = r.ticker
-            ? `<span class="text-[9px] font-black text-blue-400 ml-1">${r.ticker}</span>
-               <span class="text-[9px] text-slate-500">${r.qty ? r.qty + '주' : ''}</span>`
-            : '';
-
-        const amtColor = r.type === '수입' ? 'text-emerald-400'
-                       : r.type === '지출' ? 'text-rose-400' : 'text-white';
-        const sign = r.type === '지출' ? '-' : '';
+        const stockMeta = r.ticker ? `<span class="text-[9px] font-black text-blue-400 ml-1">${r.ticker}</span><span class="text-[9px] text-slate-500">${r.qty ? r.qty+'주' : ''}</span>` : '';
+        const amtColor  = r.type === '수입' ? 'text-emerald-400' : r.type === '지출' ? 'text-rose-400' : 'text-white';
+        const sign      = r.type === '지출' ? '-' : '';
+        const wName     = writerName(r.writer);
+        const wColor    = isUser1Color(r.writer) ? 'bg-indigo-600' : 'bg-slate-600';
 
         return `
-        <div class="glass-card p-4 rounded-2xl flex justify-between items-center group">
+        <div class="record-row glass-card p-4 rounded-2xl flex justify-between items-center group" onclick="openEditModal('${r.id}')">
             <div class="flex items-center gap-3 min-w-0 flex-1">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black flex-shrink-0
-                    ${r.writer === '남호' ? 'bg-indigo-600 text-white' : 'bg-slate-600 text-white'}">
-                    ${r.writer === '남호' ? '남호' : '가람'}
-                </div>
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-[9px] font-black flex-shrink-0 ${wColor} text-white">${wName.slice(0,2)}</div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
                         <span class="text-[9px] font-bold text-slate-500">${r.date}</span>
                         <span class="text-[9px] font-black text-indigo-400">${r.cat}</span>
                         ${stockMeta}
+                        <span class="edit-hint">✏️ 클릭하여 수정</span>
                     </div>
                     <div class="flex items-center gap-1.5 flex-wrap">
                         <p class="font-bold text-sm text-slate-200 truncate">${r.memo || '-'}</p>
@@ -419,15 +804,9 @@ function render() {
             </div>
             <div class="flex items-center gap-2 flex-shrink-0 ml-2">
                 <div class="text-right">
-                    <p class="font-black text-lg ${amtColor}">
-                        ${sign}₩${Math.round(dispAmt).toLocaleString()}
-                    </p>
+                    <p class="font-black text-lg ${amtColor}">${sign}₩${Math.round(dispAmt).toLocaleString()}</p>
                     ${tk && r.qty ? `<p class="text-[9px] text-slate-500">${r.qty}주</p>` : ''}
                 </div>
-                <button onclick="deleteData('${r.id}')"
-                    class="del-btn opacity-0 group-hover:opacity-100 p-1 text-slate-700 hover:text-rose-500 transition-all">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
             </div>
         </div>`;
     }).join('');
@@ -435,34 +814,135 @@ function render() {
     lucide.createIcons();
 }
 
-/* ═══ 저장 ═══ */
-window.saveData = async () => {
-    const catVal  = document.getElementById('field-cat').value;
+/* ══════════════════════════════════════════
+   수정 모달
+══════════════════════════════════════════ */
+function openEditModal(id) {
+    const r = state.records.find(x => String(x.id) === String(id));
+    if (!r) return;
+    editingId = id;
+
+    // 분류 값 설정
+    const catVal = r.type + '|' + r.cat;
+    document.getElementById('edit-cat').value = catVal;
+    onEditCatChange();
+
+    // 주식이면 주식 필드, 아니면 금액 필드
+    const isStock = r.cat === '주식(국내)' || r.cat === '주식(해외)';
+    if (isStock) {
+        document.getElementById('edit-ticker').value = r.ticker || '';
+        document.getElementById('edit-qty').value    = r.qty    || '';
+        try {
+            const extra = JSON.parse(r.raw_desc || '{}');
+            document.getElementById('edit-unit').value = extra.unitPrice || '';
+        } catch {}
+    } else {
+        document.getElementById('edit-amt').value = r.amt || '';
+    }
+
+    document.getElementById('edit-memo').value = r.memo || '';
+    document.getElementById('edit-date').value = r.date || '';
+
+    document.getElementById('edit-modal').classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function closeEditModal() {
+    editingId = null;
+    document.getElementById('edit-modal').classList.add('hidden');
+}
+
+async function submitEdit() {
+    if (!editingId) return;
+    const r = state.records.find(x => String(x.id) === String(editingId));
+    if (!r) return;
+
+    const catVal  = document.getElementById('edit-cat').value;
     const [type, cat] = catVal.split('|');
-    const dateVal = document.getElementById('field-date').value;
-    const memoVal = document.getElementById('field-memo').value.trim();
-    const isKR    = cat === '주식(국내)';
-    const isUS    = cat === '주식(해외)';
+    const dateVal = document.getElementById('edit-date').value;
+    const memoVal = document.getElementById('edit-memo').value.trim();
+    const isKR    = cat === '주식(국내)', isUS = cat === '주식(해외)';
     const isStock = isKR || isUS;
 
     if (!dateVal) { alert('날짜를 선택해주세요.'); return; }
 
     let amount, description;
+    if (isStock) {
+        const ticker    = document.getElementById('edit-ticker').value.trim().toUpperCase();
+        const qty       = parseFloat(document.getElementById('edit-qty').value) || 0;
+        const unitPrice = parseFloat(document.getElementById('edit-unit').value) || 0;
+        if (!ticker || !qty) { alert('티커와 수량을 입력해주세요.'); return; }
+        let priceKRW = unitPrice, priceRaw = unitPrice;
+        const live = await getPrice(ticker, isUS);
+        if (live) { priceKRW = live.krw; priceRaw = live.raw; }
+        amount      = Math.round(priceKRW * qty);
+        description = JSON.stringify({ ticker, qty, unitPrice, currentPrice: priceRaw, usdRate: isUS ? usdRate : null, memo: memoVal });
+    } else {
+        amount = Number(document.getElementById('edit-amt').value);
+        if (!amount || amount <= 0) { alert('금액을 입력해주세요.'); return; }
+        description = memoVal;
+    }
 
+    const payload = { type, category: cat, amount, date: dateVal, description };
+
+    // 낙관적 업데이트
+    const idx = state.records.findIndex(x => String(x.id) === String(editingId));
+    const oldRec = { ...state.records[idx] };
+    state.records[idx] = { ...state.records[idx], type, cat, amt: amount, date: dateVal, memo: memoVal, raw_desc: description,
+        ticker: isStock ? document.getElementById('edit-ticker').value.trim().toUpperCase() : null,
+        qty: isStock ? parseFloat(document.getElementById('edit-qty').value) : null, isUS };
+    render();
+    closeEditModal();
+
+    const { error } = await sb.from(TABLE).update(payload).eq('id', editingId);
+    if (error) {
+        state.records[idx] = oldRec;
+        render();
+        alert('수정 실패: ' + error.message);
+    }
+}
+
+async function confirmDelete() {
+    if (!editingId) return;
+    if (!confirm('이 내역을 삭제할까요?')) return;
+
+    const id      = editingId;
+    const removed = state.records.find(r => String(r.id) === String(id));
+    state.records = state.records.filter(r => String(r.id) !== String(id));
+    render();
+    closeEditModal();
+
+    const { error } = await sb.from(TABLE).delete().eq('id', id);
+    if (error) {
+        if (removed) state.records.unshift(removed);
+        render();
+        alert('삭제 실패: ' + error.message);
+    }
+}
+
+/* ══════════════════════════════════════════
+   저장
+══════════════════════════════════════════ */
+window.saveData = async () => {
+    const catVal  = document.getElementById('field-cat').value;
+    const [type, cat] = catVal.split('|');
+    const dateVal = document.getElementById('field-date').value;
+    const memoVal = document.getElementById('field-memo').value.trim();
+    const isKR    = cat === '주식(국내)', isUS = cat === '주식(해외)';
+    const isStock = isKR || isUS;
+
+    if (!dateVal) { alert('날짜를 선택해주세요.'); return; }
+
+    let amount, description;
     if (isStock) {
         const ticker    = document.getElementById('field-ticker').value.trim().toUpperCase();
         const qty       = parseFloat(document.getElementById('field-qty').value) || 0;
         const unitPrice = parseFloat(document.getElementById('field-unit').value) || 0;
-
         if (!ticker) { alert('티커를 입력해주세요.'); return; }
         if (!qty)    { alert('수량을 입력해주세요.'); return; }
-
-        // 실시간 가격으로 평가금액 계산 (없으면 매입단가 사용)
-        let priceKRW = unitPrice;
-        let priceRaw = unitPrice;
+        let priceKRW = unitPrice, priceRaw = unitPrice;
         const live = await getPrice(ticker, isUS);
         if (live) { priceKRW = live.krw; priceRaw = live.raw; }
-
         amount      = Math.round(priceKRW * qty);
         description = JSON.stringify({ ticker, qty, unitPrice, currentPrice: priceRaw, usdRate: isUS ? usdRate : null, memo: memoVal });
     } else {
@@ -471,16 +951,15 @@ window.saveData = async () => {
         description = memoVal;
     }
 
-    const payload = { user_name: state.writer, type, category: cat, amount, date: dateVal, description };
+    const writerName_ = writerName(state.writer);
+    const payload     = { user_name: writerName_, type, category: cat, amount, date: dateVal, description };
 
-    // 낙관적 업데이트
     const tempId = 'tmp_' + Date.now();
     const ticker = isStock ? document.getElementById('field-ticker').value.trim().toUpperCase() : null;
     const qty    = isStock ? parseFloat(document.getElementById('field-qty').value) : null;
     state.records.unshift({ id: tempId, writer: state.writer, type, cat, amt: amount, date: dateVal, memo: memoVal, raw_desc: description, ticker, qty, isUS });
     render();
 
-    // 폼 초기화
     document.getElementById('field-memo').value = '';
     document.getElementById('field-amt').value  = '';
     if (isStock) {
@@ -499,25 +978,15 @@ window.saveData = async () => {
     if (idx !== -1) state.records[idx] = toView(data);
 };
 
-/* ═══ 삭제 ═══ */
-window.deleteData = async (id) => {
-    if (!confirm('삭제할까요?')) return;
-    const removed = state.records.find(r => r.id === id);
-    state.records = state.records.filter(r => r.id !== id);
-    render();
-    if (String(id).startsWith('tmp_')) return;
-    const { error } = await sb.from(TABLE).delete().eq('id', id);
-    if (error) {
-        if (removed) state.records.unshift(removed);
-        render();
-        alert('삭제 실패: ' + error.message);
-    }
-};
-
-/* ═══ 작성자/필터 ═══ */
+/* ══════════════════════════════════════════
+   작성자 / 필터
+══════════════════════════════════════════ */
 window.setWriter = (w) => {
     state.writer = w;
-    document.querySelectorAll('.w-btn').forEach(b => b.classList.toggle('tab-active', b.id === 'w-' + w));
+    document.getElementById('w-user1').classList.toggle('tab-active', w === 'user1');
+    document.getElementById('w-user1').classList.toggle('text-slate-400', w !== 'user1');
+    document.getElementById('w-user2').classList.toggle('tab-active', w === 'user2');
+    document.getElementById('w-user2').classList.toggle('text-slate-400', w !== 'user2');
 };
 window.setFilter = (f) => {
     state.filter = f;
@@ -527,12 +996,32 @@ window.setFilter = (f) => {
 
 function setStatus(type, msg) {
     const el = document.getElementById('status-text');
-    el.className = 'text-[10px] font-bold mt-1 uppercase tracking-widest ' +
+    el.className = 'text-[10px] font-bold uppercase tracking-widest ' +
         (type === 'live' ? 'text-emerald-500' : type === 'error' ? 'text-rose-500' : 'text-amber-400');
     el.innerText = '● ' + msg;
 }
 
-init();
+/* ══════════════════════════════════════════
+   시작 — 세션 확인
+══════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+    lucide.createIcons();
+
+    const session  = loadSession();
+    const accts    = loadAccounts();
+
+    if (session && accts) {
+        // 세션이 있으면 바로 앱 시작
+        const user = accts[session.key] || session;
+        startApp(user);
+    } else if (!accts) {
+        // 계정 자체가 없으면 온보딩
+        showOnboarding();
+    } else {
+        // 계정은 있는데 세션 없으면 로그인
+        showLogin();
+    }
+});
 </script>
 </body>
 </html>
