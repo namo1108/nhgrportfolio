@@ -619,31 +619,38 @@ async function getPrice(ticker, isUS) {
     if (!key) return null;
     if (livePrice[key]) return livePrice[key];
 
-    // 국내: 6자리 숫자면 .KS 추가
     const symbol = isUS ? key : (/^\d{6}$/.test(key) ? key + '.KS' : key);
+    const yhUrl  = 'https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1d&range=5d';
+    const yhUrl2 = 'https://query2.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1d&range=5d';
 
-    // proxy 두 개 시도
     const proxies = [
-        'https://api.allorigins.win/get?url=' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d'),
-        'https://corsproxy.io/?' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + symbol + '?interval=1m&range=1d')
+        'https://api.allorigins.win/get?url=' + encodeURIComponent(yhUrl),
+        'https://api.allorigins.win/get?url=' + encodeURIComponent(yhUrl2),
+        'https://corsproxy.io/?' + encodeURIComponent(yhUrl),
+        'https://thingproxy.freeboard.io/fetch/' + yhUrl,
     ];
 
     for (const proxy of proxies) {
         try {
-            const resp = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
-            let data;
+            const resp = await fetch(proxy, { signal: AbortSignal.timeout(10000) });
+            if (!resp.ok) continue;
             const text = await resp.text();
-            // allorigins는 {contents: "..."} 형식, corsproxy는 직접 JSON
-            try { const wrap = JSON.parse(text); data = typeof wrap.contents === 'string' ? JSON.parse(wrap.contents) : wrap; }
-            catch { data = JSON.parse(text); }
-            const p = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+            let data;
+            try {
+                const wrap = JSON.parse(text);
+                data = (wrap && typeof wrap.contents === 'string') ? JSON.parse(wrap.contents) : wrap;
+            } catch { continue; }
+            const p = data?.chart?.result?.[0]?.meta?.regularMarketPrice
+                   || data?.chart?.result?.[0]?.meta?.previousClose;
             if (p && p > 0) {
-                const rate = usdRate > 0 ? usdRate : 1380; // 환율 fallback
+                const rate = usdRate > 0 ? usdRate : 1380;
                 livePrice[key] = { raw: p, krw: isUS ? p * rate : p };
+                console.log('[주가]', key, '=', p, isUS ? '(USD→KRW: ' + livePrice[key].krw + ')' : '(KRW)');
                 return livePrice[key];
             }
-        } catch(e) { /* 다음 proxy 시도 */ }
+        } catch(e) { console.warn('[주가 proxy 실패]', proxy.slice(0,40), e.message); }
     }
+    console.warn('[주가 조회 실패]', key, '- 매입단가 사용');
     return null;
 }
 
@@ -681,10 +688,21 @@ async function fetchAndShowPrice() {
     const p = await getPrice(ticker, isUS);
     priceEl.classList.remove('fetching');
     if (p) {
-        priceEl.innerText = isUS ? `$${p.raw.toLocaleString()} → ₩${Math.round(p.krw).toLocaleString()}` : `₩${Math.round(p.krw).toLocaleString()}`;
+        priceEl.innerText = isUS
+            ? `$${p.raw.toLocaleString(undefined,{maximumFractionDigits:2})} → ₩${Math.round(p.krw).toLocaleString()}`
+            : `₩${Math.round(p.krw).toLocaleString()}`;
         if (isUS) document.getElementById('rate-val').innerText = `₩${Math.round(usdRate).toLocaleString()}`;
         recalcEval();
-    } else { priceEl.innerText = '조회 실패 (수동 입력)'; }
+    } else {
+        priceEl.innerText = '조회 실패 — 매입단가로 계산됩니다';
+        const unitP = parseFloat(document.getElementById('field-unit').value) || 0;
+        const qtyV  = parseFloat(document.getElementById('field-qty').value)  || 0;
+        if (unitP > 0 && qtyV > 0) {
+            const evalV = isUS ? unitP * (usdRate || 1380) * qtyV : unitP * qtyV;
+            document.getElementById('eval-amt').innerText = '₩' + Math.round(evalV).toLocaleString();
+            document.getElementById('field-amt').value    = Math.round(evalV);
+        }
+    }
 }
 
 function recalcEval() {
