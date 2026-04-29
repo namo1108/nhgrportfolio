@@ -450,7 +450,7 @@
 ══════════════════════════════════════════ */
 const SB_URL = 'https://gtuwbqowucdegcucwcvk.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0dXdicW93dWNkZWdjdWN3Y3ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDk2OTAsImV4cCI6MjA5MTQ4NTY5MH0.ay6poW7tgKHWrjWGKKTTuCvdow57halg3vHmOQjwRSQ';
-const TABLE  = 'nhgr_budget'; // id TEXT primary key (uuid 없음)
+const TABLE  = 'nhgr_budget';
 const sb     = window.supabase.createClient(SB_URL, SB_KEY);
 
 /* ══════════════════════════════════════════
@@ -720,7 +720,7 @@ async function init() {
     setStatus('loading', '데이터 불러오는 중...');
     await fetchUsdRate();
 
-    const { data, error } = await sb.from(TABLE).select('*').order('date', { ascending: false });
+    const { data, error } = await sb.from(TABLE).select('*').order('created_at', { ascending: false });
     if (error) { setStatus('error', '연결 실패: ' + error.message); return; }
 
     state.records = (data || []).map(toView);
@@ -744,6 +744,13 @@ async function init() {
         .subscribe();
 
     refreshLivePrices();
+
+    // 30초마다 주가 자동 갱신
+    setInterval(async () => {
+        livePrice = {}; // 캐시 초기화
+        await refreshLivePrices();
+        console.log('[자동갱신] 주가 업데이트 완료', new Date().toLocaleTimeString());
+    }, 30000);
 }
 
 async function refreshLivePrices() {
@@ -755,44 +762,22 @@ async function refreshLivePrices() {
 
 /* ── DB row → view ── */
 function toView(r) {
-    // nhgr_budget 컬럼: id(text), writer, type, cat, amt, memo, date
-    // account_v3 컬럼: id(uuid), user_name, type, category, amount, description, date
-    // 두 테이블 모두 지원
-    const isNewTable = r.cat !== undefined;
-    if (isNewTable) {
-        let extra = {};
-        try { extra = JSON.parse(r.memo || '{}'); } catch {}
-        const isStockJson = typeof extra === 'object' && extra.ticker;
-        return {
-            id:       r.id,
-            writer:   r.writer || 'user1',
-            type:     r.type || '지출',
-            cat:      r.cat || '',
-            amt:      Number(r.amt) || 0,
-            date:     r.date || '',
-            memo:     isStockJson ? (extra.memo || '') : (r.memo || ''),
-            raw_desc: r.memo || '',
-            ticker:   extra.ticker || null,
-            qty:      extra.qty    || null,
-            isUS:     r.cat === '주식(해외)'
-        };
-    }
-    // account_v3 fallback
+    // nhgr_budget: id(text), writer, type, cat, amt, memo, date, created_at
     let extra = {};
-    try { extra = JSON.parse(r.description || '{}'); } catch {}
-    const isStockJson = typeof extra === 'object' && extra.ticker;
+    try { extra = JSON.parse(r.memo || '{}'); } catch {}
+    const isStockJson = typeof extra === 'object' && extra !== null && !!extra.ticker;
     return {
-        id:       r.id ?? null,
-        writer:   r.user_name || 'user1',
-        type:     r.type || '지출',
-        cat:      r.category || '',
-        amt:      Number(r.amount) || 0,
-        date:     r.date || '',
-        memo:     isStockJson ? (extra.memo || '') : (r.description || ''),
-        raw_desc: r.description || '',
-        ticker:   extra.ticker  || null,
-        qty:      extra.qty     || null,
-        isUS:     r.category === '주식(해외)'
+        id:       r.id,
+        writer:   r.writer || 'user1',
+        type:     r.type   || '지출',
+        cat:      r.cat    || '',
+        amt:      Number(r.amt) || 0,
+        date:     r.date   || '',
+        memo:     isStockJson ? (extra.memo || '') : (r.memo || ''),
+        raw_desc: r.memo   || '',
+        ticker:   isStockJson ? (extra.ticker || null) : null,
+        qty:      isStockJson ? (Number(extra.qty) || null) : null,
+        isUS:     r.cat === '주식(해외)'
     };
 }
 
@@ -953,7 +938,7 @@ async function submitEdit() {
         description = memoVal;
     }
 
-    const payload = { writer: writerName(state.editWriter || state.writer), type, cat, amt: amount, memo: description, date: dateVal };
+    const payload = { type, cat, amt: amount, memo: description, date: dateVal };
 
     // 낙관적 업데이트
     const idx = state.records.findIndex(x => String(x.id) === String(editingId));
@@ -1037,9 +1022,17 @@ window.saveData = async () => {
     }
 
     const writerName_ = writerName(state.writer);
-    // nhgr_budget: id는 Date.now() 문자열로 직접 생성 (uuid 타입 아님)
-    const newId = String(Date.now()) + '_' + Math.random().toString(36).slice(2,7);
+    // nhgr_budget: id는 text 타입, 직접 생성
+    const newId   = String(Date.now()) + '_' + Math.random().toString(36).slice(2, 7);
     const payload = { id: newId, writer: writerName_, type, cat, amt: amount, memo: description, date: dateVal };
+
+    // 낙관적 업데이트 (즉시 화면 반영)
+    const _ticker = isStock ? document.getElementById('field-ticker').value.trim().toUpperCase() : null;
+    const _qty    = isStock ? (parseFloat(document.getElementById('field-qty').value) || null) : null;
+    const optimistic = { id: newId, writer: writerName_, type, cat, amt: amount,
+        memo: memoVal, raw_desc: description, date: dateVal, ticker: _ticker, qty: _qty, isUS };
+    state.records.unshift(optimistic);
+    render();
 
     // 폼 초기화
     document.getElementById('field-memo').value = '';
@@ -1049,29 +1042,15 @@ window.saveData = async () => {
         document.getElementById('price-info').classList.add('hidden');
     }
 
-    // 저장 버튼 비활성화
+    // DB 저장
     const saveBtn = document.getElementById('btn-save');
     saveBtn.disabled = true; saveBtn.textContent = '저장 중...';
-
-    // 낙관적 업데이트 (즉시 화면 반영)
-    const _ticker = isStock ? document.getElementById('field-ticker').value.trim().toUpperCase() : null;
-    const _qty    = isStock ? parseFloat(document.getElementById('field-qty').value) || null : null;
-    const optimistic = { id: newId, writer: writerName(state.writer), type, cat, amt: amount,
-        memo: memoVal, raw_desc: description, date: dateVal, ticker: _ticker, qty: _qty, isUS };
-    state.records.unshift(optimistic);
-    render();
-
-    console.log('[저장 시작] TABLE:', TABLE, 'payload:', JSON.stringify(payload));
     let data, error;
     try {
         const res = await sb.from(TABLE).insert([payload]).select().single();
-        data  = res.data;
-        error = res.error;
-    } catch(e) {
-        error = { message: e.message || String(e) };
-    }
+        data = res.data; error = res.error;
+    } catch(e) { error = { message: e.message || String(e) }; }
     saveBtn.disabled = false; saveBtn.textContent = '저장';
-    console.log('[저장 결과] data:', JSON.stringify(data), 'error:', JSON.stringify(error));
 
     if (error) {
         state.records = state.records.filter(r => r.id !== newId);
@@ -1079,10 +1058,11 @@ window.saveData = async () => {
         alert('저장 실패: ' + error.message);
         return;
     }
-    // 임시 id → 실제 DB id로 교체
-    const oidx = state.records.findIndex(r => r.id === newId);
-    if (oidx !== -1 && data) state.records[oidx] = toView(data);
-    else if (oidx !== -1 && !data) state.records[oidx] = {...optimistic};
+    if (data) {
+        const oidx = state.records.findIndex(r => r.id === newId);
+        if (oidx !== -1) state.records[oidx] = toView(data);
+    }
+};
 };
 
 /* ══════════════════════════════════════════
@@ -1131,4 +1111,4 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html>
+    </html>
