@@ -1041,8 +1041,17 @@ window.saveData = async () => {
     state.records.unshift(optimistic);
     render();
 
-    const { data, error } = await sb.from(TABLE).insert([payload]).select().single();
+    console.log('[저장 시작] TABLE:', TABLE, 'payload:', JSON.stringify(payload));
+    let data, error;
+    try {
+        const res = await sb.from(TABLE).insert([payload]).select().single();
+        data  = res.data;
+        error = res.error;
+    } catch(e) {
+        error = { message: e.message || String(e) };
+    }
     saveBtn.disabled = false; saveBtn.textContent = '저장';
+    console.log('[저장 결과] data:', JSON.stringify(data), 'error:', JSON.stringify(error));
 
     if (error) {
         state.records = state.records.filter(r => r.id !== newId);
@@ -1052,7 +1061,8 @@ window.saveData = async () => {
     }
     // 임시 id → 실제 DB id로 교체
     const oidx = state.records.findIndex(r => r.id === newId);
-    if (oidx !== -1) state.records[oidx] = toView(data);
+    if (oidx !== -1 && data) state.records[oidx] = toView(data);
+    else if (oidx !== -1 && !data) state.records[oidx] = {...optimistic};
 };
 
 /* ══════════════════════════════════════════
