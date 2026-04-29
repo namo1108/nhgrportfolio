@@ -808,7 +808,7 @@ function render() {
         const wColor    = isUser1Color(r.writer) ? 'bg-indigo-600' : 'bg-slate-600';
 
         return `
-        <div class="record-row glass-card p-4 rounded-2xl flex justify-between items-center group" onclick="openEditModal('${r.id}')">
+        <div class="record-row glass-card p-4 rounded-2xl flex justify-between items-center group" data-record-id="${r.id}" onclick="openEditModal(this.dataset.recordId)">
             <div class="flex items-center gap-3 min-w-0 flex-1">
                 <div class="w-8 h-8 rounded-lg flex items-center justify-center text-[9px] font-black flex-shrink-0 ${wColor} text-white">${wName.slice(0,2)}</div>
                 <div class="min-w-0">
@@ -840,9 +840,11 @@ function render() {
    수정 모달
 ══════════════════════════════════════════ */
 function openEditModal(id) {
+    // id는 bigint(숫자) 또는 uuid(문자열) 모두 처리
     const r = state.records.find(x => String(x.id) === String(id));
-    if (!r) return;
-    editingId = id;
+    if (!r) { console.warn('Record not found for id:', id); return; }
+    editingId = r.id; // DB 원본 id 그대로 보존 (숫자면 숫자, 문자면 문자)
+    console.log('Editing record id:', editingId, typeof editingId);
 
     // 분류 값 설정
     const catVal = r.type + '|' + r.cat;
@@ -917,6 +919,8 @@ async function submitEdit() {
     render();
     closeEditModal();
 
+    // editingId를 DB 원본 타입에 맞게 변환
+    // account_v3의 id가 bigint면 Number, uuid/text면 String
     const { error } = await sb.from(TABLE).update(payload).eq('id', editingId);
     if (error) {
         state.records[idx] = oldRec;
