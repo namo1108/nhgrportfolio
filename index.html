@@ -1036,8 +1036,10 @@ window.saveData = async () => {
     saveBtn.disabled = true; saveBtn.textContent = '저장 중...';
 
     // 낙관적 업데이트 (즉시 화면 반영)
+    const _ticker = isStock ? document.getElementById('field-ticker').value.trim().toUpperCase() : null;
+    const _qty    = isStock ? parseFloat(document.getElementById('field-qty').value) || null : null;
     const optimistic = { id: newId, writer: writerName(state.writer), type, cat, amt: amount,
-        memo: memoVal, raw_desc: description, date: dateVal, ticker, qty, isUS };
+        memo: memoVal, raw_desc: description, date: dateVal, ticker: _ticker, qty: _qty, isUS };
     state.records.unshift(optimistic);
     render();
 
