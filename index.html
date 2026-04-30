@@ -529,23 +529,23 @@ function onMCat(){
   document.getElementById('m-arow').style.display=stock?'none':'block';
   document.getElementById('m-slbl').textContent=v==='자산|주식(국내)'?'국내 주식 정보':'해외 주식 정보 (USD→KRW)';
 }
-async function doEdit(){
+ function doEdit(){
   if(!editId)return;
   const[type,cat]=document.getElementById('m-cat').value.split('|');
   const dt=document.getElementById('m-date').value;
   const mm=document.getElementById('m-memo').value.trim();
   const isKR=cat==='주식(국내)',isUS=cat==='주식(해외)',stock=isKR||isUS;
   if(!dt){alert('날짜를 입력해주세요.');return;}
-  let amt,memo;
+  let amt,memo,tk=null,qty=null;
   if(stock){
-    const tk=document.getElementById('m-ticker').value.trim().toUpperCase();
-    const qty=parseFloat(document.getElementById('m-qty').value)||0;
+    tk=document.getElementById('m-ticker').value.trim().toUpperCase();
+    qty=parseFloat(document.getElementById('m-qty').value)||0;
     const unit=parseFloat(document.getElementById('m-unit').value)||0;
     if(!tk||!qty){alert('티커와 수량을 입력해주세요.');return;}
-    if(isUS&&usd<=0)await fetchUSD();
-    const live=await fetchP(tk,isUS);
-    const pkrw=live?live.krw:(isUS?unit*(usd||1380):unit);
-    const praw=live?live.raw:unit;
+    // 캐시된 주가 사용 (없으면 매입단가) → API 재조회 없이 즉시 저장
+    const cached=lp[tk];
+    const pkrw=cached?cached.krw:(isUS?unit*(usd||1380):unit);
+    const praw=cached?cached.raw:unit;
     amt=Math.round(pkrw*qty);
     memo=JSON.stringify({ticker:tk,qty,unitPrice:unit,currentPrice:praw,usdRate:isUS?usd:null,memo:mm});
   }else{
@@ -554,14 +554,16 @@ async function doEdit(){
     memo=mm;
   }
   const payload={type,cat,amt,memo,date:dt};
-  const idx=rec.findIndex(r=>r.id===editId);
-  const old=idx!==-1?{...rec[idx]}:null;
-  if(idx!==-1)rec[idx]={...rec[idx],type,cat,amt,memo:mm,raw_desc:memo,date:dt,
-    ticker:stock?document.getElementById('m-ticker').value.trim().toUpperCase():null,
-    qty:stock?parseFloat(document.getElementById('m-qty').value):null,isUS};
+  const savedId=editId;
+  const idx=rec.findIndex(r=>r.id===savedId);
+  const backup=idx!==-1?{...rec[idx]}:null;
+  // 즉시 UI 반영 & 모달 닫기
+  if(idx!==-1)rec[idx]={...rec[idx],type,cat,amt,memo:mm,raw_desc:memo,date:dt,ticker:tk,qty,isUS};
   render();closeModal();
-  const{error}=await sb.from(TABLE).update(payload).eq('id',editId);
-  if(error){if(old&&idx!==-1)rec[idx]=old;render();alert('수정 실패: '+error.message);}
+  // 백그라운드 DB 업데이트 (await 없음 → 즉시 반환)
+  sb.from(TABLE).update(payload).eq('id',savedId).then(({error})=>{
+    if(error){if(backup&&idx!==-1)rec[idx]=backup;render();alert('수정 실패: '+error.message);}
+  });
 }
 async function doDelete(){
   if(!editId||!confirm('삭제할까요?'))return;
