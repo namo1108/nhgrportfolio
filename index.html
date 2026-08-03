@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -6,6 +7,7 @@
 <title>남호가람 가계부</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
 *{font-family:'Pretendard',-apple-system,sans-serif;box-sizing:border-box}
@@ -25,6 +27,9 @@ input,select{background:#f1f5f9!important;color:#1e293b!important;font-family:in
 #modal-wrap{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px}
 #modal-wrap.hide{display:none}
 #modal-inner{background:#fff;border-radius:24px;padding:24px;width:100%;max-width:460px;max-height:88vh;overflow-y:auto;color:#1e293b}
+#budget-modal-wrap{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px}
+#budget-modal-wrap.hide{display:none}
+#budget-modal-inner{background:#fff;border-radius:24px;padding:24px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;color:#1e293b}
 /* 앱 */
 #app-wrap{display:none}
 #app-wrap.show{display:block}
@@ -38,6 +43,16 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 .ehint{opacity:0;transition:opacity .15s;font-size:9px;color:#818cf8}
 .rec:hover .ehint{opacity:1}
 .pb{display:inline-flex;align-items:center;background:#1e3a5f;color:#60a5fa;font-size:9px;font-weight:900;padding:1px 7px;border-radius:999px}
+/* 통계/예산/탭 */
+.tab-btn,.wf-btn{transition:all .15s}
+#panel-stats.hidden{display:none}
+.bud-row{background:#f8fafc;border-radius:14px;padding:10px 12px}
+.bud-bar-bg{background:#e2e8f0;border-radius:999px;height:7px;overflow:hidden;margin-top:6px}
+.bud-bar-fg{height:100%;border-radius:999px;transition:width .3s}
+.mnav-btn{transition:background .15s}
+.mnav-btn:hover{background:#242938}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#242938;border-radius:8px}
 </style>
 </head>
 <body>
@@ -152,6 +167,19 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
   </div>
 </div>
 
+<!-- 예산 설정 모달 -->
+<div id="budget-modal-wrap" class="hide">
+  <div id="budget-modal-inner">
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="text-lg font-black">예산 설정</h3>
+      <button onclick="closeBudget()" class="p-2 rounded-full hover:bg-slate-100 text-slate-400 text-2xl leading-none font-light">×</button>
+    </div>
+    <p class="text-[11px] text-slate-500 font-bold mb-4">분류별 이달 지출 한도를 설정하면 통계 탭에서 초과 여부를 알려드려요.</p>
+    <div id="budget-form" class="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1"></div>
+    <button onclick="saveBudget()" class="w-full mt-5 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl text-sm transition-all">저장</button>
+  </div>
+</div>
+
 <!-- 메인 앱 -->
 <div id="app-wrap" class="p-4 md:p-8 pb-20">
 <div class="max-w-6xl mx-auto">
@@ -170,18 +198,29 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
         <span id="timer-txt" class="text-[9px] text-slate-600 font-bold"></span>
       </div>
     </div>
-    <div class="flex gap-3 overflow-x-auto noscroll w-full md:w-auto">
-      <div class="gc px-5 py-3 rounded-2xl min-w-[110px]">
-        <p class="text-[9px] text-slate-500 font-bold mb-1">자산 총액</p>
-        <p class="text-lg font-black" id="s-total">₩0</p>
+    <div class="flex flex-col gap-2 w-full md:w-auto">
+      <div class="flex items-center justify-end gap-1.5">
+        <button onclick="navMonth(-1)" class="mnav-btn w-7 h-7 rounded-lg gc text-slate-400 hover:text-white text-xs font-black">‹</button>
+        <span id="ym-label" class="text-xs font-black text-slate-300 min-w-[76px] text-center"></span>
+        <button onclick="navMonth(1)" class="mnav-btn w-7 h-7 rounded-lg gc text-slate-400 hover:text-white text-xs font-black">›</button>
       </div>
-      <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-emerald-500">
-        <p class="text-[9px] text-slate-500 font-bold mb-1">이달 수입</p>
-        <p class="text-lg font-black text-emerald-400" id="s-inc">₩0</p>
-      </div>
-      <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-rose-500">
-        <p class="text-[9px] text-slate-500 font-bold mb-1">이달 지출</p>
-        <p class="text-lg font-black text-rose-400" id="s-exp">₩0</p>
+      <div class="flex gap-3 overflow-x-auto noscroll w-full md:w-auto">
+        <div class="gc px-5 py-3 rounded-2xl min-w-[110px]">
+          <p class="text-[9px] text-slate-500 font-bold mb-1">자산 총액</p>
+          <p class="text-lg font-black" id="s-total">₩0</p>
+        </div>
+        <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-emerald-500">
+          <p class="text-[9px] text-slate-500 font-bold mb-1" id="s-inc-lbl">이달 수입</p>
+          <p class="text-lg font-black text-emerald-400" id="s-inc">₩0</p>
+        </div>
+        <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-rose-500">
+          <p class="text-[9px] text-slate-500 font-bold mb-1" id="s-exp-lbl">이달 지출</p>
+          <p class="text-lg font-black text-rose-400" id="s-exp">₩0</p>
+        </div>
+        <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-indigo-500">
+          <p class="text-[9px] text-slate-500 font-bold mb-1">저축률</p>
+          <p class="text-lg font-black text-indigo-400" id="s-rate">0%</p>
+        </div>
       </div>
     </div>
   </header>
@@ -247,13 +286,50 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 
     <!-- 목록 -->
     <div class="lg:col-span-8">
-      <div class="flex gap-2 mb-5 overflow-x-auto noscroll pb-1">
-        <button id="fb-all" onclick="setF('all')" class="f-btn ta px-5 py-2 rounded-xl text-xs font-bold whitespace-nowrap">전체</button>
-        <button id="fb-자산" onclick="setF('자산')" class="f-btn gc px-5 py-2 rounded-xl text-xs font-bold text-slate-500 whitespace-nowrap">자산</button>
-        <button id="fb-수입" onclick="setF('수입')" class="f-btn gc px-5 py-2 rounded-xl text-xs font-bold text-slate-500 whitespace-nowrap">수입</button>
-        <button id="fb-지출" onclick="setF('지출')" class="f-btn gc px-5 py-2 rounded-xl text-xs font-bold text-slate-500 whitespace-nowrap">지출</button>
+      <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
+        <div class="flex gap-1 gc p-1 rounded-xl">
+          <button id="tab-list" onclick="setTab('list')" class="tab-btn ta px-4 py-2 rounded-lg text-xs font-bold">목록</button>
+          <button id="tab-stats" onclick="setTab('stats')" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold text-slate-400">통계</button>
+        </div>
+        <button onclick="exportCSV()" class="gc px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-indigo-400 transition-colors whitespace-nowrap">⬇ CSV 내보내기</button>
       </div>
-      <div id="rec-list" class="space-y-2"></div>
+
+      <div id="panel-list">
+        <div class="flex gap-2 mb-3 flex-wrap">
+          <input id="q-search" type="text" placeholder="🔍 메모 · 분류 검색" class="inp flex-1 min-w-[140px]" oninput="render()">
+          <div class="flex gap-1 gc rounded-xl p-1 flex-shrink-0">
+            <button id="wf-all" onclick="setWF('all')" class="wf-btn ta px-3 py-2 rounded-lg text-[11px] font-bold">전체</button>
+            <button id="wf-me" onclick="setWF('me')" class="wf-btn px-3 py-2 rounded-lg text-[11px] font-bold text-slate-400">나</button>
+            <button id="wf-other" onclick="setWF('other')" class="wf-btn px-3 py-2 rounded-lg text-[11px] font-bold text-slate-400">상대방</button>
+          </div>
+        </div>
+        <div class="flex gap-2 mb-5 overflow-x-auto noscroll pb-1">
+          <button id="fb-all" onclick="setF('all')" class="f-btn ta px-5 py-2 rounded-xl text-xs font-bold whitespace-nowrap">전체</button>
+          <button id="fb-자산" onclick="setF('자산')" class="f-btn gc px-5 py-2 rounded-xl text-xs font-bold text-slate-500 whitespace-nowrap">자산</button>
+          <button id="fb-수입" onclick="setF('수입')" class="f-btn gc px-5 py-2 rounded-xl text-xs font-bold text-slate-500 whitespace-nowrap">수입</button>
+          <button id="fb-지출" onclick="setF('지출')" class="f-btn gc px-5 py-2 rounded-xl text-xs font-bold text-slate-500 whitespace-nowrap">지출</button>
+        </div>
+        <div id="rec-list" class="space-y-2"></div>
+      </div>
+
+      <div id="panel-stats" class="hidden space-y-5">
+        <div class="bg-white rounded-[32px] p-6 shadow-xl text-slate-900">
+          <h3 class="font-black text-sm mb-4" id="stat-cat-title">지출 분류</h3>
+          <canvas id="chart-cat" height="220"></canvas>
+          <div id="cat-legend" class="mt-4 grid grid-cols-2 gap-1.5"></div>
+        </div>
+        <div class="bg-white rounded-[32px] p-6 shadow-xl text-slate-900">
+          <h3 class="font-black text-sm mb-4">최근 6개월 수입 · 지출</h3>
+          <canvas id="chart-trend" height="200"></canvas>
+        </div>
+        <div class="gc rounded-[32px] p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-black text-sm">예산 관리</h3>
+            <button onclick="openBudget()" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300">설정 ⚙</button>
+          </div>
+          <div id="budget-list" class="space-y-2.5"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -276,6 +352,16 @@ function clrSess(){localStorage.removeItem(LS);}
 
 /* ── 상태 ── */
 let rec=[],lp={},usd=0,wKey='u1',filt='all',editId=null,ptimer=null,psecs=30;
+let curYM=new Date().toISOString().slice(0,7),tab='list',wf='all';
+let chCat=null,chTrend=null;
+const LB='nhgr_budget_v1';
+let budget=(()=>{try{return JSON.parse(localStorage.getItem(LB)||'{}');}catch{return{};}})();
+const EXP_CATS=['생활비','교통','금융/대출','식비','문화/여가','쇼핑','경조금','관리비','임대료','보험'];
+const CAT_ICON={'현금':'💰','예금':'🏦','적금':'🐷','주택청약':'🏠','보증금':'🔑','주식(국내)':'📈','주식(해외)':'🌎','퇴직금':'🎁','퇴직연금':'🧓',
+  '급여':'💼','상여금':'🎉','이자배당금':'💹','스톡옵션':'📊',
+  '생활비':'🛒','교통':'🚌','금융/대출':'🏦','식비':'🍚','문화/여가':'🎬','쇼핑':'🛍️','경조금':'🎊','관리비':'🏢','임대료':'🏠','보험':'🛡️'};
+function catIcon(c){return CAT_ICON[c]||'📌';}
+const CHART_COLORS=['#6366f1','#f43f5e','#f59e0b','#10b981','#3b82f6','#a855f7','#ec4899','#14b8a6','#eab308','#64748b'];
 
 /* ── 로그인 ── */
 function doLogin(){
@@ -340,6 +426,7 @@ function startApp(user){
   document.getElementById('u-badge').textContent=(user.name||'?').slice(0,2);
   document.getElementById('u-name').textContent=(user.name||'')+'님';
   document.getElementById('f-date').valueAsDate=new Date();
+  document.getElementById('wf-me').textContent=user.name||'나';
   init();
 }
 
@@ -584,21 +671,40 @@ function toV(r){
     ticker:isS?(ex.ticker||null):null,qty:isS?(Number(ex.qty)||null):null,isUS:r.cat==='주식(해외)'};
 }
 
+/* ── 필터 (목록+CSV 공유) ── */
+function currentFiltered(){
+  const myAcc=getAcc();
+  const meName=myAcc?.name||'나';
+  const q=(document.getElementById('q-search')?.value||'').trim().toLowerCase();
+  return rec.filter(r=>{
+    if(filt!=='all'&&r.type!==filt)return false;
+    if(wf==='me'&&r.writer!==meName)return false;
+    if(wf==='other'&&r.writer===meName)return false;
+    if(q&&!((r.memo||'').toLowerCase().includes(q)||(r.cat||'').toLowerCase().includes(q)))return false;
+    return true;
+  }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+}
+
 /* ── 렌더 ── */
 function render(){
-  const ym=new Date().toISOString().slice(0,7);
+  document.getElementById('ym-label').textContent=ymLabel(curYM);
+  const[,mNum]=curYM.split('-');
+  document.getElementById('s-inc-lbl').textContent=`${Number(mNum)}월 수입`;
+  document.getElementById('s-exp-lbl').textContent=`${Number(mNum)}월 지출`;
   let asset=0,inc=0,exp=0;
   rec.forEach(r=>{
     const v=calcA(r);
     if(r.type==='자산')asset+=v;
-    else if(r.date?.startsWith(ym)){if(r.type==='수입')inc+=v;else exp+=v;}
+    else if((r.date||'').startsWith(curYM)){if(r.type==='수입')inc+=v;else exp+=v;}
   });
   document.getElementById('s-total').textContent='₩'+Math.round(asset).toLocaleString();
   document.getElementById('s-inc').textContent='₩'+Math.round(inc).toLocaleString();
   document.getElementById('s-exp').textContent='₩'+Math.round(exp).toLocaleString();
+  document.getElementById('s-rate').textContent=(inc>0?Math.round((inc-exp)/inc*100):0)+'%';
 
-  const filtered=rec.filter(r=>filt==='all'||r.type===filt).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const filtered=currentFiltered();
   const list=document.getElementById('rec-list');
+  if(tab==='stats')renderStats();
   if(!filtered.length){list.innerHTML='<div class="text-center py-20 opacity-20 text-sm font-bold">내역이 없습니다.</div>';return;}
 
   const myAcc=getAcc();
@@ -619,7 +725,7 @@ function render(){
         <div class="min-w-0">
           <div class="flex items-center gap-1.5 flex-wrap text-[9px] font-black mb-0.5">
             <span class="text-slate-500">${r.date}</span>
-            <span class="text-indigo-400">${r.cat}</span>
+            <span class="text-indigo-400">${catIcon(r.cat)} ${r.cat}</span>
             ${tk?`<span class="text-blue-400">${tk}</span><span class="text-slate-500">${r.qty||''}주</span>`:''}
             <span class="ehint">✏️ 수정</span>
           </div>
@@ -654,6 +760,134 @@ function setDot(t,msg){
   const el=document.getElementById('s-dot');
   el.className='text-[10px] font-bold uppercase tracking-widest '+(t==='live'?'text-emerald-500':t==='err'?'text-rose-500':'text-amber-400');
   el.textContent='● '+msg;
+}
+
+/* ── 월 탐색 ── */
+function navMonth(dir){
+  const[y,m]=curYM.split('-').map(Number);
+  const d=new Date(y,m-1+dir,1);
+  curYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  render();
+}
+function ymLabel(ym){const[y,m]=ym.split('-').map(Number);return`${y}년 ${m}월`;}
+
+/* ── 탭 / 필터 ── */
+function setTab(t){
+  tab=t;
+  document.getElementById('panel-list').classList.toggle('hidden',t!=='list');
+  document.getElementById('panel-stats').classList.toggle('hidden',t!=='stats');
+  ['tab-list','tab-stats'].forEach(id=>{
+    const on=id==='tab-'+t;
+    document.getElementById(id).classList.toggle('ta',on);
+    document.getElementById(id).classList.toggle('text-slate-400',!on);
+  });
+  if(t==='stats')renderStats();
+}
+function setWF(w){
+  wf=w;
+  document.querySelectorAll('.wf-btn').forEach(b=>{
+    const on=b.id==='wf-'+w;
+    b.classList.toggle('ta',on);b.classList.toggle('text-slate-400',!on);
+  });
+  render();
+}
+
+/* ── 통계 ── */
+function statsMonthRecs(){return rec.filter(r=>r.type==='지출'&&(r.date||'').startsWith(curYM));}
+function catBreakdown(){
+  const m={};
+  statsMonthRecs().forEach(r=>{m[r.cat]=(m[r.cat]||0)+calcA(r);});
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+function last6Months(){
+  const out=[];const[y,mo]=curYM.split('-').map(Number);
+  for(let i=5;i>=0;i--){const d=new Date(y,mo-1-i,1);out.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}
+  return out;
+}
+function renderStats(){
+  if(typeof Chart==='undefined')return;
+  document.getElementById('stat-cat-title').textContent=ymLabel(curYM)+' 지출 분류';
+  const bd=catBreakdown();
+  const ctxC=document.getElementById('chart-cat');
+  if(chCat)chCat.destroy();
+  if(!bd.length){
+    ctxC.getContext('2d').clearRect(0,0,ctxC.width,ctxC.height);
+    document.getElementById('cat-legend').innerHTML='<p class="text-slate-400 text-xs font-bold col-span-2 text-center py-6">이번 달 지출 내역이 없습니다.</p>';
+  }else{
+    chCat=new Chart(ctxC,{type:'doughnut',data:{labels:bd.map(x=>x[0]),datasets:[{data:bd.map(x=>x[1]),backgroundColor:CHART_COLORS,borderWidth:0}]},
+      options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ₩${Math.round(c.raw).toLocaleString()}`}}},cutout:'62%'}});
+    const total=bd.reduce((s,x)=>s+x[1],0);
+    document.getElementById('cat-legend').innerHTML=bd.map((x,i)=>`
+      <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${CHART_COLORS[i%CHART_COLORS.length]}"></span>
+        <span class="truncate">${catIcon(x[0])} ${x[0]}</span>
+        <span class="ml-auto text-slate-400">${total?Math.round(x[1]/total*100):0}%</span>
+      </div>`).join('');
+  }
+  const months=last6Months();
+  const inc=months.map(ym=>rec.filter(r=>r.type==='수입'&&(r.date||'').startsWith(ym)).reduce((s,r)=>s+calcA(r),0));
+  const exp=months.map(ym=>rec.filter(r=>r.type==='지출'&&(r.date||'').startsWith(ym)).reduce((s,r)=>s+calcA(r),0));
+  const ctxT=document.getElementById('chart-trend');
+  if(chTrend)chTrend.destroy();
+  chTrend=new Chart(ctxT,{type:'bar',data:{labels:months.map(ym=>ym.split('-')[1]+'월'),datasets:[
+    {label:'수입',data:inc,backgroundColor:'#10b981',borderRadius:6},
+    {label:'지출',data:exp,backgroundColor:'#f43f5e',borderRadius:6}]},
+    options:{scales:{y:{ticks:{callback:v=>'₩'+(v/10000)+'만'}}},plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11,weight:'bold'}}}}}});
+
+  const spend=Object.fromEntries(catBreakdown());
+  const cats=Object.keys(budget).filter(c=>budget[c]>0);
+  const bl=document.getElementById('budget-list');
+  if(!cats.length){
+    bl.innerHTML='<p class="text-slate-500 text-xs font-bold text-center py-4">설정된 예산이 없습니다. 우측 상단 설정에서 추가해보세요.</p>';
+  }else{
+    bl.innerHTML=cats.map(c=>{
+      const sp=spend[c]||0,lim=budget[c],pct=Math.min(100,Math.round(sp/lim*100)),over=sp>lim;
+      return`<div class="bud-row">
+        <div class="flex justify-between items-center text-[11px] font-black">
+          <span class="text-slate-700">${catIcon(c)} ${c}</span>
+          <span class="${over?'text-rose-500':'text-slate-500'}">₩${Math.round(sp).toLocaleString()} / ₩${lim.toLocaleString()}</span>
+        </div>
+        <div class="bud-bar-bg"><div class="bud-bar-fg" style="width:${pct}%;background:${over?'#f43f5e':'#6366f1'}"></div></div>
+      </div>`;
+    }).join('');
+  }
+}
+
+/* ── 예산 설정 모달 ── */
+function openBudget(){
+  const bf=document.getElementById('budget-form');
+  bf.innerHTML=EXP_CATS.map(c=>`
+    <div class="flex items-center gap-2">
+      <label class="text-xs font-bold text-slate-600 w-24 flex-shrink-0 truncate">${catIcon(c)} ${c}</label>
+      <input type="number" placeholder="0" class="inp bud-inp" data-cat="${c}" value="${budget[c]||''}">
+    </div>`).join('');
+  document.getElementById('budget-modal-wrap').classList.remove('hide');
+}
+function closeBudget(){document.getElementById('budget-modal-wrap').classList.add('hide');}
+function saveBudget(){
+  document.querySelectorAll('.bud-inp').forEach(inp=>{
+    const v=Number(inp.value)||0;
+    if(v>0)budget[inp.dataset.cat]=v;else delete budget[inp.dataset.cat];
+  });
+  localStorage.setItem(LB,JSON.stringify(budget));
+  closeBudget();
+  renderStats();
+}
+
+/* ── CSV 내보내기 ── */
+function exportCSV(){
+  const rows=currentFiltered();
+  if(!rows.length){alert('내보낼 내역이 없습니다.');return;}
+  const head=['날짜','분류(대)','분류(소)','작성자','내용','금액'];
+  const body=rows.map(r=>[r.date,r.type,r.cat,r.writer,(r.memo||'').replace(/"/g,"'"),Math.round(calcA(r))]);
+  const csv=[head,...body].map(row=>row.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const stamp=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.download=`가계부_${stamp}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 /* ── 부팅 ── */
