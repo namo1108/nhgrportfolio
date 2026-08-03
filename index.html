@@ -38,8 +38,8 @@ input,select{background:#f1f5f9!important;color:#1e293b!important;font-family:in
 select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;-webkit-appearance:none}
 .stock-box{display:none}
 .stock-box.show{display:block}
-.rec{transition:background .15s,border-color .15s;cursor:pointer}
-.rec:hover{background:#1e2330!important;border-color:rgba(99,102,241,.35)!important}
+.rec{transition:background .15s,border-color .15s,transform .15s;cursor:pointer}
+.rec:hover{background:#1e2330!important;border-color:rgba(99,102,241,.35)!important;transform:translateX(3px)}
 .ehint{opacity:0;transition:opacity .15s;font-size:9px;color:#818cf8}
 .rec:hover .ehint{opacity:1}
 .pb{display:inline-flex;align-items:center;background:#1e3a5f;color:#60a5fa;font-size:9px;font-weight:900;padding:1px 7px;border-radius:999px}
@@ -61,6 +61,7 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 <div id="login-wrap">
   <div class="w-full max-w-sm px-6 fu">
     <div class="text-center mb-10">
+      <div class="inline-flex w-14 h-14 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 items-center justify-center text-2xl mb-3 shadow-lg shadow-indigo-500/20">💳</div>
       <h1 class="text-4xl font-black tracking-tighter mb-1"><span class="text-indigo-500">NHGR</span> 가계부</h1>
       <p class="text-slate-500 text-sm font-bold">남호가람 자산 관리</p>
     </div>
@@ -89,7 +90,7 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
     <div class="text-center mb-8">
       <h2 class="text-2xl font-black mb-1">내 계정 설정</h2>
       <p class="text-slate-500 text-sm">이 기기에서 사용할 계정을 설정하세요</p>
-      <p class="text-slate-600 text-xs mt-1">상대방은 자신의 기기에서 별도로 설정하면 됩니다</p>
+      <p class="text-slate-600 text-xs mt-1">가람은 자신의 기기에서 별도로 설정하면 됩니다</p>
     </div>
     <div class="gc rounded-3xl p-7 space-y-4">
       <div>
@@ -186,7 +187,10 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 
   <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
     <div>
-      <h1 class="text-3xl font-black tracking-tighter"><span class="text-indigo-500">NHGR</span> 가계부</h1>
+      <h1 class="text-3xl font-black tracking-tighter flex items-center gap-2.5">
+        <span class="inline-flex w-9 h-9 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 items-center justify-center text-base flex-shrink-0 shadow-lg shadow-indigo-500/20">💳</span>
+        <span><span class="text-indigo-500">NHGR</span> 가계부</span>
+      </h1>
       <div class="flex items-center gap-3 mt-1 flex-wrap">
         <span id="s-dot" class="text-[10px] font-bold text-amber-400 uppercase tracking-widest">● 로딩 중...</span>
         <span class="text-slate-700">|</span>
@@ -212,14 +216,16 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
         <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-emerald-500">
           <p class="text-[9px] text-slate-500 font-bold mb-1" id="s-inc-lbl">이달 수입</p>
           <p class="text-lg font-black text-emerald-400" id="s-inc">₩0</p>
+          <p class="text-[9px] font-bold mt-0.5 h-3" id="s-inc-delta"></p>
         </div>
         <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-rose-500">
           <p class="text-[9px] text-slate-500 font-bold mb-1" id="s-exp-lbl">이달 지출</p>
           <p class="text-lg font-black text-rose-400" id="s-exp">₩0</p>
+          <p class="text-[9px] font-bold mt-0.5 h-3" id="s-exp-delta"></p>
         </div>
         <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-indigo-500">
           <p class="text-[9px] text-slate-500 font-bold mb-1">저축률</p>
-          <p class="text-lg font-black text-indigo-400" id="s-rate">0%</p>
+          <p class="text-lg font-black" id="s-rate">0%</p>
         </div>
       </div>
     </div>
@@ -300,7 +306,7 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
           <div class="flex gap-1 gc rounded-xl p-1 flex-shrink-0">
             <button id="wf-all" onclick="setWF('all')" class="wf-btn ta px-3 py-2 rounded-lg text-[11px] font-bold">전체</button>
             <button id="wf-me" onclick="setWF('me')" class="wf-btn px-3 py-2 rounded-lg text-[11px] font-bold text-slate-400">나</button>
-            <button id="wf-other" onclick="setWF('other')" class="wf-btn px-3 py-2 rounded-lg text-[11px] font-bold text-slate-400">상대방</button>
+            <button id="wf-other" onclick="setWF('other')" class="wf-btn px-3 py-2 rounded-lg text-[11px] font-bold text-slate-400">가람</button>
           </div>
         </div>
         <div class="flex gap-2 mb-5 overflow-x-auto noscroll pb-1">
@@ -420,7 +426,7 @@ function startApp(user){
   document.getElementById('app-wrap').classList.add('show');
   // 작성자 버튼: 로그인한 사람이 기본 선택
   document.getElementById('w-u1').textContent=user.name||'나';
-  document.getElementById('w-u2').textContent='상대방';
+  document.getElementById('w-u2').textContent='가람';
   wKey='u1'; // 항상 본인(u1)이 기본
   setW('u1');
   document.getElementById('u-badge').textContent=(user.name||'?').slice(0,2);
@@ -571,9 +577,9 @@ async function doSave(){
     if(!amt||amt<=0){document.getElementById('f-amt').focus();return;}
     memo=mm;
   }
-  // 작성자: u1=본인, u2=상대방
+  // 작성자: u1=본인, u2=가람
   const myAcc=getAcc();
-  const wname=wKey==='u1'?(myAcc?.name||'나'):'상대방';
+  const wname=wKey==='u1'?(myAcc?.name||'나'):'가람';
   const nid=`${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
   const payload={id:nid,writer:wname,type,cat,amt,memo,date:dt};
   const tk2=stock?document.getElementById('f-ticker').value.trim().toUpperCase():null;
@@ -691,21 +697,28 @@ function render(){
   const[,mNum]=curYM.split('-');
   document.getElementById('s-inc-lbl').textContent=`${Number(mNum)}월 수입`;
   document.getElementById('s-exp-lbl').textContent=`${Number(mNum)}월 지출`;
-  let asset=0,inc=0,exp=0;
+  let asset=0,inc=0,exp=0,pInc=0,pExp=0;
+  const prevYM=(()=>{const[y,m]=curYM.split('-').map(Number);const d=new Date(y,m-2,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');})();
   rec.forEach(r=>{
     const v=calcA(r);
     if(r.type==='자산')asset+=v;
     else if((r.date||'').startsWith(curYM)){if(r.type==='수입')inc+=v;else exp+=v;}
+    else if((r.date||'').startsWith(prevYM)){if(r.type==='수입')pInc+=v;else pExp+=v;}
   });
   document.getElementById('s-total').textContent='₩'+Math.round(asset).toLocaleString();
   document.getElementById('s-inc').textContent='₩'+Math.round(inc).toLocaleString();
   document.getElementById('s-exp').textContent='₩'+Math.round(exp).toLocaleString();
-  document.getElementById('s-rate').textContent=(inc>0?Math.round((inc-exp)/inc*100):0)+'%';
+  document.getElementById('s-inc-delta').innerHTML=deltaHtml(inc,pInc,true);
+  document.getElementById('s-exp-delta').innerHTML=deltaHtml(exp,pExp,false);
+  const rate=inc>0?Math.round((inc-exp)/inc*100):0;
+  const rateEl=document.getElementById('s-rate');
+  rateEl.textContent=rate+'%';
+  rateEl.className='text-lg font-black '+(rate>=0?'text-emerald-400':'text-rose-400');
 
   const filtered=currentFiltered();
   const list=document.getElementById('rec-list');
   if(tab==='stats')renderStats();
-  if(!filtered.length){list.innerHTML='<div class="text-center py-20 opacity-20 text-sm font-bold">내역이 없습니다.</div>';return;}
+  if(!filtered.length){list.innerHTML='<div class="text-center py-20 opacity-30"><div class="text-4xl mb-2">🗒️</div><p class="text-sm font-bold">내역이 없습니다.</p></div>';return;}
 
   const myAcc=getAcc();
   const u1name=myAcc?.name||'나';
@@ -718,8 +731,9 @@ function render(){
     const ac=r.type==='수입'?'text-emerald-400':r.type==='지출'?'text-rose-400':'text-white';
     const sg=r.type==='지출'?'-':'';
     const bc=r.writer===u1name?'bg-indigo-600':'bg-slate-600';
+    const border=r.type==='수입'?'border-l-2 border-emerald-500':r.type==='지출'?'border-l-2 border-rose-500':'border-l-2 border-indigo-500';
     const safeId=String(r.id).replace(/['"]/g,'');
-    return`<div class="rec gc p-4 rounded-2xl flex justify-between items-center" onclick="openModal('${safeId}')">
+    return`<div class="rec gc ${border} p-4 rounded-2xl flex justify-between items-center" onclick="openModal('${safeId}')">
       <div class="flex items-center gap-3 min-w-0 flex-1">
         <div class="w-8 h-8 rounded-lg ${bc} text-white flex items-center justify-center text-[9px] font-black flex-shrink-0">${(r.writer||'?').slice(0,2)}</div>
         <div class="min-w-0">
@@ -743,6 +757,14 @@ function render(){
 }
 
 function calcA(r){const tk=r.ticker?.toUpperCase();if(tk&&r.qty&&lp[tk])return lp[tk].krw*r.qty;return r.amt||0;}
+
+function deltaHtml(cur,prev,goodWhenUp){
+  if(prev<=0){if(cur<=0)return'<span class="text-slate-600">전월 데이터 없음</span>';prev=0;}
+  const pct=prev>0?Math.round((cur-prev)/prev*100):100;
+  if(pct===0)return'<span class="text-slate-600">전월 동일</span>';
+  const up=pct>0,good=up===goodWhenUp,arrow=up?'▲':'▼';
+  return`<span class="${good?'text-emerald-500':'text-rose-500'}">${arrow} ${Math.abs(pct)}% 전월대비</span>`;
+}
 
 function setW(k){
   wKey=k;
