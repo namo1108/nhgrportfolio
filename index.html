@@ -10,47 +10,68 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
-*{font-family:'Pretendard',-apple-system,sans-serif;box-sizing:border-box}
-body{background:#0b0e14;color:#f8fafc;margin:0;min-height:100vh}
-.gc{background:#161a23;border:1px solid rgba(255,255,255,.06)}
-.ta{background:#6366f1!important;color:#fff!important}
+*{font-family:'Pretendard',-apple-system,sans-serif;box-sizing:border-box;font-variant-numeric:tabular-nums}
+html,body{height:100%}
+body{
+  background:
+    radial-gradient(900px 480px at 8% -8%, rgba(99,102,241,.16), transparent 60%),
+    radial-gradient(700px 420px at 100% 0%, rgba(236,72,153,.10), transparent 55%),
+    #0a0d13;
+  color:#f8fafc;margin:0;min-height:100vh;
+}
+::selection{background:#6366f1;color:#fff}
+.gc{background:rgba(21,25,34,.72);border:1px solid rgba(255,255,255,.07);backdrop-filter:blur(14px);box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px -12px rgba(0,0,0,.5)}
+.ta{background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;color:#fff!important;box-shadow:0 6px 16px -4px rgba(99,102,241,.5)}
 input,select{background:#f1f5f9!important;color:#1e293b!important;font-family:inherit}
+input::placeholder{color:#9aa4b6}
 .noscroll::-webkit-scrollbar{display:none}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 .fu{animation:fadeUp .3s ease forwards}
 /* 로그인/온보딩 */
-#login-wrap{position:fixed;inset:0;z-index:100;background:#0b0e14;display:flex;align-items:center;justify-content:center}
+#login-wrap{position:fixed;inset:0;z-index:100;background:#0a0d13;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s ease}
 #login-wrap.hide{display:none}
-#ob-wrap{position:fixed;inset:0;z-index:99;background:#0b0e14;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
+#ob-wrap{position:fixed;inset:0;z-index:99;background:#0a0d13;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;animation:fadeIn .3s ease}
 #ob-wrap.hide{display:none}
 /* 수정 모달 */
-#modal-wrap{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px}
+#modal-wrap{position:fixed;inset:0;z-index:200;background:rgba(6,8,14,.72);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s ease}
 #modal-wrap.hide{display:none}
-#modal-inner{background:#fff;border-radius:24px;padding:24px;width:100%;max-width:460px;max-height:88vh;overflow-y:auto;color:#1e293b}
-#budget-modal-wrap{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px}
+#modal-inner{background:#fff;border-radius:26px;padding:24px;width:100%;max-width:460px;max-height:88vh;overflow-y:auto;color:#1e293b;box-shadow:0 30px 70px -20px rgba(0,0,0,.6)}
+#budget-modal-wrap{position:fixed;inset:0;z-index:200;background:rgba(6,8,14,.72);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s ease}
 #budget-modal-wrap.hide{display:none}
-#budget-modal-inner{background:#fff;border-radius:24px;padding:24px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;color:#1e293b}
+#budget-modal-inner{background:#fff;border-radius:26px;padding:24px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;color:#1e293b;box-shadow:0 30px 70px -20px rgba(0,0,0,.6)}
 /* 앱 */
 #app-wrap{display:none}
-#app-wrap.show{display:block}
-.inp{width:100%;padding:11px 14px;border-radius:12px;border:1.5px solid #e2e8f0;font-size:13px;font-weight:700;outline:none;transition:border-color .2s}
-.inp:focus{border-color:#6366f1}
+#app-wrap.show{display:block;animation:fadeIn .35s ease}
+.inp{width:100%;padding:12px 14px;border-radius:13px;border:1.5px solid #e2e8f0;font-size:13px;font-weight:700;outline:none;transition:border-color .15s,box-shadow .15s}
+.inp:focus{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.12)}
 select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;-webkit-appearance:none}
 .stock-box{display:none}
-.stock-box.show{display:block}
+.stock-box.show{display:block;animation:fadeUp .2s ease}
 .rec{transition:background .15s,border-color .15s,transform .15s;cursor:pointer}
-.rec:hover{background:#1e2330!important;border-color:rgba(99,102,241,.35)!important;transform:translateX(3px)}
-.ehint{opacity:0;transition:opacity .15s;font-size:9px;color:#818cf8}
+.rec:hover{background:rgba(99,102,241,.08)!important;border-color:rgba(99,102,241,.4)!important;transform:translateX(3px)}
+.ehint{opacity:0;transition:opacity .15s;font-size:9px;color:#a5b4fc}
 .rec:hover .ehint{opacity:1}
-.pb{display:inline-flex;align-items:center;background:#1e3a5f;color:#60a5fa;font-size:9px;font-weight:900;padding:1px 7px;border-radius:999px}
+.pb{display:inline-flex;align-items:center;gap:3px;background:rgba(59,130,246,.14);color:#60a5fa;font-size:9px;font-weight:900;padding:2px 8px;border-radius:999px}
+.pb::before{content:'';width:5px;height:5px;border-radius:999px;background:#34d399;box-shadow:0 0 0 2px rgba(52,211,153,.25)}
 /* 통계/예산/탭 */
-.tab-btn,.wf-btn{transition:all .15s}
+.tab-btn,.wf-btn{transition:all .18s cubic-bezier(.16,1,.3,1)}
 #panel-stats.hidden{display:none}
-.bud-row{background:#f8fafc;border-radius:14px;padding:10px 12px}
-.bud-bar-bg{background:#e2e8f0;border-radius:999px;height:7px;overflow:hidden;margin-top:6px}
-.bud-bar-fg{height:100%;border-radius:999px;transition:width .3s}
-.mnav-btn{transition:background .15s}
-.mnav-btn:hover{background:#242938}
+.bud-row{background:#f7f9fc;border-radius:16px;padding:12px 14px;border:1px solid #eef1f7}
+.bud-bar-bg{background:#e7ebf3;border-radius:999px;height:7px;overflow:hidden;margin-top:7px}
+.bud-bar-fg{height:100%;border-radius:999px;transition:width .4s cubic-bezier(.16,1,.3,1)}
+.mnav-btn{transition:background .15s,transform .15s}
+.mnav-btn:hover{background:#242938;transform:scale(1.06)}
+.mnav-btn:active{transform:scale(.94)}
+.stat-card{position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.05),transparent 60%);pointer-events:none}
+button:active{transform:scale(.97)}
+#toast-wrap{position:fixed;left:50%;bottom:28px;z-index:300;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.toast{pointer-events:auto;animation:toastIn .25s cubic-bezier(.16,1,.3,1);background:#181d29;border:1px solid rgba(255,255,255,.1);color:#f8fafc;font-size:12px;font-weight:700;padding:11px 18px;border-radius:999px;box-shadow:0 14px 34px -10px rgba(0,0,0,.6);white-space:nowrap}
+.toast.err{border-color:rgba(244,63,94,.4);color:#fda4af}
+.toast.warn{border-color:rgba(245,158,11,.4);color:#fcd34d}
+.toast.ok{border-color:rgba(52,211,153,.4);color:#6ee7b7}
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-thumb{background:#242938;border-radius:8px}
 </style>
@@ -181,6 +202,9 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
   </div>
 </div>
 
+<!-- 토스트 -->
+<div id="toast-wrap"></div>
+
 <!-- 메인 앱 -->
 <div id="app-wrap" class="p-4 md:p-8 pb-20">
 <div class="max-w-6xl mx-auto">
@@ -209,21 +233,21 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
         <button onclick="navMonth(1)" class="mnav-btn w-7 h-7 rounded-lg gc text-slate-400 hover:text-white text-xs font-black">›</button>
       </div>
       <div class="flex gap-3 overflow-x-auto noscroll w-full md:w-auto">
-        <div class="gc px-5 py-3 rounded-2xl min-w-[110px]">
+        <div class="stat-card gc px-5 py-3 rounded-2xl min-w-[110px]">
           <p class="text-[9px] text-slate-500 font-bold mb-1">자산 총액</p>
           <p class="text-lg font-black" id="s-total">₩0</p>
         </div>
-        <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-emerald-500">
+        <div class="stat-card gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-emerald-500">
           <p class="text-[9px] text-slate-500 font-bold mb-1" id="s-inc-lbl">이달 수입</p>
           <p class="text-lg font-black text-emerald-400" id="s-inc">₩0</p>
           <p class="text-[9px] font-bold mt-0.5 h-3" id="s-inc-delta"></p>
         </div>
-        <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-rose-500">
+        <div class="stat-card gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-rose-500">
           <p class="text-[9px] text-slate-500 font-bold mb-1" id="s-exp-lbl">이달 지출</p>
           <p class="text-lg font-black text-rose-400" id="s-exp">₩0</p>
           <p class="text-[9px] font-bold mt-0.5 h-3" id="s-exp-delta"></p>
         </div>
-        <div class="gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-indigo-500">
+        <div class="stat-card gc px-5 py-3 rounded-2xl min-w-[110px] border-l-2 border-indigo-500">
           <p class="text-[9px] text-slate-500 font-bold mb-1">저축률</p>
           <p class="text-lg font-black" id="s-rate">0%</p>
         </div>
@@ -346,18 +370,31 @@ select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 const SB_URL='https://gtuwbqowucdegcucwcvk.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0dXdicW93dWNkZWdjdWN3Y3ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MDk2OTAsImV4cCI6MjA5MTQ4NTY5MH0.ay6poW7tgKHWrjWGKKTTuCvdow57halg3vHmOQjwRSQ';
 const TABLE='nhgr_budget';
-const sb=window.supabase.createClient(SB_URL,SB_KEY);
+let sb=null;
+try{sb=window.supabase.createClient(SB_URL,SB_KEY);}catch{}
 
 /* ── 계정 (localStorage) ── */
-const LA='nhgr_acc_v3', LS='nhgr_sess_v3';
+const LA='nhgr_acc_v3', LS='nhgr_sess_v3', LREC='nhgr_rec_cache_v1';
 function getAcc(){try{return JSON.parse(localStorage.getItem(LA)||'null');}catch{return null;}}
 function setAcc(a){localStorage.setItem(LA,JSON.stringify(a));}
 function getSess(){try{return JSON.parse(localStorage.getItem(LS)||'null');}catch{return null;}}
 function setSess(u){localStorage.setItem(LS,JSON.stringify(u));}
 function clrSess(){localStorage.removeItem(LS);}
+function getRecCache(){try{return JSON.parse(localStorage.getItem(LREC)||'[]');}catch{return [];}}
+function setRecCache(r){try{localStorage.setItem(LREC,JSON.stringify(r));}catch{}}
+
+/* ── 토스트 ── */
+function toast(msg,type){
+  const wrap=document.getElementById('toast-wrap');
+  const el=document.createElement('div');
+  el.className='toast'+(type?' '+type:'');
+  el.textContent=msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .25s';setTimeout(()=>el.remove(),250);},2600);
+}
 
 /* ── 상태 ── */
-let rec=[],lp={},usd=0,wKey='u1',filt='all',editId=null,ptimer=null,psecs=30;
+let rec=[],lp={},usd=0,wKey='u1',filt='all',editId=null,ptimer=null,psecs=30,offline=false;
 let curYM=new Date().toISOString().slice(0,7),tab='list',wf='all';
 let chCat=null,chTrend=null;
 const LB='nhgr_budget_v1';
@@ -439,25 +476,39 @@ function startApp(user){
 /* ── 초기화 ── */
 async function init(){
   setDot('loading','로딩 중...');
+  const cached=getRecCache();
+  if(cached.length){rec=cached;render();}
   // 환율 + DB 병렬 로드
-  const[,dbR]=await Promise.allSettled([fetchUSD(),sb.from(TABLE).select('*').order('created_at',{ascending:false})]);
+  const[,dbR]=await Promise.allSettled([
+    fetchUSD(),
+    sb?sb.from(TABLE).select('*').order('created_at',{ascending:false}):Promise.reject(new Error('no client'))
+  ]);
   if(dbR.status==='fulfilled'&&!dbR.value.error){
+    offline=false;
     rec=(dbR.value.data||[]).map(toV);
+    setRecCache(rec);
     render();
     setDot('live','실시간 연결됨 ✓');
+    startRealtime();
   }else{
-    setDot('err','연결 실패: '+(dbR.value?.error?.message||''));
+    offline=true;
+    setDot('warn',cached.length?'오프라인 모드 · 마지막 동기화 데이터 표시 중':'오프라인 모드 · 클라우드 미연결');
   }
   // 주가는 백그라운드에서
   refreshP();
-  // 실시간 구독
-  sb.channel('nhgr_ch')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:TABLE},({new:r})=>{if(!rec.find(x=>x.id===r.id))rec.unshift(toV(r));render();})
-    .on('postgres_changes',{event:'DELETE',schema:'public',table:TABLE},({old:r})=>{rec=rec.filter(x=>x.id!==r.id);render();})
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:TABLE},({new:r})=>{const i=rec.findIndex(x=>x.id===r.id);if(i!==-1)rec[i]=toV(r);render();})
-    .subscribe();
   // 30초 타이머
   startTimer();
+}
+
+function startRealtime(){
+  if(!sb)return;
+  try{
+    sb.channel('nhgr_ch')
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:TABLE},({new:r})=>{if(!rec.find(x=>x.id===r.id))rec.unshift(toV(r));setRecCache(rec);render();})
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:TABLE},({old:r})=>{rec=rec.filter(x=>x.id!==r.id);setRecCache(rec);render();})
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:TABLE},({new:r})=>{const i=rec.findIndex(x=>x.id===r.id);if(i!==-1){rec[i]=toV(r);setRecCache(rec);}render();})
+      .subscribe();
+  }catch{}
 }
 
 function startTimer(){
@@ -558,14 +609,14 @@ async function doSave(){
   const dt=document.getElementById('f-date').value;
   const mm=document.getElementById('f-memo').value.trim();
   const isKR=cat==='주식(국내)',isUS=cat==='주식(해외)',stock=isKR||isUS;
-  if(!dt){alert('날짜를 선택해주세요.');return;}
+  if(!dt){toast('날짜를 선택해주세요.','err');return;}
   let amt,memo;
   if(stock){
     const tk=document.getElementById('f-ticker').value.trim().toUpperCase();
     const qty=parseFloat(document.getElementById('f-qty').value)||0;
     const unit=parseFloat(document.getElementById('f-unit').value)||0;
-    if(!tk){alert('티커를 입력해주세요.');return;}
-    if(!qty){alert('수량을 입력해주세요.');return;}
+    if(!tk){toast('티커를 입력해주세요.','err');return;}
+    if(!qty){toast('수량을 입력해주세요.','err');return;}
     if(isUS&&usd<=0)await fetchUSD();
     const live=await fetchP(tk,isUS);
     const pkrw=live?live.krw:(isUS?unit*(usd||1380):unit);
@@ -585,16 +636,19 @@ async function doSave(){
   const tk2=stock?document.getElementById('f-ticker').value.trim().toUpperCase():null;
   const qty2=stock?parseFloat(document.getElementById('f-qty').value):null;
   rec.unshift({id:nid,writer:wname,type,cat,amt,memo:mm,raw_desc:memo,date:dt,ticker:tk2,qty:qty2,isUS});
+  setRecCache(rec);
   render();
   document.getElementById('f-memo').value='';document.getElementById('f-amt').value='';
   if(stock){['f-ticker','f-qty','f-unit'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-pinfo').classList.add('hidden');}
+  if(!sb||offline){toast('오프라인 저장됨 · 클라우드 미연결','warn');return;}
   const btn=document.getElementById('f-save');
   btn.disabled=true;btn.textContent='저장 중...';
   try{
     const{data,error}=await sb.from(TABLE).insert([payload]).select().single();
     if(error)throw error;
     const i=rec.findIndex(r=>r.id===nid);if(i!==-1&&data)rec[i]=toV(data);
-  }catch(e){rec=rec.filter(r=>r.id!==nid);render();alert('저장 실패: '+e.message);}
+    setRecCache(rec);
+  }catch(e){toast('클라우드 저장 실패 · 이 기기에만 보관됨','err');}
   btn.disabled=false;btn.textContent='저장';
 }
 
@@ -628,13 +682,13 @@ function onMCat(){
   const dt=document.getElementById('m-date').value;
   const mm=document.getElementById('m-memo').value.trim();
   const isKR=cat==='주식(국내)',isUS=cat==='주식(해외)',stock=isKR||isUS;
-  if(!dt){alert('날짜를 입력해주세요.');return;}
+  if(!dt){toast('날짜를 입력해주세요.','err');return;}
   let amt,memo,tk=null,qty=null;
   if(stock){
     tk=document.getElementById('m-ticker').value.trim().toUpperCase();
     qty=parseFloat(document.getElementById('m-qty').value)||0;
     const unit=parseFloat(document.getElementById('m-unit').value)||0;
-    if(!tk||!qty){alert('티커와 수량을 입력해주세요.');return;}
+    if(!tk||!qty){toast('티커와 수량을 입력해주세요.','err');return;}
     // 캐시된 주가 사용 (없으면 매입단가) → API 재조회 없이 즉시 저장
     const cached=lp[tk];
     const pkrw=cached?cached.krw:(isUS?unit*(usd||1380):unit);
@@ -643,7 +697,7 @@ function onMCat(){
     memo=JSON.stringify({ticker:tk,qty,unitPrice:unit,currentPrice:praw,usdRate:isUS?usd:null,memo:mm});
   }else{
     amt=Number(document.getElementById('m-amt').value);
-    if(!amt||amt<=0){alert('금액을 입력해주세요.');return;}
+    if(!amt||amt<=0){toast('금액을 입력해주세요.','err');return;}
     memo=mm;
   }
   const payload={type,cat,amt,memo,date:dt};
@@ -652,10 +706,12 @@ function onMCat(){
   const backup=idx!==-1?{...rec[idx]}:null;
   // 즉시 UI 반영 & 모달 닫기
   if(idx!==-1)rec[idx]={...rec[idx],type,cat,amt,memo:mm,raw_desc:memo,date:dt,ticker:tk,qty,isUS};
+  setRecCache(rec);
   render();closeModal();
+  if(!sb||offline){toast('오프라인 수정됨 · 클라우드 미연결','warn');return;}
   // 백그라운드 DB 업데이트 (await 없음 → 즉시 반환)
   sb.from(TABLE).update(payload).eq('id',savedId).then(({error})=>{
-    if(error){if(backup&&idx!==-1)rec[idx]=backup;render();alert('수정 실패: '+error.message);}
+    if(error){if(backup&&idx!==-1)rec[idx]=backup;setRecCache(rec);render();toast('수정 실패: '+error.message,'err');}
   });
 }
 async function doDelete(){
@@ -663,9 +719,11 @@ async function doDelete(){
   const id=editId;
   const removed=rec.find(r=>r.id===id);
   rec=rec.filter(r=>r.id!==id);
+  setRecCache(rec);
   render();closeModal();
+  if(!sb||offline){toast('오프라인 삭제됨 · 클라우드 미연결','warn');return;}
   const{error}=await sb.from(TABLE).delete().eq('id',id);
-  if(error){if(removed)rec.unshift(removed);render();alert('삭제 실패: '+error.message);}
+  if(error){if(removed)rec.unshift(removed);setRecCache(rec);render();toast('삭제 실패: '+error.message,'err');}
 }
 
 /* ── 데이터 변환 ── */
@@ -780,7 +838,7 @@ function setF(f){
 }
 function setDot(t,msg){
   const el=document.getElementById('s-dot');
-  el.className='text-[10px] font-bold uppercase tracking-widest '+(t==='live'?'text-emerald-500':t==='err'?'text-rose-500':'text-amber-400');
+  el.className='text-[10px] font-bold uppercase tracking-widest '+(t==='live'?'text-emerald-500':t==='err'?'text-rose-500':t==='warn'?'text-amber-400':'text-amber-400');
   el.textContent='● '+msg;
 }
 
@@ -899,7 +957,7 @@ function saveBudget(){
 /* ── CSV 내보내기 ── */
 function exportCSV(){
   const rows=currentFiltered();
-  if(!rows.length){alert('내보낼 내역이 없습니다.');return;}
+  if(!rows.length){toast('내보낼 내역이 없습니다.','err');return;}
   const head=['날짜','분류(대)','분류(소)','작성자','내용','금액'];
   const body=rows.map(r=>[r.date,r.type,r.cat,r.writer,(r.memo||'').replace(/"/g,"'"),Math.round(calcA(r))]);
   const csv=[head,...body].map(row=>row.map(v=>`"${v}"`).join(',')).join('\n');
