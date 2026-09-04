@@ -1,0 +1,12 @@
+name = "nhgrportfolio"
+main = "worker.js"
+compatibility_date = "2026-09-04"
+
+[assets]
+directory = "./"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nhgr-budget-db"
+database_id = "2ecc0bd1-564e-4606-bb79-370ee428041e"
